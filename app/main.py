@@ -12,7 +12,8 @@ from pathlib import Path
 from docx import Document as WordDocument
 from fastapi import BackgroundTasks, Depends, FastAPI, File, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import Response, FileResponse
+from fastapi.staticfiles import StaticFiles
 from openai import OpenAI
 from openpyxl import load_workbook
 from pgvector.sqlalchemy import Vector
@@ -80,7 +81,8 @@ async def lifespan(app):
     Base.metadata.create_all(engine)
     yield
 
-app = FastAPI(title='Universal Knowledge Chatbot', version='0.1.0', lifespan=lifespan)
+app = FastAPI(title='Universal Knowledge Chatbot', version='0.2.0', lifespan=lifespan)
+app.mount('/chat/assets', StaticFiles(directory='chat'), name='chat-assets')
 # Allow only registered website origins for public chat, including preflight requests.
 @app.middleware('http')
 async def tenant_cors(request: Request, call_next):
@@ -229,6 +231,18 @@ def public_chat(public_key:str,body:ChatInput,request:Request):
         db.add_all([Message(id=uid(),conversation_id=conv.id,role='user',content=body.message),Message(id=uid(),conversation_id=conv.id,role='assistant',content=answer)])
         db.commit()
         return {'conversation_id':conv.id,'answer':answer,'sources':[{'number':i+1,'filename':name} for i,(_,name,_) in enumerate(matches)]}
+
+@app.get('/chat', include_in_schema=False)
+def standalone_chat():
+    return FileResponse('chat/index.html', media_type='text/html', headers={'Cache-Control':'no-store'})
+
+@app.get('/chat/chat.css', include_in_schema=False)
+def chat_css():
+    return FileResponse('chat/chat.css', media_type='text/css')
+
+@app.get('/chat/chat.js', include_in_schema=False)
+def chat_js():
+    return FileResponse('chat/chat.js', media_type='application/javascript')
 
 @app.get('/widget.js')
 def widget_js():
