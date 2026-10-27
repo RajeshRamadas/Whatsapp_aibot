@@ -57,3 +57,42 @@ Do not deploy this starter to a public-facing production service without address
 ## API
 
 Routes: `/health`, `/api/v1/tenants`, `/api/v1/sources`, `/api/v1/chat/{public_key}`, `/widget.js`.
+
+
+## Customer chat interfaces
+
+Both interfaces use the existing `POST /api/v1/chat/{public_key}` endpoint and the same knowledge base.
+
+### Standalone chat page
+
+Start Docker Compose, create a tenant and upload documents as described above. Open:
+
+`http://localhost:8000/chat?key=YOUR_PUBLIC_KEY`
+
+The page supports a responsive layout, conversation context during the current page session, source filenames, a new-chat button, and error states. It intentionally does not persist customer conversation credentials in browser storage.
+
+### Embeddable widget
+
+Insert this script into a website:
+
+```html
+<script src="https://YOUR_API_HOST/widget.js"
+        data-chatbot-key="YOUR_PUBLIC_KEY"
+        data-label="Ask us anything"
+        defer></script>
+```
+
+The widget uses an isolated Shadow DOM launcher and an iframe that loads the same standalone chat page. It does not require the host website to install JavaScript dependencies. For local testing, use `http://localhost:8000/widget.js`.
+
+**Browser origin policy:** The iframe's chat API requests originate from the chatbot service's own origin. The existing tenant `allowed_origins` setting therefore does **not** restrict which third-party sites can embed the widget. Before public deployment, enforce allowed embedding domains using a per-tenant `Content-Security-Policy: frame-ancestors` policy, together with session security, quotas and rate limiting. The current code is a development starter and should not be exposed publicly.
+
+### Future WhatsApp adapter
+
+`app/channels.py` defines channel-neutral inbound/outbound message contracts. WhatsApp integration is **not yet implemented**. The next backend refactor should extract the chat orchestration from the HTTP route into a shared service; the Meta webhook adapter will then authenticate, deduplicate and enqueue messages, invoke that service and send replies through the WhatsApp Cloud API.
+
+### Known limitations
+
+- Conversations are currently identified by UUID only; add session-bound credentials before production.
+- The standalone chat and widget are not yet deployed to a public host.
+- The chatbot API performs synchronous LLM requests; use workers and concurrency controls at scale.
+- No automated browser/integration tests have been run against live services.
