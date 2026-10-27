@@ -1,0 +1,41 @@
+# Render Blueprint. Deploy through Render Dashboard > New > Blueprint.
+# Paid services are required for persistent uploads and a durable managed database.
+services:
+  - type: web
+    name: whatsapp-aibot-api
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeployTrigger: off
+    disk:
+      name: chatbot-uploads
+      mountPath: /srv/uploads
+      sizeGB: 1
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: whatsapp-aibot-db
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ADMIN_BOOTSTRAP_TOKEN
+        generateValue: true
+      - key: ADMIN_DASHBOARD_USER
+        value: admin
+      - key: ADMIN_DASHBOARD_PASSWORD
+        generateValue: true
+      - key: DEPLOYMENT_MODE
+        value: production
+      - key: CHAT_MODEL
+        value: gpt-4.1-mini
+      - key: EMBEDDING_MODEL
+        value: text-embedding-3-small
+      - key: MAX_UPLOAD_MB
+        value: "15"
+databases:
+  - name: whatsapp-aibot-db
+    databaseName: chatbot
+    user: chatbot
+    plan: basic-256mb
