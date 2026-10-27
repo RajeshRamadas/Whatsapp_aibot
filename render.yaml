@@ -4,7 +4,8 @@ services:
   - type: web
     name: whatsapp-aibot-api
     runtime: docker
-    plan: starter
+    region: singapore
+    plan: 0.5c-512mb
     dockerfilePath: ./Dockerfile
     dockerContext: .
     healthCheckPath: /health
@@ -36,6 +37,8 @@ services:
         value: "15"
 databases:
   - name: whatsapp-aibot-db
+    region: singapore
+    ipAllowList: []
     databaseName: chatbot
     user: chatbot
-    plan: basic-256mb
+    plan: 0.5c-1g
