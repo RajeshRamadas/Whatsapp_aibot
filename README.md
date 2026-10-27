@@ -108,3 +108,7 @@ Open `http://localhost:8000/admin` after starting Docker Compose.
 - The dashboard holds credentials in **tab memory only** and does not persist them to local storage. Save generated admin keys in a secure password manager; they are shown only once.
 
 **Security warning:** This is a developer-oriented dashboard, not a production admin console. Do not deploy `/admin` to the public internet without authenticated operator sessions, RBAC, CSRF protections, audit logging, TLS, and disabling or restricting bootstrap tenant creation. Avoid pasting production secrets into an untrusted browser. The public key entered for an existing tenant is not currently verified as belonging to the provided admin key; validate the pairing server-side before production use.
+
+## Render staging deployment
+
+A Render Blueprint is provided in [`render.yaml`](render.yaml), with managed PostgreSQL (pgvector), HTTPS web hosting, an upload disk, and secret environment variables. See **[Render deployment instructions](docs/RENDER_DEPLOYMENT.md)** for costs, setup, validation, security controls and public-launch blockers. Do not expose this development chatbot to public customers before adding authenticated chat sessions, rate limits and other controls described there.
