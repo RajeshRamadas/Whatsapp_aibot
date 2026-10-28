@@ -22,4 +22,6 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt -r requirements-dev.txt
       - run: ruff check app tests
+      - run: alembic upgrade head
+      - run: alembic check
       - run: pytest -q
