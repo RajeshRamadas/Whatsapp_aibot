@@ -4,7 +4,7 @@
 |---|---|
 | Status | Draft for review |
 | Last updated | 2026-10-28 |
-| Companion | [DESIGN.md](DESIGN.md) (how these requirements are built) |
+| Companions | [DESIGN.md](DESIGN.md) (technical design), [INTEGRATIONS.md](INTEGRATIONS.md) (integrations), [UX_DESIGN.md](UX_DESIGN.md) (UX and visual design) |
 
 ## 1. Purpose
 
