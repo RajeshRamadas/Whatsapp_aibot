@@ -135,6 +135,7 @@ def init_db() -> None:
     from pathlib import Path
 
     config = Config(str(Path(__file__).resolve().parent.parent / 'alembic.ini'))
+    config.set_main_option('script_location', str(Path(__file__).resolve().parent.parent / 'migrations'))
     expected = ScriptDirectory.from_config(config).get_current_head()
     with engine.connect() as con:
         actual = MigrationContext.configure(con).get_current_revision()
