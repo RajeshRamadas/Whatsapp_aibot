@@ -232,6 +232,18 @@ def public_chat(public_key:str,body:ChatInput,request:Request):
         db.commit()
         return {'conversation_id':conv.id,'answer':answer,'sources':[{'number':i+1,'filename':name} for i,(_,name,_) in enumerate(matches)]}
 
+@app.get('/admin', include_in_schema=False)
+def admin_dashboard():
+    return FileResponse('admin/index.html', media_type='text/html', headers={'Cache-Control':'no-store', 'X-Frame-Options':'DENY'})
+
+@app.get('/admin/admin.css', include_in_schema=False)
+def admin_css():
+    return FileResponse('admin/admin.css', media_type='text/css')
+
+@app.get('/admin/admin.js', include_in_schema=False)
+def admin_js():
+    return FileResponse('admin/admin.js', media_type='application/javascript')
+
 @app.get('/chat', include_in_schema=False)
 def standalone_chat():
     return FileResponse('chat/index.html', media_type='text/html', headers={'Cache-Control':'no-store'})

@@ -96,3 +96,15 @@ The widget uses an isolated Shadow DOM launcher and an iframe that loads the sam
 - The standalone chat and widget are not yet deployed to a public host.
 - The chatbot API performs synchronous LLM requests; use workers and concurrency controls at scale.
 - No automated browser/integration tests have been run against live services.
+
+
+## Development admin dashboard
+
+Open `http://localhost:8000/admin` after starting Docker Compose.
+
+- Create a tenant with the bootstrap token from your local `.env`, or connect an existing tenant with its admin key and public key.
+- Upload PDF, DOCX, TXT, Markdown, CSV, XLSX or JSON files and refresh ingestion statuses.
+- Copy the standalone chat URL or website embed snippet; open a chat preview.
+- The dashboard holds credentials in **tab memory only** and does not persist them to local storage. Save generated admin keys in a secure password manager; they are shown only once.
+
+**Security warning:** This is a developer-oriented dashboard, not a production admin console. Do not deploy `/admin` to the public internet without authenticated operator sessions, RBAC, CSRF protections, audit logging, TLS, and disabling or restricting bootstrap tenant creation. Avoid pasting production secrets into an untrusted browser. The public key entered for an existing tenant is not currently verified as belonging to the provided admin key; validate the pairing server-side before production use.
