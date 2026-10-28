@@ -11,9 +11,9 @@ from fastapi.responses import FileResponse, PlainTextResponse, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
-from . import ingest, llm, rag, whatsapp
+from . import evaluate, ingest, llm, rag, whatsapp
 from .config import settings
-from .db import Conversation, Message, Session, Source, Tenant, init_db, uid
+from .db import Conversation, EvalCase, Message, Session, Source, Tenant, init_db, uid
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -95,6 +95,22 @@ class UpdateTenant(BaseModel):
 class ChatInput(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
     conversation_id: str | None = None
+
+
+class EvalCaseInput(BaseModel):
+    question: str = Field(min_length=1, max_length=4000)
+    expected_keywords: list[str] = Field(default_factory=list, max_length=20)
+    expected_source: str | None = Field(default=None, max_length=255)
+    expect_no_answer: bool = False
+
+
+class EvalCasesInput(BaseModel):
+    cases: list[EvalCaseInput] = Field(min_length=1, max_length=200)
+
+
+def eval_view(c: EvalCase) -> dict:
+    return {'id': c.id, 'question': c.question, 'expected_keywords': c.expected_keywords,
+            'expected_source': c.expected_source, 'expect_no_answer': c.expect_no_answer}
 
 
 class AgentReply(BaseModel):
@@ -275,6 +291,41 @@ def agent_reply(conversation_id: str, body: AgentReply, tenant: Tenant = Depends
     whatsapp.send_text(tenant.whatsapp_phone_number_id, conv.external_user, body.message)
     rag.save_exchange(conv, ('agent', body.message))
     return {'status': 'sent'}
+
+
+@app.post('/api/v1/evals', status_code=201)
+def add_eval_cases(body: EvalCasesInput, tenant: Tenant = Depends(admin_tenant)):
+    cases = [EvalCase(tenant_id=tenant.id, **c.model_dump()) for c in body.cases]
+    with Session.begin() as db:
+        db.add_all(cases)
+    return [eval_view(c) for c in cases]
+
+
+@app.get('/api/v1/evals')
+def list_eval_cases(tenant: Tenant = Depends(admin_tenant)):
+    with Session() as db:
+        return [eval_view(c) for c in db.scalars(select(EvalCase).where(EvalCase.tenant_id == tenant.id)
+                                                  .order_by(EvalCase.created_at))]
+
+
+@app.delete('/api/v1/evals/{case_id}', status_code=204)
+def delete_eval_case(case_id: str, tenant: Tenant = Depends(admin_tenant)):
+    with Session.begin() as db:
+        case = db.scalar(select(EvalCase).where(EvalCase.id == case_id, EvalCase.tenant_id == tenant.id))
+        if not case:
+            raise HTTPException(404, 'Test question not found')
+        db.delete(case)
+
+
+@app.post('/api/v1/evals/run')
+def run_evals(tenant: Tenant = Depends(admin_tenant)):
+    """Ask every test question and score the answers. Each question is a real (billed) provider call."""
+    with Session() as db:
+        cases = db.scalars(select(EvalCase).where(EvalCase.tenant_id == tenant.id)
+                           .order_by(EvalCase.created_at)).all()
+    if not cases:
+        raise HTTPException(409, 'Add test questions first (POST /api/v1/evals)')
+    return evaluate.run(tenant, cases)
 
 
 @app.get('/webhooks/whatsapp')

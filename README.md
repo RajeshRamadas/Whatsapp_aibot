@@ -96,6 +96,36 @@ How it behaves:
 
 WhatsApp only allows free-form replies within 24 hours of the user's last message. Reaching a user after that needs an approved template, which is not implemented.
 
+## How answers stay accurate
+
+1. **Structure-aware chunks.** Files are split along their structure: Markdown and Word headings, PDF pages, and table or spreadsheet rows. A chunk never spans two sections or pages, and a table row is never cut in half. Each row keeps its column names (`plan: Pro; price: 499`). Every chunk is embedded together with its document name and heading, and its citation shows them too: `policy.pdf > Refunds (page 3)`.
+2. **Hybrid search.** Each question runs two searches: by meaning (pgvector embeddings) and by exact words (Postgres full-text search). The keyword search finds order numbers, product codes and names that embeddings often miss. The two result lists are merged with reciprocal rank fusion, and the top `RETRIEVAL_TOP_K` chunks go to the model.
+3. **Follow-up rewriting.** In an ongoing conversation, a message like "and for shipping?" is first rewritten into a complete question using the conversation, then searched. The answer itself still sees the customer's own words. This costs one extra short model call per follow-up; set `QUERY_REWRITE=false` to turn it off.
+4. **Stricter prompt.** The model must answer only from the retrieved text, say so when the text doesn't cover the question, and copy prices, dates and codes exactly.
+
+### Measuring accuracy
+
+Add test questions for a tenant, with what a correct answer must contain, then run them all:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/evals -H 'X-Admin-Key: YOUR_ADMIN_KEY' \
+  -H 'Content-Type: application/json' -d '{"cases": [
+    {"question": "How long do I have to ask for a refund?", "expected_keywords": ["30 days"], "expected_source": "refunds.pdf"},
+    {"question": "Do you sell cars?", "expect_no_answer": true}
+  ]}'
+
+curl -X POST http://localhost:8000/api/v1/evals/run -H 'X-Admin-Key: YOUR_ADMIN_KEY'
+# {"total": 2, "passed": 2, "accuracy": 1.0, "source_hit_rate": 1.0, "results": [...]}
+```
+
+Each case can check three things:
+
+- `expected_source`: that file must be among the cited sources.
+- `expected_keywords`: every keyword must appear in the answer (case-insensitive).
+- `expect_no_answer`: the documents don't cover the question, so the bot must find no sources or say it doesn't know.
+
+Scoring is plain text matching, with no extra model call. A good set has 30–50 real customer questions, including a few the bot should decline. Re-run it after uploading documents or changing provider, model or retrieval settings, and compare `accuracy`. Each question is a real, billed provider call, and a large set can take a few minutes.
+
 ## API
 
 | Route | Auth | Purpose |
@@ -106,17 +136,19 @@ WhatsApp only allows free-form replies within 24 hours of the user's last messag
 | `POST`, `GET /api/v1/sources`, `DELETE /api/v1/sources/{id}` | `X-Admin-Key` | Manage knowledge sources |
 | `POST /api/v1/chat/{public_key}` | public key + allowed origin | Website chat |
 | `/api/v1/conversations…` | `X-Admin-Key` | Transcripts and handoff (above) |
+| `POST`, `GET /api/v1/evals`, `DELETE /api/v1/evals/{id}`, `POST /api/v1/evals/run` | `X-Admin-Key` | Test questions and accuracy runs (above) |
 | `GET`, `POST /webhooks/whatsapp` | Meta verify token / signature | WhatsApp webhook |
 | `GET /widget.js` | none | Website widget |
 
 ## Architecture
 
 - `app/main.py`: FastAPI routes, tenant auth and CORS.
-- `app/rag.py`: retrieval, prompt and answer, shared by web and WhatsApp, plus the rate limiter. No database connection is held during LLM calls.
+- `app/rag.py`: hybrid retrieval, follow-up rewriting, prompt and answer, shared by web and WhatsApp, plus the rate limiter. No database connection is held during LLM calls.
+- `app/evaluate.py`: scores answers to a tenant's test questions.
 - `app/llm.py`: OpenAI, Anthropic and Gemini chat clients, and OpenAI and Gemini embedders.
 - `app/whatsapp.py`: webhook parsing, signature check, dedupe, replies and handoff.
-- `app/ingest.py`: file parsing, chunking and embedding. A failed ingest leaves no partial chunks.
-- `app/db.py`: SQLAlchemy models. Tables are created at startup, with an HNSW cosine index on embeddings.
+- `app/ingest.py`: structure-aware parsing and chunking, and embedding. A failed ingest leaves no partial chunks.
+- `app/db.py`: SQLAlchemy models. Tables are created at startup, with an HNSW cosine index on embeddings and a GIN full-text index.
 - `widget/widget.js`: dependency-free website widget.
 
 ## Tests
@@ -134,7 +166,7 @@ The tests drop and recreate every table, so never point `DATABASE_URL` at real d
 
 ## Upgrading from 0.1
 
-The schema changed: new tenant, conversation and message columns, the `whatsapp_inbound` table and the vector index. There are no migrations yet, so recreate the development database (`docker compose down -v`) and re-upload sources.
+The schema changed: new tenant, conversation, message and chunk columns (heading, page, full-text search), the `whatsapp_inbound` and `eval_cases` tables, and the search indexes. There are no migrations yet, so recreate the development database (`docker compose down -v`) and re-upload sources.
 
 ## Production gaps
 
@@ -143,7 +175,8 @@ The schema changed: new tenant, conversation and message columns, the `whatsapp_
 - **Migrations:** add Alembic before you have data worth keeping.
 - **Security:** the public key and origin allowlist identify a tenant; they don't authenticate anyone. Add session ownership for web conversations, malware scanning of uploads, audit logs and secrets management. WhatsApp access tokens are global (one Meta app); per-tenant tokens would need encrypted storage.
 - **WhatsApp:** message templates (for the 24-hour window), media handling (images, voice transcription), read receipts and typing indicators are not implemented.
-- **Retrieval:** add OCR, table-aware parsing, hybrid search, reranking and evaluation tests. Tune `RETRIEVAL_MAX_DISTANCE` for your embedding model. CSV/JSON/XLSX are retrieved as text, so exact totals and aggregates need a dedicated query engine.
+- **Retrieval:** add OCR for scanned PDFs and images, a reranking model, and checking of answers against their cited text. Tune `RETRIEVAL_MAX_DISTANCE` for your embedding model, using the accuracy runs above. CSV/JSON/XLSX rows are searched as text, so exact totals and aggregates need a dedicated query engine.
+- **Keyword search language:** `TEXT_SEARCH_CONFIG=english` (the default) handles English word forms (refund/refunds) but not other languages. For mixed-language content, use `simple`, which matches words exactly.
 - **Operations:** monitoring, backups and a deployment strategy.
 
 Do not deploy this starter to a public-facing production service without addressing these gaps.

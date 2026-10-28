@@ -31,9 +31,16 @@ class FakeEmbedder:
 
 class FakeChat:
     def __init__(self, name):
-        self.name, self.calls = name, []
+        self.name, self.calls, self.rewrites = name, [], []
 
     def complete(self, model, system, messages):
+        if system == rag.REWRITE_PROMPT:
+            # Stand-in for a real rewrite: the first customer message's topic plus the follow-up.
+            prompt = messages[-1]['content']
+            first = prompt.split('Customer: ', 1)[1].split('\n', 1)[0]
+            latest = prompt.rsplit('Latest message: ', 1)[1]
+            self.rewrites.append(prompt)
+            return f'{latest} (about: {first})'
         self.calls.append({'model': model, 'system': system, 'messages': messages})
         return f'{self.name}:{model}: {messages[-1]["content"]}'
 

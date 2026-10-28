@@ -5,15 +5,18 @@ from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     BigInteger,
     Boolean,
+    Computed,
     DateTime,
     ForeignKey,
     Index,
+    Integer,
     String,
     Text,
     UniqueConstraint,
     create_engine,
     text,
 )
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 from .config import settings
@@ -65,11 +68,18 @@ class Chunk(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
     tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'), index=True)
     source_id: Mapped[str] = mapped_column(ForeignKey('sources.id', ondelete='CASCADE'), index=True)
+    position: Mapped[int] = mapped_column(Integer, default=0)  # order within the source
+    heading: Mapped[str | None] = mapped_column(Text, nullable=True)  # e.g. 'Policies > Refunds', or a sheet name
+    page: Mapped[int | None] = mapped_column(Integer, nullable=True)
     content: Mapped[str] = mapped_column(Text)
     embedding: Mapped[list] = mapped_column(Vector(settings.embedding_dimensions))
+    # Keyword index for exact terms (order numbers, product codes) that embeddings miss.
+    search_text: Mapped[str] = mapped_column(TSVECTOR, Computed(
+        f"to_tsvector('{settings.text_search_config}', coalesce(heading, '') || ' ' || content)", persisted=True))
     __table_args__ = (
         Index('ix_chunks_embedding_hnsw', 'embedding', postgresql_using='hnsw',
               postgresql_ops={'embedding': 'vector_cosine_ops'}),
+        Index('ix_chunks_search_text', 'search_text', postgresql_using='gin'),
     )
 
 
@@ -93,6 +103,18 @@ class Message(Base):
     conversation_id: Mapped[str] = mapped_column(ForeignKey('conversations.id', ondelete='CASCADE'), index=True)
     role: Mapped[str] = mapped_column(String(20))  # user | assistant | agent
     content: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class EvalCase(Base):
+    """A test question with what a correct answer must contain, used to measure accuracy."""
+    __tablename__ = 'eval_cases'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'), index=True)
+    question: Mapped[str] = mapped_column(Text)
+    expected_keywords: Mapped[list] = mapped_column(JSONB, default=list)  # all must appear in the answer
+    expected_source: Mapped[str | None] = mapped_column(String(255), nullable=True)  # filename to be cited
+    expect_no_answer: Mapped[bool] = mapped_column(Boolean, default=False)  # documents don't cover it
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
