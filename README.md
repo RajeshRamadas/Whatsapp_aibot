@@ -17,10 +17,21 @@ The plan for turning it into a product businesses pay for:
 - WhatsApp Cloud API webhook with signature checks, duplicate filtering, background replies and handoff to a human agent.
 - Embeddable website widget.
 
+## Database migrations
+
+The API refuses to start if the database is not at the current Alembic revision. Run migrations before starting the API:
+
+```bash
+alembic upgrade head
+alembic check
+```
+
+For Docker Compose, migrations run automatically before Uvicorn. **Existing databases created before Alembic** already have tables: back up the database, verify its schema matches the baseline, and run `alembic stamp 0001_baseline` once instead of replaying the initial migration. Never stamp an unknown schema without checking it first. To generate later migrations use `alembic revision --autogenerate -m "description"` and review the generated operations before applying.
+
 ## Getting started
 
 1. Copy `.env.example` to `.env`. Set a long random `ADMIN_BOOTSTRAP_TOKEN` and the API key of at least one provider (see [AI providers](#ai-providers)).
-2. Run `docker compose up --build`.
+2. Run `docker compose up --build` (the API service applies Alembic migrations before starting).
 3. Open `http://localhost:8000/docs` for the API documentation.
 4. Create a tenant:
 
