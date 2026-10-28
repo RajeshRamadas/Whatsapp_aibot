@@ -4,6 +4,8 @@ A multi-tenant chatbot that answers customer questions from your own documents, 
 
 It is a **development starter**, not a production-complete platform: read [Production gaps](#production-gaps) before going live.
 
+The plan for turning it into a product businesses pay for is in [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) (what to build) and [docs/DESIGN.md](docs/DESIGN.md) (how).
+
 - Upload PDF, DOCX, TXT, Markdown, CSV, XLSX or JSON. Text is chunked, embedded and stored in PostgreSQL + pgvector.
 - Answers are grounded in the closest chunks, with numbered citations, and say "I don't know" when the documents don't cover the question.
 - WhatsApp Cloud API webhook with signature checks, duplicate filtering, background replies and handoff to a human agent.
