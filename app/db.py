@@ -127,11 +127,11 @@ class WhatsAppInbound(Base):
 
 def init_db() -> None:
     """Reject an unversioned or outdated database; never modify schema on app startup."""
+    from pathlib import Path
+
     from alembic.config import Config
     from alembic.runtime.migration import MigrationContext
     from alembic.script import ScriptDirectory
-
-    from pathlib import Path
 
     config = Config(str(Path(__file__).resolve().parent.parent / 'alembic.ini'))
     config.set_main_option('script_location', str(Path(__file__).resolve().parent.parent / 'migrations'))
