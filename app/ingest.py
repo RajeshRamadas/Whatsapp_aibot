@@ -96,7 +96,7 @@ def docx_blocks(path) -> list[Block]:
             if not rows:
                 continue
             header, body = rows[0], rows[1:]
-            blocks += [Block(render_row(dict(zip(header, r))), headings.path, row=True) for r in body] \
+            blocks += [Block(render_row(dict(zip(header, r, strict=False))), headings.path, row=True) for r in body] \
                 or [Block(' | '.join(header), headings.path)]
             continue
         text, style = item.text.strip(), (item.style.name if item.style is not None else '')
@@ -136,7 +136,7 @@ def extract(path, suffix) -> list[Block]:
             headers = next(it, None)
             if headers:
                 names = [str(h) if h is not None else f'column {i + 1}' for i, h in enumerate(headers)]
-                blocks += [Block(render_row(dict(zip(names, row))), heading=ws.title, row=True)
+                blocks += [Block(render_row(dict(zip(names, row, strict=False))), heading=ws.title, row=True)
                            for row in it if any(v is not None for v in row)]
         wb.close()
         return blocks
@@ -218,7 +218,7 @@ def ingest(source_id: str) -> None:
                 vectors = embedder.embed([embedding_text(src.filename, p) for p in batch])
                 rows += [Chunk(tenant_id=src.tenant_id, source_id=src.id, position=i + n, content=p.content,
                                heading=p.heading, page=p.page, embedding=v)
-                         for n, (p, v) in enumerate(zip(batch, vectors))]
+                         for n, (p, v) in enumerate(zip(batch, vectors, strict=True))]
             # All chunks land together with the status change, so a failure leaves none behind.
             db.add_all(rows)
             src.status, src.error = 'ready', None
