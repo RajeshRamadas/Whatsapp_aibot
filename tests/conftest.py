@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import json
 import os
+from pathlib import Path
 
 import pytest
 
@@ -14,6 +15,8 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 from app import llm, rag, whatsapp  # noqa: E402
 from app.db import Base, engine  # noqa: E402
+from alembic import command  # noqa: E402
+from alembic.config import Config  # noqa: E402
 from app.main import app  # noqa: E402
 
 # Tiny fake embedding space: each keyword is an axis.
@@ -64,6 +67,8 @@ def sent(monkeypatch):
 def client(chats, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     Base.metadata.drop_all(engine)
+    Base.metadata.create_all(engine)
+    command.stamp(Config(str(Path(__file__).resolve().parents[1] / 'alembic.ini')), 'head')
     rag.chat_limiter.hits.clear()
     with TestClient(app) as c:
         yield c
