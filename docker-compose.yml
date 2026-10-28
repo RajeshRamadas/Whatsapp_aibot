@@ -3,7 +3,7 @@ services:
     image: pgvector/pgvector:pg16
     environment:
       POSTGRES_USER: chatbot
-      POSTGRES_PASSWORD: chatbot
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-chatbot}
       POSTGRES_DB: chatbot
     volumes:
       - pgdata:/var/lib/postgresql/data
