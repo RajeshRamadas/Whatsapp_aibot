@@ -68,7 +68,9 @@ def client(chats, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
-    command.stamp(Config(str(Path(__file__).resolve().parents[1] / 'alembic.ini')), 'head')
+    config = Config(str(Path(__file__).resolve().parents[1] / 'alembic.ini'))
+    config.set_main_option('script_location', str(Path(__file__).resolve().parents[1] / 'migrations'))
+    command.stamp(config, 'head')
     rag.chat_limiter.hits.clear()
     with TestClient(app) as c:
         yield c
