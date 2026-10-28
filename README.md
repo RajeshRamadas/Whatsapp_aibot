@@ -10,7 +10,7 @@ The plan for turning it into a product businesses pay for:
 - [docs/DESIGN.md](docs/DESIGN.md): technical design and delivery plan
 - [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md): every outside system it connects to, and the rules connectors follow
 - [docs/UX_DESIGN.md](docs/UX_DESIGN.md): user experience, conversation and visual design requirements
-- [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md): step-by-step tasks for building it, one pull request each, written so AI coding agents can work through them ([CLAUDE.md](CLAUDE.md) has the repo commands and rules)
+- [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md): step-by-step tasks for building it, one pull request each, written so any AI coding tool (ChatGPT/Codex, Gemini, Claude, Cursor, Copilot) can work through them. [AGENTS.md](AGENTS.md) has the repo commands and rules
 
 - Upload PDF, DOCX, TXT, Markdown, CSV, XLSX or JSON. Text is chunked, embedded and stored in PostgreSQL + pgvector.
 - Answers are grounded in the closest chunks, with numbered citations, and say "I don't know" when the documents don't cover the question.

@@ -6,24 +6,24 @@
 | Last updated | 2026-10-28 |
 | Derived from | [REQUIREMENTS.md](REQUIREMENTS.md), [DESIGN.md](DESIGN.md), [INTEGRATIONS.md](INTEGRATIONS.md), [UX_DESIGN.md](UX_DESIGN.md) |
 
-This plan breaks the product into small, ordered tasks. Each task is sized so that one AI coding session (Claude Code or similar) can build, test and open a pull request for it, and so that a human can review it in under an hour. Tasks name the requirement IDs they deliver, so every line of code traces back to the documents above.
+This plan breaks the product into small, ordered tasks. Each task is sized so that one session with any AI coding tool (ChatGPT/Codex, Gemini, Claude, Cursor, Copilot and others; see §2.1) can build, test and open a pull request for it, and so that a human can review it in under an hour. Tasks name the requirement IDs they deliver, so every line of code traces back to the documents above.
 
 ## 1. How to use this plan
 
 1. **Pick the first task whose dependencies are all merged.** Tasks are numbered in build order (`T<milestone>.<n>`). Status is tracked in §6.
 2. **Start a fresh session per task** on a new branch named `feat/<task-id>-<short-name>` (for example `feat/t1-3-users-sessions`).
-3. **Give the agent the prompt in §2**, with the task ID filled in. The agent reads `CLAUDE.md`, this plan's §3 and §4, the task, and the requirement IDs it lists.
+3. **Give the agent the prompt in §2**, with the task ID filled in. The agent reads `AGENTS.md`, this plan's §3 and §4, the task, and the requirement IDs it lists.
 4. **One task = one pull request.** If a task turns out bigger than expected, the agent stops after a coherent part, opens the PR, and proposes how to split the rest.
 5. **After merge,** tick the task in §6 and note anything that changed the plan (new decisions, renamed modules) in the task's "Notes" line.
 
 ## 2. Session prompt template
 
-Copy this into a new session, replacing `<TASK-ID>`:
+Copy this into a new session, replacing `<TASK-ID>`. It works with any tool that can read and edit the repository; §2.1 covers chat-only tools.
 
 ```text
 Implement task <TASK-ID> from docs/IMPLEMENTATION_PLAN.md.
 
-1. Read CLAUDE.md, sections 3 and 4 of docs/IMPLEMENTATION_PLAN.md, the task itself,
+1. Read AGENTS.md, sections 3 and 4 of docs/IMPLEMENTATION_PLAN.md, the task itself,
    and every requirement ID it lists (REQUIREMENTS.md, INTEGRATIONS.md, UX_DESIGN.md)
    plus the DESIGN.md sections it references.
 2. Check that the task's dependencies are merged on main. If not, stop and say which.
@@ -34,7 +34,37 @@ Implement task <TASK-ID> from docs/IMPLEMENTATION_PLAN.md.
    instead of fixing it.
 6. Open a pull request titled "<TASK-ID>: <task title>" whose description lists the
    requirement IDs delivered, what was tested, and anything left for later.
+   (If you can't open pull requests, give me the branch name and the PR text instead.)
 ```
+
+### 2.1 Using different AI tools
+
+The plan works with any model and tool. The repo-level rules are in `AGENTS.md`, the one file all tools share. Small pointer files make each tool find it automatically:
+
+| Tool | How it finds the rules | How to run a task |
+|---|---|---|
+| **OpenAI Codex** (CLI, IDE or cloud), ChatGPT with Codex | Reads `AGENTS.md` automatically | Open the repo, paste the §2 prompt |
+| **Gemini CLI**, Gemini Code Assist | `GEMINI.md` imports `AGENTS.md` | Open the repo, paste the §2 prompt |
+| **Claude Code** | `CLAUDE.md` imports `AGENTS.md` | Open the repo, paste the §2 prompt |
+| **Cursor**, **Windsurf** and similar editors | Read `AGENTS.md` (or attach it to the chat) | Agent mode, paste the §2 prompt |
+| **GitHub Copilot** (agent mode or coding agent) | `.github/copilot-instructions.md` points to `AGENTS.md` | Assign an issue containing the §2 prompt, or paste it in agent mode |
+| **Chat-only apps** (ChatGPT, Gemini or Claude on the web, with no repo access) | You paste the files in | Follow the steps below |
+
+**With a chat-only app,** the model can't see or run the code, so you act as its hands:
+
+1. **Give it context.** Start a new chat. Paste the §2 prompt, then paste (or upload) `AGENTS.md`, §3–4 of this plan, the task, the requirement sections it lists, and every file named in the task's "Files". If a file is long, paste only the parts the task changes, and say so.
+2. **Ask for the plan first,** as in the prompt's step 3. Correct it before any code is written.
+3. **Ask for complete files or unified diffs,** one file at a time, with each file's path. For example: "Give me the full new content of app/api/auth.py" or "Give me a git diff I can apply with git apply". Apply them on a new branch.
+4. **Run the checks yourself** (`pytest -q`, `ruff check …`, and the frontend checks if `web/` changed). Paste any failures back word for word and ask for fixes. Repeat until everything passes.
+5. **Ask for the PR description** (requirement IDs, tests, follow-ups), then commit, push and open the PR yourself.
+
+**Tips that help every model:**
+
+- **One task per session.** Long sessions drift; a fresh session per task keeps the model focused on the plan.
+- **Always ask for tests with the code,** and run them before accepting the change. "Tests pass" from a model that hasn't run them is not evidence.
+- **Keep the plan as the source of truth.** If the model suggests a different approach, decide, then update this plan (or the design documents) in the same PR, so the next session, whichever model runs it, sees the decision.
+- **Review security-sensitive tasks closely** whatever tool wrote them: auth (T1.3–T1.5), encryption (T1.8), webhooks (T2.3, T7.2), billing (T7.x) and the HTTP connector (T10.3).
+- **Different models may write the same thing differently.** The conventions in §3 and the tests are what keep the code base consistent; ask the model to match the surrounding code's style.
 
 ## 3. Conventions every task follows
 
@@ -115,7 +145,7 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 - **Size:** S
 - **Steps:**
   1. Add a `ruff.toml` (line length 120, rules E, F, W, I, B, ignoring B008) and run `ruff check` in CI before `pytest`.
-  2. Confirm `CLAUDE.md` matches the commands in this plan.
+  2. Confirm `AGENTS.md` matches the commands in this plan.
 - **Done when:** CI fails on a lint error and passes on `main`.
 
 ### M1: Foundations (DESIGN §16 steps 1–3, §17 M1)
