@@ -1,0 +1,88 @@
+import hashlib
+import hmac
+import json
+import os
+
+import pytest
+
+os.environ.setdefault('DATABASE_URL', 'postgresql+psycopg://postgres@127.0.0.1:5433/chatbot_test')
+os.environ.setdefault('ADMIN_BOOTSTRAP_TOKEN', 'test-bootstrap')
+os.environ.update(WHATSAPP_VERIFY_TOKEN='verify-me', WHATSAPP_APP_SECRET='app-secret',
+                  WHATSAPP_ACCESS_TOKEN='wa-token', EMBEDDING_DIMENSIONS='3')
+
+from fastapi.testclient import TestClient  # noqa: E402
+
+from app import llm, rag, whatsapp  # noqa: E402
+from app.db import Base, engine  # noqa: E402
+from app.main import app  # noqa: E402
+
+# Tiny fake embedding space: each keyword is an axis.
+AXES = ('refund', 'shipping', 'hours')
+
+
+class FakeEmbedder:
+    def embed(self, texts, *, query=False):
+        out = []
+        for t in texts:
+            v = [float(t.lower().count(a)) for a in AXES]
+            out.append(v if any(v) else [0.01, 0.01, 0.01])
+        return out
+
+
+class FakeChat:
+    def __init__(self, name):
+        self.name, self.calls = name, []
+
+    def complete(self, model, system, messages):
+        self.calls.append({'model': model, 'system': system, 'messages': messages})
+        return f'{self.name}:{model}: {messages[-1]["content"]}'
+
+
+@pytest.fixture
+def chats(monkeypatch):
+    fakes = {name: FakeChat(name) for name in llm.CHAT_PROVIDERS}
+    monkeypatch.setattr(llm, 'chat_provider', lambda name: fakes[name])
+    monkeypatch.setattr(llm, 'embedder', lambda: FakeEmbedder())
+    return fakes
+
+
+@pytest.fixture
+def sent(monkeypatch):
+    messages = []
+    monkeypatch.setattr(whatsapp, 'send_text', lambda pid, to, body: messages.append((pid, to, body)))
+    return messages
+
+
+@pytest.fixture
+def client(chats, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    Base.metadata.drop_all(engine)
+    rag.chat_limiter.hits.clear()
+    with TestClient(app) as c:
+        yield c
+
+
+@pytest.fixture
+def tenant(client):
+    r = client.post('/api/v1/tenants', headers={'X-Bootstrap-Token': 'test-bootstrap'},
+                    json={'name': 'Demo Store', 'allowed_origins': ['https://shop.example']})
+    assert r.status_code == 200, r.text
+    data = r.json()
+    data['headers'] = {'X-Admin-Key': data['admin_key']}
+    return data
+
+
+def signed(body: dict) -> tuple[bytes, dict]:
+    raw = json.dumps(body).encode()
+    sig = hmac.new(b'app-secret', raw, hashlib.sha256).hexdigest()
+    return raw, {'X-Hub-Signature-256': f'sha256={sig}', 'Content-Type': 'application/json'}
+
+
+def wa_payload(text='hi', msg_id='wamid.1', sender='15551234567', phone_number_id='PNID1', kind='text'):
+    msg = {'from': sender, 'id': msg_id, 'timestamp': '1700000000', 'type': kind}
+    if kind == 'text':
+        msg['text'] = {'body': text}
+    return {'object': 'whatsapp_business_account', 'entry': [{'id': 'WABA', 'changes': [{'field': 'messages', 'value': {
+        'messaging_product': 'whatsapp',
+        'metadata': {'display_phone_number': '1555000', 'phone_number_id': phone_number_id},
+        'contacts': [{'wa_id': sender, 'profile': {'name': 'Test'}}], 'messages': [msg]}}]}]}

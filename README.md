@@ -1,10 +1,17 @@
-# Universal AI Chatbot — runnable foundation
+# WhatsApp AI Chatbot
 
-A **development starter**, not a production-complete platform. Supports tenant-scoped uploads (PDF, DOCX, TXT, Markdown, CSV, XLSX, JSON), OpenAI embeddings, pgvector retrieval, grounded chat and an embeddable widget.
+A multi-tenant chatbot that answers customer questions from your own documents, on **WhatsApp** and on your **website**. Each tenant picks its AI provider: **OpenAI (ChatGPT)**, **Anthropic (Claude)** or **Google Gemini**.
+
+It is a **development starter**, not a production-complete platform: read [Production gaps](#production-gaps) before going live.
+
+- Upload PDF, DOCX, TXT, Markdown, CSV, XLSX or JSON. Text is chunked, embedded and stored in PostgreSQL + pgvector.
+- Answers are grounded in the closest chunks, with numbered citations, and say "I don't know" when the documents don't cover the question.
+- WhatsApp Cloud API webhook with signature checks, duplicate filtering, background replies and handoff to a human agent.
+- Embeddable website widget.
 
 ## Getting started
 
-1. Copy `.env.example` to `.env`; set `OPENAI_API_KEY` and a long random `ADMIN_BOOTSTRAP_TOKEN`.
+1. Copy `.env.example` to `.env`. Set a long random `ADMIN_BOOTSTRAP_TOKEN` and the API key of at least one provider (see [AI providers](#ai-providers)).
 2. Run `docker compose up --build`.
 3. Open `http://localhost:8000/docs` for the API documentation.
 4. Create a tenant:
@@ -15,14 +22,14 @@ curl -X POST http://localhost:8000/api/v1/tenants \
   -d '{"name":"Demo Store","allowed_origins":["http://localhost:3000"]}'
 ```
 
-5. Save the generated `admin_key` and `public_key`, then upload a document:
+5. Save the `admin_key` (shown only once) and the `public_key`, then upload a document:
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/sources \
   -H 'X-Admin-Key: YOUR_ADMIN_KEY' -F 'file=@sample.pdf'
 ```
 
-6. Use `GET /api/v1/sources` with your admin key to check ingestion, then chat:
+6. Check ingestion with `GET /api/v1/sources`, then chat:
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/chat/YOUR_PUBLIC_KEY \
@@ -35,25 +42,108 @@ curl -X POST http://localhost:8000/api/v1/chat/YOUR_PUBLIC_KEY \
 <script src="http://localhost:8000/widget.js" data-chatbot-key="YOUR_PUBLIC_KEY" defer></script>
 ```
 
-## Architecture
+## AI providers
 
-- `app/main.py`: FastAPI, tenancy, parsing, ingestion, embedding, retrieval and chat.
-- `widget/widget.js`: dependency-free, embeddable website widget.
-- PostgreSQL + pgvector: tenant-scoped vector storage.
-- Docker Compose: local development environment.
+| Provider | Key | Default chat model | Embeddings |
+|---|---|---|---|
+| `openai` | `OPENAI_API_KEY` | `gpt-4.1-mini` | `text-embedding-3-small` |
+| `anthropic` | `ANTHROPIC_API_KEY` | `claude-opus-5-5` | none (Anthropic has no embeddings API) |
+| `gemini` | `GEMINI_API_KEY` | `gemini-2.5-flash` | `gemini-embedding-001` |
 
-## Production gaps
+**Chat** is chosen per tenant, so different customers can use different providers. `CHAT_PROVIDER` / `CHAT_MODEL` set the server default; a tenant overrides it with its admin key:
 
-- **Security:** Origin allowlisting is not authentication. Add session ownership, strong user auth, tenant quotas, rate limits, abuse prevention, file validation, malware scanning, audit logging and secrets management.
-- **Structured data:** CSV/JSON/XLSX are turned into text for retrieval. Exact aggregates, SQL analysis and numerical reasoning require a dedicated read-only query engine.
-- **Ingestion:** FastAPI BackgroundTasks are not durable. Replace with Redis/Celery or equivalent queue, idempotent processing, retries and versioning.
-- **Retrieval:** Add OCR, table parsing, hybrid search, reranking, citation verification, relevance thresholds and evaluation tests.
-- **Operations:** Add database migrations, CI, tests, monitoring, backups and deployment strategy.
-- **WhatsApp:** Not yet implemented. Build a Meta Cloud API adapter with verified webhooks, deduplication, async delivery, templates and agent handoff.
-- **Embeddings:** VECTOR(1536) assumes text-embedding-3-small's default dimensionality; switching dimensions requires migration and reindexing.
+```bash
+curl -X PATCH http://localhost:8000/api/v1/tenant -H 'X-Admin-Key: YOUR_ADMIN_KEY' \
+  -H 'Content-Type: application/json' -d '{"chat_provider":"anthropic"}'
+# or a specific model:  -d '{"chat_provider":"gemini","chat_model":"gemini-2.5-pro"}'
+# back to the server default: -d '{"chat_provider":null}'
+```
 
-Do not deploy this starter to a public-facing production service without addressing these gaps.
+Changing the provider without a `chat_model` resets the model to that provider's default.
+
+Claude requests use low effort, which suits short grounded answers, and opt in to Anthropic's server-side refusal fallback (`fallbacks: "default"`). If Claude still declines, the user gets a polite refusal message.
+
+**Embeddings** are one setting for the whole deployment (`EMBEDDING_PROVIDER`, `EMBEDDING_MODEL`, `EMBEDDING_DIMENSIONS`), because all vectors in the index must come from the same model. So a Claude-only deployment still needs an OpenAI or Gemini key for embeddings. Switching the embedding model means recreating the `chunks` table and re-uploading sources.
+
+## WhatsApp setup
+
+1. In [Meta for Developers](https://developers.facebook.com/), create an app with the **WhatsApp** product and add a phone number.
+2. Set in `.env`:
+   - `WHATSAPP_ACCESS_TOKEN`: a permanent System User token with `whatsapp_business_messaging`.
+   - `WHATSAPP_APP_SECRET`: *App settings → Basic → App secret*. Every webhook call is checked against it (`X-Hub-Signature-256`).
+   - `WHATSAPP_VERIFY_TOKEN`: any random string you choose.
+3. Expose the API over HTTPS (for local testing, a tunnel such as ngrok or cloudflared). Then under *WhatsApp → Configuration*, set the callback URL to `https://YOUR_HOST/webhooks/whatsapp` with the same verify token, and subscribe to the `messages` field.
+4. Link the phone number to a tenant using its **Phone number ID** (from *WhatsApp → API Setup*):
+
+```bash
+curl -X PATCH http://localhost:8000/api/v1/tenant -H 'X-Admin-Key: YOUR_ADMIN_KEY' \
+  -H 'Content-Type: application/json' -d '{"whatsapp_phone_number_id":"123456789012345"}'
+```
+
+How it behaves:
+
+- Each WhatsApp user gets one ongoing conversation per tenant, so the bot remembers recent messages.
+- Meta's retries are recognised by message ID and answered once. The webhook returns 200 straight away and replies from a background task.
+- Text, quick-reply buttons and interactive list replies are answered. Other types (images, voice notes) get a "text only" reply.
+- **Human handoff:** a user who sends one of `WHATSAPP_HANDOFF_KEYWORDS` (default `human`, `agent`) is told a person will reply, and the bot goes quiet for that conversation. Agents use the admin API:
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/v1/conversations?handoff=true` | Conversations waiting for a human |
+| `GET /api/v1/conversations/{id}/messages` | Transcript |
+| `POST /api/v1/conversations/{id}/reply` | Send a WhatsApp message as the agent |
+| `POST /api/v1/conversations/{id}/handoff?active=false` | Hand the conversation back to the bot |
+
+WhatsApp only allows free-form replies within 24 hours of the user's last message. Reaching a user after that needs an approved template, which is not implemented.
 
 ## API
 
-Routes: `/health`, `/api/v1/tenants`, `/api/v1/sources`, `/api/v1/chat/{public_key}`, `/widget.js`.
+| Route | Auth | Purpose |
+|---|---|---|
+| `GET /health` | none | Liveness |
+| `POST /api/v1/tenants` | `X-Bootstrap-Token` | Create a tenant |
+| `GET`, `PATCH /api/v1/tenant` | `X-Admin-Key` | View or change tenant settings (name, origins, provider, model, WhatsApp number) |
+| `POST`, `GET /api/v1/sources`, `DELETE /api/v1/sources/{id}` | `X-Admin-Key` | Manage knowledge sources |
+| `POST /api/v1/chat/{public_key}` | public key + allowed origin | Website chat |
+| `/api/v1/conversations…` | `X-Admin-Key` | Transcripts and handoff (above) |
+| `GET`, `POST /webhooks/whatsapp` | Meta verify token / signature | WhatsApp webhook |
+| `GET /widget.js` | none | Website widget |
+
+## Architecture
+
+- `app/main.py`: FastAPI routes, tenant auth and CORS.
+- `app/rag.py`: retrieval, prompt and answer, shared by web and WhatsApp, plus the rate limiter. No database connection is held during LLM calls.
+- `app/llm.py`: OpenAI, Anthropic and Gemini chat clients, and OpenAI and Gemini embedders.
+- `app/whatsapp.py`: webhook parsing, signature check, dedupe, replies and handoff.
+- `app/ingest.py`: file parsing, chunking and embedding. A failed ingest leaves no partial chunks.
+- `app/db.py`: SQLAlchemy models. Tables are created at startup, with an HNSW cosine index on embeddings.
+- `widget/widget.js`: dependency-free website widget.
+
+## Tests
+
+The tests use a real PostgreSQL with pgvector, and fake LLM and WhatsApp clients, so they need no API keys:
+
+```bash
+docker run -d --name chatbot-test -p 5433:5432 -e POSTGRES_HOST_AUTH_METHOD=trust \
+  -e POSTGRES_DB=chatbot_test pgvector/pgvector:pg16
+pip install -r requirements.txt -r requirements-dev.txt
+pytest -q   # DATABASE_URL defaults to postgresql+psycopg://postgres@127.0.0.1:5433/chatbot_test
+```
+
+The tests drop and recreate every table, so never point `DATABASE_URL` at real data when running them. CI runs the same suite on every push (`.github/workflows/ci.yml`).
+
+## Upgrading from 0.1
+
+The schema changed: new tenant, conversation and message columns, the `whatsapp_inbound` table and the vector index. There are no migrations yet, so recreate the development database (`docker compose down -v`) and re-upload sources.
+
+## Production gaps
+
+- **Durable jobs:** ingestion and WhatsApp replies run as FastAPI background tasks, which are lost if the process restarts. Move them to a queue (Redis + RQ/Celery, or similar) with retries.
+- **Rate limits** are in memory and per process, keyed by client IP for the website. Behind a reverse proxy, run uvicorn with `--proxy-headers --forwarded-allow-ips=<proxy IP>` so the real IP is used. Use Redis for several workers, and add per-tenant quotas and spending caps.
+- **Migrations:** add Alembic before you have data worth keeping.
+- **Security:** the public key and origin allowlist identify a tenant; they don't authenticate anyone. Add session ownership for web conversations, malware scanning of uploads, audit logs and secrets management. WhatsApp access tokens are global (one Meta app); per-tenant tokens would need encrypted storage.
+- **WhatsApp:** message templates (for the 24-hour window), media handling (images, voice transcription), read receipts and typing indicators are not implemented.
+- **Retrieval:** add OCR, table-aware parsing, hybrid search, reranking and evaluation tests. Tune `RETRIEVAL_MAX_DISTANCE` for your embedding model. CSV/JSON/XLSX are retrieved as text, so exact totals and aggregates need a dedicated query engine.
+- **Operations:** monitoring, backups and a deployment strategy.
+
+Do not deploy this starter to a public-facing production service without addressing these gaps.
