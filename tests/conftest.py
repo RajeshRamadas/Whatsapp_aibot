@@ -11,12 +11,12 @@ os.environ.setdefault('ADMIN_BOOTSTRAP_TOKEN', 'test-bootstrap')
 os.environ.update(WHATSAPP_VERIFY_TOKEN='verify-me', WHATSAPP_APP_SECRET='app-secret',
                   WHATSAPP_ACCESS_TOKEN='wa-token', EMBEDDING_DIMENSIONS='3')
 
+from alembic import command  # noqa: E402
+from alembic.config import Config  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
 from app import llm, rag, whatsapp  # noqa: E402
 from app.db import Base, engine  # noqa: E402
-from alembic import command  # noqa: E402
-from alembic.config import Config  # noqa: E402
 from app.main import app  # noqa: E402
 
 # Tiny fake embedding space: each keyword is an axis.
