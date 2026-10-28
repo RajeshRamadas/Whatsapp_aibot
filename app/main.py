@@ -17,7 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from openai import OpenAI
 from openpyxl import load_workbook
 from pgvector.sqlalchemy import Vector
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pypdf import PdfReader
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, create_engine, select, text
@@ -31,6 +31,18 @@ class Settings(BaseSettings):
     admin_bootstrap_token: str
     public_base_url: str = 'http://localhost:8000'
     max_upload_mb: int = 15
+    deployment_mode: str = 'development'
+    admin_dashboard_user: str = 'admin'
+    admin_dashboard_password: str = ''
+
+    @field_validator('database_url')
+    @classmethod
+    def normalize_database_url(cls, value: str) -> str:
+        if value.startswith('postgres://'):
+            return 'postgresql+psycopg://' + value[len('postgres://'):]
+        if value.startswith('postgresql://'):
+            return 'postgresql+psycopg://' + value[len('postgresql://'):]
+        return value
     model_config = SettingsConfigDict(env_file='.env', extra='ignore')
 
 settings = Settings()
@@ -81,8 +93,53 @@ async def lifespan(app):
     Base.metadata.create_all(engine)
     yield
 
-app = FastAPI(title='Universal Knowledge Chatbot', version='0.2.0', lifespan=lifespan)
+app = FastAPI(title='Universal Knowledge Chatbot', version='0.3.0', lifespan=lifespan,
+              docs_url=None if settings.deployment_mode == 'production' else '/docs',
+              redoc_url=None if settings.deployment_mode == 'production' else '/redoc',
+              openapi_url=None if settings.deployment_mode == 'production' else '/openapi.json')
 app.mount('/chat/assets', StaticFiles(directory='chat'), name='chat-assets')
+# Production hardening for the developer dashboard; replace with SSO/RBAC before SaaS launch.
+@app.middleware('http')
+async def production_security(request: Request, call_next):
+    path = request.url.path
+    if settings.deployment_mode == 'production':
+        protected = path == '/admin' or path.startswith('/admin/') or path == '/api/v1/tenants'
+        if protected:
+            import base64
+            from fastapi.responses import PlainTextResponse
+            supplied = request.headers.get('authorization', '')
+            valid = False
+            if supplied.startswith('Basic ') and settings.admin_dashboard_password:
+                try:
+                    decoded = base64.b64decode(supplied[6:], validate=True).decode('utf-8')
+                    username, password = decoded.split(':', 1)
+                    valid = secrets.compare_digest(username, settings.admin_dashboard_user) and secrets.compare_digest(password, settings.admin_dashboard_password)
+                except (ValueError, UnicodeError):
+                    pass
+            if not valid:
+                return PlainTextResponse('Administrator authentication required', status_code=401,
+                    headers={'WWW-Authenticate': 'Basic realm="Chatbot Admin"', 'Cache-Control': 'no-store'})
+    response = await call_next(request)
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    if settings.deployment_mode == 'production':
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        if path == '/chat':
+            key = request.query_params.get('key', '')
+            origins = []
+            if key:
+                with Session() as db:
+                    tenant = db.scalar(select(Tenant).where(Tenant.public_key == key))
+                    if tenant:
+                        origins = json.loads(tenant.allowed_origins)
+            valid_origins = [o for o in origins if o.startswith('https://') and not any(c in o for c in ' ;\r\n')]
+            response.headers['Content-Security-Policy'] = "frame-ancestors 'self' " + ' '.join(valid_origins)
+        elif path == '/admin':
+            response.headers['Content-Security-Policy'] = "frame-ancestors 'none'"
+        elif path.startswith('/admin/'):
+            response.headers['Cache-Control'] = 'no-store'
+    return response
+
 # Allow only registered website origins for public chat, including preflight requests.
 @app.middleware('http')
 async def tenant_cors(request: Request, call_next):
