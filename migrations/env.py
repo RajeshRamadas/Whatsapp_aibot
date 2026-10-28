@@ -1,9 +1,12 @@
+from pathlib import Path
+
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 from app.config import settings
 from app.db import Base
 
 config = context.config
+config.set_main_option('script_location', str(Path(__file__).resolve().parent))
 config.set_main_option("sqlalchemy.url", settings.database_url.replace("%", "%%"))
 target_metadata = Base.metadata
 
