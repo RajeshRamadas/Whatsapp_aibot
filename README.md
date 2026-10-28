@@ -112,3 +112,7 @@ Open `http://localhost:8000/admin` after starting Docker Compose.
 ## Render staging deployment
 
 A Render Blueprint is provided in [`render.yaml`](render.yaml), with managed PostgreSQL (pgvector), HTTPS web hosting, an upload disk, and secret environment variables. See **[Render deployment instructions](docs/RENDER_DEPLOYMENT.md)** for costs, setup, validation, security controls and public-launch blockers. Do not expose this development chatbot to public customers before adding authenticated chat sessions, rate limits and other controls described there.
+
+## Free local test environment
+
+See [free local testing](docs/FREE_LOCAL_TESTING.md). Docker Compose runs the API and pgvector on your own machine with no hosting fees; OpenAI API calls remain billable.
