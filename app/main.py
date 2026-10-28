@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     deployment_mode: str = 'development'
     admin_dashboard_user: str = 'admin'
     admin_dashboard_password: str = ''
+    delete_upload_after_ingest: bool = False
 
     @field_validator('database_url')
     @classmethod
@@ -223,6 +224,9 @@ def ingest(source_id):
         except Exception as e:
             db.rollback(); src=db.get(Source,source_id)
             src.status='failed'; src.error=str(e)[:500]; db.commit()
+        finally:
+            if settings.delete_upload_after_ingest:
+                Path(src.file_path).unlink(missing_ok=True)
 
 class CreateTenant(BaseModel):
     name: str = Field(min_length=2,max_length=200)
