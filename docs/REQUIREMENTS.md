@@ -4,7 +4,7 @@
 |---|---|
 | Status | Draft for review |
 | Last updated | 2026-10-28 |
-| Companions | [DESIGN.md](DESIGN.md) (technical design), [INTEGRATIONS.md](INTEGRATIONS.md) (integrations), [UX_DESIGN.md](UX_DESIGN.md) (UX and visual design) |
+| Companions | [DESIGN.md](DESIGN.md) (technical design), [INTEGRATIONS.md](INTEGRATIONS.md) (integrations), [UX_DESIGN.md](UX_DESIGN.md) (UX and visual design), [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) (build tasks) |
 
 ## 1. Purpose
 
