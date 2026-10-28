@@ -1,3 +1,6 @@
+import re
+
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Used when neither the tenant nor CHAT_MODEL / EMBEDDING_MODEL names a model.
@@ -31,7 +34,12 @@ class Settings(BaseSettings):
 
     # Retrieval
     retrieval_top_k: int = 6
+    retrieval_candidates: int = 20  # per search method, before the results are merged
     retrieval_max_distance: float = 0.8  # cosine distance; chunks further away are ignored
+    # Postgres text search language for keyword matching ('english' stems and drops stopwords;
+    # 'simple' matches words exactly, better for mixed-language content). Changing it needs a fresh chunks table.
+    text_search_config: str = 'english'
+    query_rewrite: bool = True  # turn follow-ups like "and for shipping?" into a full question before searching
     history_messages: int = 8
 
     max_upload_mb: int = 15
@@ -45,6 +53,13 @@ class Settings(BaseSettings):
     whatsapp_handoff_keywords: str = 'human,agent'
 
     model_config = SettingsConfigDict(env_file='.env', extra='ignore')
+
+    @field_validator('text_search_config')
+    @classmethod
+    def _plain_identifier(cls, value: str) -> str:
+        if not re.fullmatch(r'[a-z_]+', value):  # it is placed in SQL as a regconfig name
+            raise ValueError('TEXT_SEARCH_CONFIG must be a Postgres text search configuration name, like english')
+        return value
 
     @property
     def whatsapp_enabled(self) -> bool:
