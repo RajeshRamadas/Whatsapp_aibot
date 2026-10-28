@@ -56,6 +56,9 @@ def test_non_text_message(client, tenant, sent):
     link_number(client, tenant)
     post(client, wa_payload(kind='image'))
     assert sent[0][2].startswith('Sorry, I can only read text')
+    [conv] = client.get('/api/v1/conversations', headers=tenant['headers']).json()
+    transcript = client.get(f"/api/v1/conversations/{conv['id']}/messages", headers=tenant['headers']).json()
+    assert [(m['role'], m['content']) for m in transcript] == [('user', '[image message]'), ('assistant', sent[0][2])]
 
 
 def test_handoff_to_human_and_back(client, tenant, sent, chats):

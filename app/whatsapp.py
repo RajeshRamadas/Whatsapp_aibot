@@ -106,8 +106,11 @@ def handle(tenant_id: str, message: dict) -> None:
             tenant = db.get(Tenant, tenant_id)
         conv = conversation_for(tenant_id, wa_user)
         if not text:
-            rag.save_exchange(conv, ('user', f"[{message['type']} message]"))
-            if not conv.handoff:
+            placeholder = ('user', f"[{message['type']} message]")
+            if conv.handoff:
+                rag.save_exchange(conv, placeholder)
+            else:
+                rag.save_exchange(conv, placeholder, ('assistant', UNSUPPORTED_REPLY))
                 send_text(phone_number_id, wa_user, UNSUPPORTED_REPLY)
             return
         if conv.handoff:  # a human agent owns this conversation
