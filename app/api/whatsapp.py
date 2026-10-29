@@ -13,8 +13,17 @@ from .. import evaluate, ingest, llm, rag, whatsapp
 from ..config import settings
 from ..db import Conversation, EvalCase, Message, Session, Source, Tenant, uid
 from .shared import (
-    AgentReply, ChatInput, CreateTenant, EvalCasesInput, UpdateTenant, UPLOADS, WIDGET,
-    admin_tenant, eval_view, origins, tenant_view,
+    UPLOADS,
+    WIDGET,
+    AgentReply,
+    ChatInput,
+    CreateTenant,
+    EvalCasesInput,
+    UpdateTenant,
+    admin_tenant,
+    eval_view,
+    origins,
+    tenant_view,
 )
 
 log = logging.getLogger(__name__)
