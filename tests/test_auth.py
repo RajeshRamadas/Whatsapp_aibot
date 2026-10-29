@@ -1,6 +1,6 @@
 from app.api import auth
-from app.services import email
 from app.config import settings
+from app.services import email
 
 
 # TestClient uses HTTP; production continues to default to Secure cookies.
