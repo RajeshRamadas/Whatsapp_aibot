@@ -18,6 +18,7 @@ DEFAULT_EMBEDDING_MODELS = {
 class Settings(BaseSettings):
     database_url: str
     admin_bootstrap_token: str
+    auth_cookie_secure: bool = True
 
     # LLM providers. Only the providers you use need a key.
     openai_api_key: str | None = None
