@@ -23,6 +23,7 @@ from .shared import (
     admin_tenant,
     eval_view,
     origins,
+    sha,
     tenant_view,
 )
 
