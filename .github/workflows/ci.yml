@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: postgresql+psycopg://postgres@127.0.0.1:5433/chatbot_test
-      ADMIN_BOOTSTRAP_TOKEN: ci-test-bootstrap
+      ADMIN_BOOTSTRAP_TOKEN: test-bootstrap
       EMBEDDING_DIMENSIONS: '3'
     services:
       postgres:
