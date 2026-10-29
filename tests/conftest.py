@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import json
 import os
+from pathlib import Path
 
 import pytest
 
@@ -10,6 +11,8 @@ os.environ.setdefault('ADMIN_BOOTSTRAP_TOKEN', 'test-bootstrap')
 os.environ.update(WHATSAPP_VERIFY_TOKEN='verify-me', WHATSAPP_APP_SECRET='app-secret',
                   WHATSAPP_ACCESS_TOKEN='wa-token', EMBEDDING_DIMENSIONS='3')
 
+from alembic import command  # noqa: E402
+from alembic.config import Config  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
 from app import llm, rag, whatsapp  # noqa: E402
@@ -64,6 +67,10 @@ def sent(monkeypatch):
 def client(chats, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     Base.metadata.drop_all(engine)
+    Base.metadata.create_all(engine)
+    config = Config(str(Path(__file__).resolve().parents[1] / 'alembic.ini'))
+    config.set_main_option('script_location', str(Path(__file__).resolve().parents[1] / 'migrations'))
+    command.stamp(config, 'head')
     rag.chat_limiter.hits.clear()
     with TestClient(app) as c:
         yield c

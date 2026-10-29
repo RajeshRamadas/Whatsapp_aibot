@@ -14,7 +14,6 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     create_engine,
-    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
@@ -127,6 +126,18 @@ class WhatsAppInbound(Base):
 
 
 def init_db() -> None:
-    with engine.begin() as con:
-        con.execute(text('CREATE EXTENSION IF NOT EXISTS vector'))
-    Base.metadata.create_all(engine)
+    """Reject an unversioned or outdated database; never modify schema on app startup."""
+    from pathlib import Path
+
+    from alembic.config import Config
+    from alembic.runtime.migration import MigrationContext
+    from alembic.script import ScriptDirectory
+
+    config = Config(str(Path(__file__).resolve().parent.parent / 'alembic.ini'))
+    config.set_main_option('script_location', str(Path(__file__).resolve().parent.parent / 'migrations'))
+    expected = ScriptDirectory.from_config(config).get_current_head()
+    with engine.connect() as con:
+        actual = MigrationContext.configure(con).get_current_revision()
+    if actual != expected:
+        raise RuntimeError(f'Database revision {actual!r} does not match required {expected!r}; '
+                           'run alembic upgrade head before starting the API')
