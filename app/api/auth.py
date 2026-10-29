@@ -33,7 +33,7 @@ class Credentials(BaseModel):
 
 class CodeInput(BaseModel):
     email: EmailStr
-    code: str = Field(pattern=r'^\d{6}
+    code: str = Field(pattern=r'^\d{6}$')
 
 
 class ResetRequest(BaseModel):
