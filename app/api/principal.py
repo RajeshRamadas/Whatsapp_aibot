@@ -1,10 +1,10 @@
 """Workspace principal resolution and role checks."""
 from dataclasses import dataclass
 
-from fastapi import Depends, Header, HTTPException, Request
+from fastapi import Depends, Header, HTTPException, Request, Response
 from sqlalchemy import select
 
-from ..db import Membership, Session, Tenant, User
+from ..db import ApiKey, Membership, Session, Tenant, User, now
 from .auth import _csrf, _session
 from .shared import sha
 
@@ -21,18 +21,35 @@ class Principal:
 
 def current_principal(
     request: Request,
+    response: Response,
     workspace_id: str | None = Header(default=None, alias='X-Workspace-Id'),
     admin_key: str | None = Header(default=None, alias='X-Admin-Key'),
 ) -> Principal:
-    # Legacy keys remain valid until API-key migration (T1.5).
-    if admin_key:
-        with Session() as db:
-            tenant = db.scalar(select(Tenant).where(Tenant.admin_key_hash == sha(admin_key)))
-        if not tenant:
-            raise HTTPException(401, 'Invalid admin key')
-        if workspace_id and workspace_id != tenant.id:
-            raise HTTPException(404, 'Workspace not found')
-        return Principal(user=None, tenant=tenant, role='owner', legacy_key=True)
+    credential = None
+    legacy = False
+    authorization = request.headers.get('Authorization')
+    if authorization is not None:
+        scheme, _, value = authorization.partition(' ')
+        if scheme.lower() != 'bearer' or not value.strip():
+            raise HTTPException(401, 'Invalid bearer authorization')
+        credential = value.strip()
+    elif admin_key:
+        credential = admin_key
+        legacy = True
+    if credential:
+        with Session.begin() as db:
+            key = db.scalar(select(ApiKey).where(ApiKey.key_hash == sha(credential)).with_for_update())
+            if not key or key.revoked_at or (key.expires_at and key.expires_at <= now()):
+                raise HTTPException(401, 'Invalid or revoked API key')
+            tenant = db.get(Tenant, key.tenant_id)
+            if not tenant or (workspace_id and workspace_id != tenant.id):
+                raise HTTPException(404, 'Workspace not found')
+            key.last_used_at = now()
+            scopes = key.scopes
+        if legacy:
+            response.headers['Warning'] = '299 - "X-Admin-Key is deprecated; use Authorization: Bearer"'
+        role = max(scopes, key=lambda item: LEVELS[item]) if scopes else 'viewer'
+        return Principal(user=None, tenant=tenant, role=role, legacy_key=legacy)
     _, user = _session(request)
     if not workspace_id:
         raise HTTPException(400, 'X-Workspace-Id required')

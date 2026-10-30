@@ -11,7 +11,7 @@ from sqlalchemy import select
 
 from .. import evaluate, ingest, llm, rag, whatsapp
 from ..config import settings
-from ..db import Conversation, EvalCase, Message, Session, Source, Tenant, uid
+from ..db import ApiKey, Conversation, EvalCase, Message, Session, Source, Tenant, uid
 from .principal import tenant_for_role
 from .shared import (
     UPLOADS,
@@ -40,6 +40,9 @@ def create_tenant(body: CreateTenant, token: str | None = Header(default=None, a
                allowed_origins=json.dumps(body.allowed_origins))
     with Session.begin() as db:
         db.add(t)
+        db.flush()
+        db.add(ApiKey(id=uid(), tenant_id=t.id, name='Legacy admin key',
+                      key_prefix='adm_', key_hash=sha(key), scopes=['owner']))
     return {**tenant_view(t), 'admin_key': key, 'warning': 'Save admin key securely; shown only once'}
 
 

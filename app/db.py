@@ -190,3 +190,16 @@ class Invitation(Base):
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     invited_by: Mapped[str] = mapped_column(ForeignKey('users.id', ondelete='CASCADE'))
+
+
+class ApiKey(Base):
+    __tablename__ = 'api_keys'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'), index=True)
+    name: Mapped[str] = mapped_column(String(100))
+    key_prefix: Mapped[str] = mapped_column(String(24))
+    key_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    scopes: Mapped[list] = mapped_column(JSONB, default=list)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
