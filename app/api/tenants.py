@@ -44,7 +44,7 @@ def create_tenant(body: CreateTenant, token: str | None = Header(default=None, a
 
 
 @router.get('/api/v1/tenant')
-def get_tenant(tenant: Tenant = Depends(tenant_for_role('admin'))):
+def get_tenant(tenant: Tenant = Depends(tenant_for_role('viewer'))):
     return tenant_view(tenant)
 
 
