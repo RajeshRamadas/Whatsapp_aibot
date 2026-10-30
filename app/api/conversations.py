@@ -12,6 +12,7 @@ from sqlalchemy import select
 from .. import evaluate, ingest, llm, rag, whatsapp
 from ..config import settings
 from ..db import Conversation, EvalCase, Message, Session, Source, Tenant, uid
+from .principal import tenant_for_role
 from .shared import (
     UPLOADS,
     WIDGET,
@@ -31,7 +32,7 @@ router = APIRouter()
 
 @router.get('/api/v1/conversations')
 def list_conversations(handoff: bool | None = None, limit: int = Query(50, ge=1, le=200),
-                       tenant: Tenant = Depends(admin_tenant)):
+                       tenant: Tenant = Depends(tenant_for_role('viewer'))):
     query = select(Conversation).where(Conversation.tenant_id == tenant.id)
     if handoff is not None:
         query = query.where(Conversation.handoff == handoff)
@@ -50,7 +51,7 @@ def tenant_conversation(db, tenant: Tenant, conversation_id: str) -> Conversatio
 
 
 @router.get('/api/v1/conversations/{conversation_id}/messages')
-def conversation_messages(conversation_id: str, tenant: Tenant = Depends(admin_tenant)):
+def conversation_messages(conversation_id: str, tenant: Tenant = Depends(tenant_for_role('viewer'))):
     with Session() as db:
         conv = tenant_conversation(db, tenant, conversation_id)
         rows = db.scalars(select(Message).where(Message.conversation_id == conv.id).order_by(Message.id)).all()
@@ -58,7 +59,7 @@ def conversation_messages(conversation_id: str, tenant: Tenant = Depends(admin_t
 
 
 @router.post('/api/v1/conversations/{conversation_id}/handoff')
-def set_handoff(conversation_id: str, active: bool = True, tenant: Tenant = Depends(admin_tenant)):
+def set_handoff(conversation_id: str, active: bool = True, tenant: Tenant = Depends(tenant_for_role('agent'))):
     """active=true: a human takes over and the bot stops replying. active=false: hand back to the bot."""
     with Session.begin() as db:
         tenant_conversation(db, tenant, conversation_id).handoff = active
@@ -66,7 +67,7 @@ def set_handoff(conversation_id: str, active: bool = True, tenant: Tenant = Depe
 
 
 @router.post('/api/v1/conversations/{conversation_id}/reply')
-def agent_reply(conversation_id: str, body: AgentReply, tenant: Tenant = Depends(admin_tenant)):
+def agent_reply(conversation_id: str, body: AgentReply, tenant: Tenant = Depends(tenant_for_role('agent'))):
     """Send a message from a human agent to a WhatsApp user."""
     with Session() as db:
         conv = tenant_conversation(db, tenant, conversation_id)
