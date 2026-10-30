@@ -60,3 +60,9 @@ def require_role(role: str):
 
 def workspace_tenant(principal: Principal = Depends(require_role('viewer'))) -> Tenant:
     return principal.tenant
+
+
+def tenant_for_role(role: str):
+    def check(principal: Principal = Depends(require_role(role))) -> Tenant:
+        return principal.tenant
+    return check
