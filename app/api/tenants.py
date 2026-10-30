@@ -11,8 +11,9 @@ from sqlalchemy import select
 
 from .. import evaluate, ingest, llm, rag, whatsapp
 from ..config import settings
+from ..services.audit import audit
 from ..db import ApiKey, Conversation, EvalCase, Message, Session, Source, Tenant, uid
-from .principal import tenant_for_role
+from .principal import Principal, require_role, tenant_for_role
 from .shared import (
     UPLOADS,
     WIDGET,
@@ -52,7 +53,8 @@ def get_tenant(tenant: Tenant = Depends(tenant_for_role('viewer'))):
 
 
 @router.patch('/api/v1/tenant')
-def update_tenant(body: UpdateTenant, tenant: Tenant = Depends(tenant_for_role('admin'))):
+def update_tenant(body: UpdateTenant, principal: Principal = Depends(require_role('admin'))):
+    tenant = principal.tenant
     changes = body.model_dump(exclude_unset=True)
     if changes.get('name', '') is None:
         del changes['name']
@@ -74,6 +76,10 @@ def update_tenant(body: UpdateTenant, tenant: Tenant = Depends(tenant_for_role('
         t = db.get(Tenant, tenant.id)
         for field, value in changes.items():
             setattr(t, field, value)
+        if changes:
+            audit(db, tenant.id, 'workspace.settings_updated', tenant.id,
+                  {'fields': sorted(changes)}, principal.user.id if principal.user else None,
+                  'user' if principal.user else 'api_key')
     return tenant_view(t)
 
 
