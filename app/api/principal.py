@@ -21,9 +21,9 @@ class Principal:
 
 def current_principal(
     request: Request,
+    response: Response,
     workspace_id: str | None = Header(default=None, alias='X-Workspace-Id'),
     admin_key: str | None = Header(default=None, alias='X-Admin-Key'),
-    response: Response = None,
 ) -> Principal:
     credential = None
     legacy = False
