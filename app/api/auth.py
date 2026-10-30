@@ -9,7 +9,8 @@ from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import delete, select
 
 from ..config import settings
-from ..db import AuthCode, Session, User, UserSession, now, uid
+from ..db import AuthCode, Membership, Session, User, UserSession, now, uid
+from ..services.audit import audit
 from ..services import auth as security
 from ..services import email
 
@@ -136,6 +137,11 @@ def login(body: Credentials, request: Request, response: Response):
     with Session.begin() as db:
         user = db.scalar(select(User).where(User.email == address))
         if not user or not security.verify_password(user.password_hash, body.password):
+            if user:
+                tenant_ids = db.scalars(select(Membership.tenant_id).where(Membership.user_id == user.id)).all()
+                for tenant_id in tenant_ids:
+                    audit(db, tenant_id, 'auth.login_failed', actor_user_id=user.id)
+                db.commit()
             raise HTTPException(401, 'Invalid credentials')
         raw, csrf = security.new_token(), security.new_token()
         db.add(UserSession(id_hash=security.hash_token(raw), user_id=user.id,
@@ -143,6 +149,9 @@ def login(body: Credentials, request: Request, response: Response):
                            ip=request.client.host if request.client else None,
                            user_agent=request.headers.get('user-agent', '')[:512]))
         view = _view(user)
+        tenant_ids = db.scalars(select(Membership.tenant_id).where(Membership.user_id == user.id)).all()
+        for tenant_id in tenant_ids:
+            audit(db, tenant_id, 'auth.login_succeeded', actor_user_id=user.id)
     _set_cookies(response, raw, csrf)
     return view
 
