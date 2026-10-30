@@ -1,9 +1,9 @@
 from fastapi import APIRouter
 
-from . import auth, chat, conversations, evals, knowledge, tenants, whatsapp, widget
+from . import auth, chat, conversations, evals, knowledge, tenants, whatsapp, widget, workspaces
 from .shared import UPLOADS as UPLOADS
 from .shared import origins as origins
 
 router = APIRouter()
-for module in (auth, tenants, knowledge, chat, conversations, evals, whatsapp, widget):
+for module in (auth, workspaces, tenants, knowledge, chat, conversations, evals, whatsapp, widget):
     router.include_router(module.router)
