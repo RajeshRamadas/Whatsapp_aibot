@@ -53,6 +53,7 @@ def create_workspace(body: WorkspaceInput, user: User = Depends(_user)):
                     allowed_origins=json.dumps(body.allowed_origins))
     with Session.begin() as db:
         db.add(tenant)
+        db.flush()
         db.add(Membership(id=uid(), user_id=user.id, tenant_id=tenant.id, role='owner'))
     return tenant_view(tenant)
 
