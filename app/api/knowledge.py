@@ -31,7 +31,8 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 @router.post('/api/v1/sources', status_code=202)
-async def upload(background: BackgroundTasks, file: UploadFile = File(...), tenant: Tenant = Depends(tenant_for_role('admin'))):
+async def upload(background: BackgroundTasks, file: UploadFile = File(...),
+                 tenant: Tenant = Depends(tenant_for_role('admin'))):
     suffix = Path(file.filename or '').suffix.lower()
     if suffix not in ingest.SUPPORTED_SUFFIXES:
         raise HTTPException(415, 'Unsupported file type')
