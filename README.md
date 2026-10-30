@@ -215,3 +215,23 @@ Member management is available under `/api/v1/members`.
 Existing `X-Admin-Key` credentials remain supported during the T1.5 API-key
 migration. The legacy bootstrap tenant endpoint remains for existing integrations;
 new user onboarding should use `/api/v1/workspaces`.
+
+
+### Workspace API keys (T1.5)
+
+Authenticated workspace owners/admins can `POST /api/v1/api-keys` with
+`X-Workspace-Id`, a session cookie and `X-CSRF-Token`:
+
+```json
+{"name":"Read-only integration","scope":"viewer","expires_in_days":90}
+```
+
+The response shows the `sk_live_` secret **once**. Save it securely.
+`GET /api/v1/api-keys` lists metadata without secrets, and
+`DELETE /api/v1/api-keys/{id}` revokes a key immediately. Supported scopes
+are `viewer`, `agent`, and `admin`; keys cannot manage other keys.
+Call workspace APIs with `Authorization: Bearer sk_live_...` and optionally
+`X-Workspace-Id` (if supplied, it must match the key's workspace).
+Existing `X-Admin-Key` credentials remain accepted during migration and
+return a `Warning` deprecation header. Run `alembic upgrade head` before
+starting the server.
