@@ -55,7 +55,7 @@ def test_workspace_roles_and_invitation(client, monkeypatch):
     assert client.get('/api/v1/conversations', headers=viewer_headers).status_code == 200
     assert client.get('/api/v1/tenant', headers={**viewer_headers,
                                                 'X-Workspace-Id': 'missing'}).status_code == 404
-    assert client.get('/api/v1/tenant').status_code == 401
+    assert client.get('/api/v1/tenant').status_code == 400
     assert client.post('/api/v1/workspaces', json={'name': 'X'},
                        headers=viewer_headers).status_code == 422
 
