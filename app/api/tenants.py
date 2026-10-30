@@ -12,6 +12,7 @@ from sqlalchemy import select
 from .. import evaluate, ingest, llm, rag, whatsapp
 from ..config import settings
 from ..db import Conversation, EvalCase, Message, Session, Source, Tenant, uid
+from .principal import tenant_for_role
 from .shared import (
     UPLOADS,
     WIDGET,
@@ -43,12 +44,12 @@ def create_tenant(body: CreateTenant, token: str | None = Header(default=None, a
 
 
 @router.get('/api/v1/tenant')
-def get_tenant(tenant: Tenant = Depends(admin_tenant)):
+def get_tenant(tenant: Tenant = Depends(tenant_for_role('admin'))):
     return tenant_view(tenant)
 
 
 @router.patch('/api/v1/tenant')
-def update_tenant(body: UpdateTenant, tenant: Tenant = Depends(admin_tenant)):
+def update_tenant(body: UpdateTenant, tenant: Tenant = Depends(tenant_for_role('admin'))):
     changes = body.model_dump(exclude_unset=True)
     if changes.get('name', '') is None:
         del changes['name']
