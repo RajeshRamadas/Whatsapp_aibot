@@ -199,3 +199,19 @@ The schema changed: new tenant, conversation, message and chunk columns (heading
 - **Operations:** monitoring, backups and a deployment strategy.
 
 Do not deploy this starter to a public-facing production service without addressing these gaps.
+
+
+### Workspace membership and permissions
+
+After signing in, create a workspace with `POST /api/v1/workspaces` and an
+`X-CSRF-Token` header matching the `chatbot_csrf` cookie. For workspace-scoped
+requests send `X-Workspace-Id: <tenant_id>`; unsafe requests also require
+`X-CSRF-Token`. Roles: owner (all), admin (settings, knowledge and members),
+agent (inbox replies and handoff), viewer (read-only transcripts).
+Use `POST /api/v1/invitations` (admin+) to email a seven-day invitation;
+the invited user signs up and accepts it at `POST /api/v1/invitations/accept`.
+Member management is available under `/api/v1/members`.
+
+Existing `X-Admin-Key` credentials remain supported during the T1.5 API-key
+migration. The legacy bootstrap tenant endpoint remains for existing integrations;
+new user onboarding should use `/api/v1/workspaces`.
