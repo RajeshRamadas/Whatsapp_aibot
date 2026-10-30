@@ -12,6 +12,7 @@ from sqlalchemy import select
 from .. import evaluate, ingest, llm, rag, whatsapp
 from ..config import settings
 from ..db import Conversation, EvalCase, Message, Session, Source, Tenant, uid
+from .principal import tenant_for_role
 from .shared import (
     UPLOADS,
     WIDGET,
@@ -30,7 +31,7 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 @router.post('/api/v1/sources', status_code=202)
-async def upload(background: BackgroundTasks, file: UploadFile = File(...), tenant: Tenant = Depends(admin_tenant)):
+async def upload(background: BackgroundTasks, file: UploadFile = File(...), tenant: Tenant = Depends(tenant_for_role('admin'))):
     suffix = Path(file.filename or '').suffix.lower()
     if suffix not in ingest.SUPPORTED_SUFFIXES:
         raise HTTPException(415, 'Unsupported file type')
@@ -50,14 +51,14 @@ async def upload(background: BackgroundTasks, file: UploadFile = File(...), tena
 
 
 @router.get('/api/v1/sources')
-def list_sources(tenant: Tenant = Depends(admin_tenant)):
+def list_sources(tenant: Tenant = Depends(tenant_for_role('admin'))):
     with Session() as db:
         sources = db.scalars(select(Source).where(Source.tenant_id == tenant.id).order_by(Source.created_at))
         return [{'id': s.id, 'filename': s.filename, 'status': s.status, 'error': s.error} for s in sources]
 
 
 @router.delete('/api/v1/sources/{source_id}', status_code=204)
-def delete_source(source_id: str, tenant: Tenant = Depends(admin_tenant)):
+def delete_source(source_id: str, tenant: Tenant = Depends(tenant_for_role('admin'))):
     with Session.begin() as db:
         src = db.scalar(select(Source).where(Source.id == source_id, Source.tenant_id == tenant.id))
         if not src:
