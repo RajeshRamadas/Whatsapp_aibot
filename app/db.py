@@ -170,3 +170,23 @@ class AuthCode(Base):
     purpose: Mapped[str] = mapped_column(String(20))
     code_hash: Mapped[str] = mapped_column(String(64))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class Membership(Base):
+    __tablename__ = 'memberships'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    user_id: Mapped[str] = mapped_column(ForeignKey('users.id', ondelete='CASCADE'), index=True)
+    tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'), index=True)
+    role: Mapped[str] = mapped_column(String(16))
+    __table_args__ = (UniqueConstraint('user_id', 'tenant_id'),)
+
+
+class Invitation(Base):
+    __tablename__ = 'invitations'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'), index=True)
+    email: Mapped[str] = mapped_column(String(320))
+    role: Mapped[str] = mapped_column(String(16))
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    invited_by: Mapped[str] = mapped_column(ForeignKey('users.id', ondelete='CASCADE'))

@@ -4,7 +4,7 @@
 def test_missing_admin_key_uses_error_envelope(client):
     response = client.get('/api/v1/tenant')
     assert response.status_code == 401
-    assert response.json() == {'error': {'code': 'unauthorized', 'message': 'Missing admin key', 'details': None}}
+    assert response.json() == {'error': {'code': 'unauthorized', 'message': 'Authentication required', 'details': None}}
 
 
 def test_validation_error_uses_error_envelope(client):
