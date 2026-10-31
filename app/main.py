@@ -8,6 +8,7 @@ from sqlalchemy import select
 
 from .api.routes import UPLOADS, origins, router
 from .db import Session, Tenant, init_db
+from .jobs.queue import close_pool
 from .services.crypto import validate_configuration
 
 logging.basicConfig(level=logging.INFO)
@@ -19,6 +20,7 @@ async def lifespan(app):
     validate_configuration()
     init_db()
     yield
+    await close_pool()
 
 
 app = FastAPI(title='Universal Knowledge Chatbot', version='0.2.0', lifespan=lifespan)
