@@ -76,8 +76,8 @@ async def handle_message(ctx: dict, event_id: str) -> None:
             raise_after_commit = event.attempts < 5
             if not raise_after_commit:
                 conv = whatsapp.conversation_for(tenant_id, contact)
-                db.execute(text('UPDATE conversations SET handoff = true WHERE id = :id'), {'id': conv.id})
-                db.add(Message(conversation_id=conv.id, role='agent',
+                db.execute(text('UPDATE conversations SET handoff = true, status = 'waiting' WHERE id = :id'), {'id': conv.id})
+                db.add(Message(conversation_id=conv.id, role='agent', kind='note', direction='outbound',
                                content='Internal note: automated WhatsApp reply failed; agent follow-up required.'))
                 for row in batch:
                     row.status = 'failed'

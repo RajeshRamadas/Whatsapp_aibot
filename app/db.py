@@ -84,6 +84,21 @@ class Chunk(Base):
     )
 
 
+class Contact(Base):
+    """Tenant-scoped identity for a customer on one channel."""
+    __tablename__ = 'contacts'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'), index=True)
+    channel: Mapped[str] = mapped_column(String(20))
+    external_user: Mapped[str] = mapped_column(String(64))
+    name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    language: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    opt_in_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    opt_out_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    attributes: Mapped[dict] = mapped_column(JSONB, default=dict)
+    __table_args__ = (UniqueConstraint('tenant_id', 'channel', 'external_user'),)
+
+
 class Conversation(Base):
     __tablename__ = 'conversations'
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
@@ -93,6 +108,12 @@ class Conversation(Base):
     external_user: Mapped[str | None] = mapped_column(String(64), nullable=True)
     # True while a human agent owns the conversation; the bot stays silent.
     handoff: Mapped[bool] = mapped_column(Boolean, default=False)
+    contact_id: Mapped[str | None] = mapped_column(ForeignKey('contacts.id', ondelete='SET NULL'), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default='bot')
+    assignee_user_id: Mapped[str | None] = mapped_column(ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    labels: Mapped[list] = mapped_column(JSONB, default=list)
+    last_inbound_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_message_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     __table_args__ = (UniqueConstraint('tenant_id', 'channel', 'external_user'),)
 
@@ -103,6 +124,12 @@ class Message(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     conversation_id: Mapped[str] = mapped_column(ForeignKey('conversations.id', ondelete='CASCADE'), index=True)
     role: Mapped[str] = mapped_column(String(20))  # user | assistant | agent
+    direction: Mapped[str] = mapped_column(String(12), default='inbound')
+    author_user_id: Mapped[str | None] = mapped_column(ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    kind: Mapped[str] = mapped_column(String(20), default='text')
+    channel_message_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    delivery_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
     content: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
