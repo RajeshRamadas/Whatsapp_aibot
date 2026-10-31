@@ -229,12 +229,10 @@ def ingest(source_id: str) -> None:
                                heading=p.heading, page=p.page, embedding=v)
                          for n, (p, v) in enumerate(zip(batch, vectors, strict=True))]
             # All chunks land together with the status change, so a failure leaves none behind.
+            db.execute(delete(Chunk).where(Chunk.source_id == source_id))
             db.add_all(rows)
             src.status, src.error = 'ready', None
             db.commit()
-        except Exception as e:
+        except Exception:
             db.rollback()
-            db.execute(delete(Chunk).where(Chunk.source_id == source_id))
-            src = db.get(Source, source_id)
-            src.status, src.error = 'failed', str(e)[:500]
-            db.commit()
+            raise
