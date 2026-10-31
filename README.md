@@ -293,3 +293,20 @@ older ciphertext remains readable. For master rotation, retain the old key in
 removing previous keys. Never discard a master key before all wrapped data
 keys have been migrated. This service is infrastructure for future channel and
 integration credentials; existing API-key hashes remain one-way hashes.
+
+
+### Durable Redis jobs (T2.1)
+
+Start the API, Redis and arq worker with `docker compose up --build`.
+Set `REDIS_URL=redis://redis:6379/0` for Compose (the default localhost URL
+is for host development). The worker runs with `python -m app.jobs.worker`.
+
+An admin can enqueue the sample job using `POST /api/v1/jobs/sample` with
+workspace credentials; the API returns HTTP 202 and a Redis job ID. The worker
+writes a tenant-scoped `jobs.sample.completed` event to the audit log. This
+proves the queue/worker round-trip; moving ingestion into arq is T2.2.
+
+The `app.jobs.queue.enqueue(name, **kwargs)` helper is the shared enqueue
+interface. Add each new job name to its allowlist and the function to
+`WorkerSettings.functions`. Redis AOF is enabled in Compose; production
+should use persistent managed Redis and monitor failed jobs.
