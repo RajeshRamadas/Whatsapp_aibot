@@ -1,5 +1,6 @@
 """arq worker entry point: python -m app.jobs.worker."""
 import asyncio
+
 from arq import run_worker
 from arq.connections import RedisSettings
 
