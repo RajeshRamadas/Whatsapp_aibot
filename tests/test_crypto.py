@@ -6,8 +6,7 @@ import pytest
 from cryptography.exceptions import InvalidTag
 
 from app.config import settings
-from app.services.crypto import (decrypt, encrypt, rewrap_master_keys,
-                                 rotate_data_key, validate_configuration)
+from app.services.crypto import decrypt, encrypt, rewrap_master_keys, rotate_data_key, validate_configuration
 
 
 def _key():
