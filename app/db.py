@@ -5,17 +5,17 @@ from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     BigInteger,
     Boolean,
-    LargeBinary,
     Computed,
     DateTime,
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     String,
-    text,
     Text,
     UniqueConstraint,
     create_engine,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
