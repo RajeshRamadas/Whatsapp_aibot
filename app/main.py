@@ -8,6 +8,7 @@ from sqlalchemy import select
 
 from .api.routes import UPLOADS, origins, router
 from .db import Session, Tenant, init_db
+from .services.crypto import validate_configuration
 
 logging.basicConfig(level=logging.INFO)
 
@@ -15,6 +16,7 @@ logging.basicConfig(level=logging.INFO)
 @asynccontextmanager
 async def lifespan(app):
     UPLOADS.mkdir(exist_ok=True)
+    validate_configuration()
     init_db()
     yield
 

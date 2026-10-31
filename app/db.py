@@ -10,10 +10,12 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     String,
     Text,
     UniqueConstraint,
     create_engine,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
@@ -215,3 +217,17 @@ class AuditLog(Base):
     target: Mapped[str | None] = mapped_column(String(120), nullable=True)
     details: Mapped[dict] = mapped_column(JSONB, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
+
+
+class TenantDataKey(Base):
+    __tablename__ = 'tenant_data_keys'
+    tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'), primary_key=True)
+    version: Mapped[int] = mapped_column(Integer, primary_key=True)
+    master_key_version: Mapped[int] = mapped_column(Integer)
+    nonce: Mapped[bytes] = mapped_column(LargeBinary)
+    encrypted_key: Mapped[bytes] = mapped_column(LargeBinary)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    __table_args__ = (Index('ix_tenant_data_keys_active', 'tenant_id', unique=True,
+                            postgresql_where=text('active')),)
+

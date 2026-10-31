@@ -268,3 +268,28 @@ with `size` and `sha256`. The server verifies the uploaded object before
 queuing ingestion. Local upload URLs are API paths requiring the same workspace
 credentials and CSRF header; S3 URLs expire after 15 minutes. Object keys are
 scoped to a workspace. Existing local files remain readable during migration.
+
+
+### Tenant secret encryption (T1.8)
+
+The `app.services.crypto` module provides AES-256-GCM envelope encryption:
+`encrypt(tenant_id, plaintext)` returns authenticated bytes, and
+`decrypt(tenant_id, ciphertext)` returns plaintext bytes. Each tenant has a
+random 256-bit data key, stored only encrypted under the master key in the
+`tenant_data_keys` table. Ciphertexts bind the tenant and data-key version
+as authenticated associated data. Set `MASTER_KEY` to a base64-encoded 32-byte
+secret (required for `ENVIRONMENT=production`); store it in a secret manager,
+not source control. Generate one with:
+
+```bash
+python -c 'import base64,secrets; print(base64.b64encode(secrets.token_bytes(32)).decode())'
+```
+
+`rotate_data_key(tenant_id)` creates a new version for future secrets while
+older ciphertext remains readable. For master rotation, retain the old key in
+`MASTER_KEY_PREVIOUS` (JSON mapping version to base64 key), increment
+`MASTER_KEY_VERSION`, set the new `MASTER_KEY`, and run
+`rewrap_master_keys(tenant_id)` for every tenant. Verify decryption before
+removing previous keys. Never discard a master key before all wrapped data
+keys have been migrated. This service is infrastructure for future channel and
+integration credentials; existing API-key hashes remain one-way hashes.
