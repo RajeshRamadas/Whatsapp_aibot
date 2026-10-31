@@ -101,5 +101,5 @@ def test_send_failure_propagates_for_worker_retry(client, tenant, chats, monkeyp
         raise RuntimeError('graph api down')
     monkeypatch.setattr(whatsapp, 'send_text', flaky)
     link_number(client, tenant)
-    assert post(client, wa_payload('hi')).status_code == 200
-    assert len(calls) == 1  # inline test worker propagates provider errors
+    assert post(client, wa_payload('hi')).status_code == 503
+    assert len(calls) == 1  # inline test worker raises; webhook returns queue error
