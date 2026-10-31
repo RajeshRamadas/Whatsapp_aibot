@@ -18,8 +18,8 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 from app import llm, rag, whatsapp  # noqa: E402
 from app.api import knowledge  # noqa: E402
-from app.jobs.worker import ingest_source  # noqa: E402
 from app.db import Base, engine  # noqa: E402
+from app.jobs.worker import ingest_source  # noqa: E402
 from app.main import app  # noqa: E402
 
 # Tiny fake embedding space: each keyword is an axis.
