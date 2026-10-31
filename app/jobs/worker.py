@@ -7,7 +7,7 @@ from sqlalchemy import select, text
 
 from .. import ingest, whatsapp
 from ..config import settings
-from ..db import AuditLog, Conversation, InboundEvent, Message, Session, Source, Tenant
+from ..db import AuditLog, InboundEvent, Message, Session, Source, Tenant
 
 
 async def sample_job(ctx: dict, tenant_id: str, job_id: str) -> str:
