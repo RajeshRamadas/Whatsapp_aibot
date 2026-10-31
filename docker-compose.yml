@@ -11,6 +11,15 @@ services:
       test: ["CMD-SHELL", "pg_isready -U chatbot -d chatbot"]
       interval: 5s
       retries: 20
+  redis:
+    image: redis:7-alpine
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      retries: 20
   minio:
     image: minio/minio:latest
     command: server /data --console-address ':9001'
@@ -33,7 +42,19 @@ services:
         condition: service_healthy
     volumes:
       - uploads:/srv/uploads
+  worker:
+    build: .
+    command: ['python', '-m', 'app.jobs.worker']
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - uploads:/srv/uploads
 volumes:
   pgdata:
   uploads:
   miniodata:
+  redisdata:
