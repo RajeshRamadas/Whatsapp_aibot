@@ -12,6 +12,7 @@ from sqlalchemy import (
     Index,
     Integer,
     String,
+    text,
     Text,
     UniqueConstraint,
     create_engine,
@@ -227,4 +228,6 @@ class TenantDataKey(Base):
     encrypted_key: Mapped[bytes] = mapped_column(LargeBinary)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    __table_args__ = (Index('ix_tenant_data_keys_active', 'tenant_id', unique=True,
+                            postgresql_where=text('active')),)
 
