@@ -269,7 +269,7 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
   2. Re-uploading or re-processing a source is idempotent: delete its old chunks in the same transaction that adds the new ones.
 - **Done when:** a source queued while the worker is stopped is processed when the worker starts.
 
-#### T2.3 Durable inbound messages
+#### T2.3 Durable inbound messages (implemented in PR #21)
 - **Delivers:** NFR-2, DESIGN §5 (idempotency, ordering, retries)
 - **Depends on:** T2.1
 - **Size:** L
