@@ -17,6 +17,7 @@ DEFAULT_EMBEDDING_MODELS = {
 
 class Settings(BaseSettings):
     database_url: str
+    redis_url: str = 'redis://localhost:6379/0'
     admin_bootstrap_token: str
     auth_cookie_secure: bool = True
     environment: str = 'development'
