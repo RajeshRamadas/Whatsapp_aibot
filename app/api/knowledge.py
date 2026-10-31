@@ -4,11 +4,11 @@ import json
 import logging
 import secrets
 from pathlib import Path
-from pydantic import BaseModel, Field
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Header, HTTPException, Query, Request, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, PlainTextResponse
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from .. import evaluate, ingest, llm, rag, whatsapp
