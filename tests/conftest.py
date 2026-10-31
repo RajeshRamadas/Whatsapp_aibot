@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import hmac
 import json
@@ -16,6 +17,8 @@ from alembic.config import Config  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
 from app import llm, rag, whatsapp  # noqa: E402
+from app.api import knowledge  # noqa: E402
+from app.jobs.worker import ingest_source  # noqa: E402
 from app.db import Base, engine  # noqa: E402
 from app.main import app  # noqa: E402
 
@@ -72,6 +75,17 @@ def client(chats, tmp_path, monkeypatch):
     config.set_main_option('script_location', str(Path(__file__).resolve().parents[1] / 'migrations'))
     command.stamp(config, 'head')
     rag.chat_limiter.hits.clear()
+
+    async def inline_ingestion(name, **kwargs):
+        if name != 'ingest_source':
+            raise ValueError('Unexpected job')
+        await asyncio.to_thread(ingest_source_sync, kwargs)
+        return kwargs['_job_id']
+
+    def ingest_source_sync(kwargs):
+        asyncio.run(ingest_source({'job_try': 3}, kwargs['source_id'], kwargs['tenant_id']))
+
+    monkeypatch.setattr(knowledge, 'enqueue', inline_ingestion)
     with TestClient(app) as c:
         yield c
 
