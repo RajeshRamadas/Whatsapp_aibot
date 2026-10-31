@@ -10,9 +10,9 @@ from sqlalchemy import delete, select
 
 from ..config import settings
 from ..db import AuthCode, Membership, Session, User, UserSession, now, uid
-from ..services.audit import audit
 from ..services import auth as security
 from ..services import email
+from ..services.audit import audit
 
 router = APIRouter(prefix='/api/v1/auth', tags=['auth'])
 _auth_hits = defaultdict(deque)
