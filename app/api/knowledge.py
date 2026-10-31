@@ -5,7 +5,7 @@ import logging
 import secrets
 from pathlib import Path
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Header, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, Request, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field
@@ -14,6 +14,7 @@ from sqlalchemy import select
 from .. import evaluate, ingest, llm, rag, whatsapp
 from ..config import settings
 from ..db import Conversation, EvalCase, Message, Session, Source, Tenant, uid
+from ..jobs.queue import enqueue
 from ..services.audit import audit
 from ..services.storage import LocalStorage, storage
 from .principal import Principal, require_role, tenant_for_role
@@ -35,7 +36,7 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 @router.post('/api/v1/sources', status_code=202)
-async def upload(background: BackgroundTasks, file: UploadFile = File(...),
+async def upload(file: UploadFile = File(...),
                  tenant: Tenant = Depends(tenant_for_role('admin'))):
     suffix = Path(file.filename or '').suffix.lower()
     if suffix not in ingest.SUPPORTED_SUFFIXES:
@@ -49,7 +50,10 @@ async def upload(background: BackgroundTasks, file: UploadFile = File(...),
     with Session.begin() as db:
         db.add(Source(id=source_id, tenant_id=tenant.id, filename=Path(file.filename or 'file').name[:255],
                       kind=suffix[1:], file_path='storage:' + key, status='queued'))
-    background.add_task(ingest.ingest, source_id)  # Dev only: use a durable queue in production.
+    try:
+        await enqueue('ingest_source', source_id=source_id, tenant_id=tenant.id, _job_id=source_id)
+    except (OSError, ConnectionError, TimeoutError, RuntimeError) as exc:
+        raise HTTPException(503, 'Background queue unavailable') from exc
     return {'source_id': source_id, 'status': 'queued'}
 
 
@@ -126,7 +130,7 @@ async def local_upload(tenant_id: str, filename: str, request: Request,
 
 
 @router.post('/api/v1/sources/{source_id}/complete', status_code=202)
-def complete_upload(source_id: str, body: UploadComplete, background: BackgroundTasks,
+async def complete_upload(source_id: str, body: UploadComplete,
                     tenant: Tenant = Depends(tenant_for_role('admin'))):
     with Session() as db:
         source = db.scalar(select(Source).where(Source.id == source_id,
@@ -151,5 +155,8 @@ def complete_upload(source_id: str, body: UploadComplete, background: Background
         if source.status != 'uploading':
             raise HTTPException(409, 'Upload already completed')
         source.status, source.error = 'queued', None
-    background.add_task(ingest.ingest, source_id)
+    try:
+        await enqueue('ingest_source', source_id=source_id, tenant_id=tenant.id, _job_id=source_id)
+    except (OSError, ConnectionError, TimeoutError, RuntimeError) as exc:
+        raise HTTPException(503, 'Background queue unavailable') from exc
     return {'source_id': source_id, 'status': 'queued'}

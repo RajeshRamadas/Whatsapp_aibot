@@ -310,3 +310,15 @@ The `app.jobs.queue.enqueue(name, **kwargs)` helper is the shared enqueue
 interface. Add each new job name to its allowlist and the function to
 `WorkerSettings.functions`. Redis AOF is enabled in Compose; production
 should use persistent managed Redis and monitor failed jobs.
+
+
+### Durable document ingestion (T2.2)
+
+Both multipart source uploads and two-step upload completion now enqueue
+`ingest_source` in Redis rather than using FastAPI in-process background tasks.
+The API returns HTTP 202 once the job is accepted. The worker processes
+queued uploads after restart, retries transient embedding/storage failures up
+to three attempts, and records a terminal `failed` status and error when
+retries are exhausted. Empty/unparseable documents fail immediately.
+Reprocessing atomically replaces old chunks, avoiding duplicate search results.
+The worker and API must share the same configured object-storage backend.

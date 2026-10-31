@@ -10,7 +10,7 @@ _pool = None
 async def enqueue(name: str, **kwargs) -> str:
     """Return the job ID after Redis accepts the job; propagate connection failures."""
     global _pool
-    if name not in {'sample_job'}:
+    if name not in {'sample_job', 'ingest_source'}:
         raise ValueError('Unknown job')
     if _pool is None:
         _pool = await create_pool(RedisSettings.from_dsn(settings.redis_url))
