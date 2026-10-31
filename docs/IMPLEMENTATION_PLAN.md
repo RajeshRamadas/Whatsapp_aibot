@@ -260,7 +260,7 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
   3. A test fixture that runs jobs inline (call the job function directly), plus one integration test with a real worker.
 - **Done when:** a sample job enqueued from an endpoint runs in the worker.
 
-#### T2.2 Ingestion as a job
+#### T2.2 Ingestion as a job (implemented in PR #20)
 - **Delivers:** KN-1 reliability, NFR-2
 - **Depends on:** T2.1, T1.7
 - **Size:** S
