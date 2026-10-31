@@ -34,11 +34,11 @@ async def ingest_source(ctx: dict, source_id: str, tenant_id: str) -> None:
         with Session.begin() as db:
             source = db.get(Source, source_id)
             if source and source.tenant_id == tenant_id:
-                if isinstance(exc, ValueError) or ctx.get('job_try', 1) >= WorkerSettings.max_tries:
+                if isinstance(exc, ValueError) or ctx.get('job_try', 1) >= 3:
                     source.status, source.error = 'failed', str(exc)[:500]
                 else:
                     source.status = 'queued'
-        if not isinstance(exc, ValueError) and ctx.get('job_try', 1) < WorkerSettings.max_tries:
+        if not isinstance(exc, ValueError) and ctx.get('job_try', 1) < 3:
             raise
 
 
