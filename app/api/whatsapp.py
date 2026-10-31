@@ -11,8 +11,8 @@ from sqlalchemy import select
 
 from .. import evaluate, ingest, llm, rag, whatsapp
 from ..config import settings
-from ..jobs.queue import enqueue
 from ..db import Conversation, EvalCase, Message, Session, Source, Tenant, uid
+from ..jobs.queue import enqueue
 from .shared import (
     UPLOADS,
     WIDGET,
