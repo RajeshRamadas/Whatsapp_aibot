@@ -11,6 +11,17 @@ services:
       test: ["CMD-SHELL", "pg_isready -U chatbot -d chatbot"]
       interval: 5s
       retries: 20
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ':9001'
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - miniodata:/data
+    ports:
+      - '9000:9000'
+      - '9001:9001'
   api:
     build: .
     command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
@@ -25,3 +36,4 @@ services:
 volumes:
   pgdata:
   uploads:
+  miniodata:
