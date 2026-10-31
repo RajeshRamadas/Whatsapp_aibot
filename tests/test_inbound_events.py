@@ -24,7 +24,8 @@ def test_webhook_only_persists_and_queues(client, tenant, monkeypatch, sent):
     raw, headers = signed(wa_payload())
     assert client.post('/webhooks/whatsapp', content=raw, headers=headers).status_code == 200
     assert client.post('/webhooks/whatsapp', content=raw, headers=headers).status_code == 200
-    assert len(jobs) == 1 and jobs[0][0] == 'handle_message'
+    assert len(jobs) == 2 and all(name == 'handle_message' for name, _ in jobs)
+    assert jobs[0][1]['event_id'] == jobs[1][1]['event_id']
     assert sent == []
     with Session() as db:
         assert db.scalar(select(InboundEvent)).status == 'queued'
