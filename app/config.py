@@ -43,6 +43,11 @@ class Settings(BaseSettings):
     query_rewrite: bool = True  # turn follow-ups like "and for shipping?" into a full question before searching
     history_messages: int = 8
 
+    storage_backend: str = 'local'  # local | s3
+    storage_local_path: str = 'uploads'
+    storage_bucket: str = 'chatbot-uploads'
+    storage_endpoint_url: str | None = None
+    storage_region: str = 'us-east-1'
     max_upload_mb: int = 15
     chat_rate_limit_per_minute: int = 20
 

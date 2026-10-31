@@ -8,6 +8,7 @@ and each chunk is embedded with its document and heading as context.
 import csv
 import json
 import re
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -19,6 +20,7 @@ from sqlalchemy import delete
 
 from . import llm
 from .db import Chunk, Session, Source
+from .services.storage import storage
 
 SUPPORTED_SUFFIXES = {'.pdf', '.docx', '.txt', '.md', '.csv', '.xlsx', '.json'}
 EMBED_BATCH = 32
@@ -208,7 +210,14 @@ def ingest(source_id: str) -> None:
         src.status = 'processing'
         db.commit()
         try:
-            pieces = chunk_blocks(extract(src.file_path, Path(src.file_path).suffix.lower()))
+            if src.file_path.startswith('storage:'):
+                key = src.file_path.removeprefix('storage:')
+                with tempfile.TemporaryDirectory() as directory:
+                    path = Path(directory) / ('source' + Path(key).suffix.lower())
+                    path.write_bytes(storage().get(key))
+                    pieces = chunk_blocks(extract(path, path.suffix.lower()))
+            else:
+                pieces = chunk_blocks(extract(src.file_path, Path(src.file_path).suffix.lower()))
             if not pieces:
                 raise ValueError('No extractable text; OCR is not implemented')
             embedder = llm.embedder()
