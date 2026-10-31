@@ -14,7 +14,7 @@ from sqlalchemy.exc import IntegrityError
 
 from . import rag
 from .config import settings
-from .db import Conversation, InboundEvent, Session, Tenant, uid
+from .db import Contact, Conversation, InboundEvent, Session, Tenant, uid
 
 log = logging.getLogger(__name__)
 
@@ -90,18 +90,38 @@ def send_text(phone_number_id: str, to: str, body: str) -> None:
 
 
 def conversation_for(tenant_id: str, wa_user: str) -> Conversation:
+    """Resolve or create a tenant-scoped contact and its WhatsApp conversation."""
     query = select(Conversation).where(Conversation.tenant_id == tenant_id, Conversation.channel == 'whatsapp',
                                        Conversation.external_user == wa_user)
-    with Session() as db:
+    contact_query = select(Contact).where(Contact.tenant_id == tenant_id, Contact.channel == 'whatsapp',
+                                          Contact.external_user == wa_user)
+    with Session.begin() as db:
+        contact = db.scalar(contact_query)
+        if contact is None:
+            contact = Contact(tenant_id=tenant_id, channel='whatsapp', external_user=wa_user)
+            with db.begin_nested():
+                try:
+                    db.add(contact)
+                    db.flush()
+                except IntegrityError:
+                    contact = None
+            if contact is None:
+                contact = db.scalar(contact_query)
         conv = db.scalar(query)
-        if conv:
-            return conv
-        db.add(Conversation(tenant_id=tenant_id, channel='whatsapp', external_user=wa_user))
-        try:
-            db.commit()
-        except IntegrityError:  # created concurrently by another message from the same user
-            db.rollback()
-        return db.scalar(query)
+        if conv is None:
+            conv = Conversation(tenant_id=tenant_id, channel='whatsapp',
+                                external_user=wa_user, contact_id=contact.id, status='bot')
+            with db.begin_nested():
+                try:
+                    db.add(conv)
+                    db.flush()
+                except IntegrityError:
+                    conv = None
+            if conv is None:
+                conv = db.scalar(query)
+        if conv.contact_id is None:
+            conv.contact_id = contact.id
+        return conv
 
 
 def handle(tenant_id: str, message: dict) -> None:
@@ -114,7 +134,7 @@ def handle(tenant_id: str, message: dict) -> None:
     conv = conversation_for(tenant_id, wa_user)
     if not text:
         placeholder = ('user', f"[{message['type']} message]")
-        if conv.handoff:
+        if conv.status in ('waiting', 'agent', 'closed') or conv.handoff:
             rag.save_exchange(conv, placeholder)
         else:
             send_text(phone_number_id, wa_user, UNSUPPORTED_REPLY)
@@ -126,7 +146,9 @@ def handle(tenant_id: str, message: dict) -> None:
     if text.lower() in settings.handoff_keywords:
         send_text(phone_number_id, wa_user, HANDOFF_REPLY)
         with Session.begin() as db:
-            db.get(Conversation, conv.id).handoff = True
+            active = db.get(Conversation, conv.id)
+            active.handoff = True
+            active.status = 'waiting'
         rag.save_exchange(conv, ('user', text), ('assistant', HANDOFF_REPLY))
         return
     if not rag.chat_limiter.allow(f'wa:{tenant_id}:{wa_user}'):
