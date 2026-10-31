@@ -73,7 +73,8 @@ async def handle_message(ctx: dict, event_id: str) -> None:
             for row in batch:
                 row.attempts += 1
                 row.last_error = str(exc)[:500]
-            if event.attempts >= 5:
+            raise_after_commit = event.attempts < 5
+            if not raise_after_commit:
                 conv = whatsapp.conversation_for(tenant_id, contact)
                 db.execute(text('UPDATE conversations SET handoff = true WHERE id = :id'), {'id': conv.id})
                 db.add(Message(conversation_id=conv.id, role='agent',
@@ -85,8 +86,6 @@ async def handle_message(ctx: dict, event_id: str) -> None:
                                             contact, whatsapp.ERROR_REPLY)
                 except Exception:
                     pass  # Handoff remains recorded even if Meta is unavailable.
-            else:
-                raise_after_commit = True
         else:
             for row in batch:
                 row.status = 'processed' if row.id == event_id else 'merged'
