@@ -286,7 +286,7 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 - **Tests:** a duplicate webhook is answered once; a crash after sending doesn't send again (the event is processed); two quick messages give one answer; provider failure → retries → handoff.
 - **Done when:** the tests above pass and no WhatsApp work runs in the request.
 
-#### T2.4 Contacts, conversation statuses and message fields
+#### T2.4 Contacts, conversation statuses and message fields (implemented in PR #22)
 - **Delivers:** DESIGN §7 (`contacts`, `conversations`, `messages`), BOT-4
 - **Depends on:** T2.3
 - **Size:** M
