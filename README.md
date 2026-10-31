@@ -249,3 +249,22 @@ accounts with memberships, invitations, membership changes, API-key creation
 and revocation, knowledge deletion, and workspace settings changes. Failed
 logins for unknown email addresses have no tenant to attribute and are not
 written to this tenant-scoped log.
+
+
+### Object storage uploads (T1.7)
+
+Set `STORAGE_BACKEND=local` (default) or `s3`. S3-compatible storage uses
+`STORAGE_BUCKET`, `STORAGE_REGION`, optional `STORAGE_ENDPOINT_URL`, and
+standard AWS credentials. Compose includes a MinIO service on port 9000; create
+the bucket before uploading. For MinIO inside Compose use
+`STORAGE_ENDPOINT_URL=http://minio:9000` and set AWS credentials to the
+MinIO root credentials. Existing multipart `POST /api/v1/sources` still works.
+
+For two-step uploads, an admin sends `POST /api/v1/sources/uploads` with
+`filename`, `content_type`, byte `size`, and lowercase hex `sha256`.
+PUT the bytes to the returned `upload_url` (for S3, include the exact
+`Content-Type` header); then `POST /api/v1/sources/{source_id}/complete`
+with `size` and `sha256`. The server verifies the uploaded object before
+queuing ingestion. Local upload URLs are API paths requiring the same workspace
+credentials and CSRF header; S3 URLs expire after 15 minutes. Object keys are
+scoped to a workspace. Existing local files remain readable during migration.
