@@ -1,4 +1,5 @@
 """arq worker entry point: python -m app.jobs.worker."""
+import asyncio
 from arq import run_worker
 from arq.connections import RedisSettings
 
@@ -26,7 +27,7 @@ async def ingest_source(ctx: dict, source_id: str, tenant_id: str) -> None:
         if source.status == 'ready':
             return
     try:
-        ingest.ingest(source_id)
+        await asyncio.to_thread(ingest.ingest, source_id)
     except Exception as exc:
         with Session.begin() as db:
             source = db.get(Source, source_id)
