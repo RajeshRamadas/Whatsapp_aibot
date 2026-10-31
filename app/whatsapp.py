@@ -72,7 +72,10 @@ def accept(message: dict) -> str | None:
             db.commit()
         except IntegrityError:
             db.rollback()
-            return None
+            existing = db.scalar(select(InboundEvent).where(
+                InboundEvent.channel_message_id == message['id'],
+                InboundEvent.tenant_id == tenant_id))
+            return existing.id if existing and existing.status == 'queued' else None
         return event.id
 
 
