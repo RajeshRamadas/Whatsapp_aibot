@@ -18,7 +18,8 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 from app import llm, rag, whatsapp  # noqa: E402
 from app.api import knowledge  # noqa: E402
-from app.db import Base, engine  # noqa: E402
+from app.api import whatsapp as whatsapp_api
+from app.db import Base, InboundEvent, Session, engine  # noqa: E402
 from app.jobs.worker import ingest_source  # noqa: E402
 from app.main import app  # noqa: E402
 
@@ -86,6 +87,17 @@ def client(chats, tmp_path, monkeypatch):
         asyncio.run(ingest_source({'job_try': 3}, kwargs['source_id'], kwargs['tenant_id']))
 
     monkeypatch.setattr(knowledge, 'enqueue', inline_ingestion)
+
+    async def inline_whatsapp(name, **kwargs):
+        if name != 'handle_message':
+            raise ValueError('Unexpected job')
+        with Session.begin() as db:
+            event = db.get(InboundEvent, kwargs['event_id'])
+            whatsapp.handle(event.tenant_id, event.payload)
+            event.status = 'processed'
+        return kwargs['_job_id']
+
+    monkeypatch.setattr(whatsapp_api, 'enqueue', inline_whatsapp)
     with TestClient(app) as c:
         yield c
 

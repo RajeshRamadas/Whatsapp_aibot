@@ -322,3 +322,15 @@ to three attempts, and records a terminal `failed` status and error when
 retries are exhausted. Empty/unparseable documents fail immediately.
 Reprocessing atomically replaces old chunks, avoiding duplicate search results.
 The worker and API must share the same configured object-storage backend.
+
+
+### Durable WhatsApp inbound processing (T2.3)
+
+Signed inbound webhooks persist deduplicated messages in `inbound_events` and
+queue an arq `handle_message` job; no WhatsApp answer is generated during the
+HTTP request. Workers debounce for two seconds, serialize per-contact work via
+PostgreSQL advisory locks, and combine pending texts into one answer. Transient
+provider failures retry with exponential backoff (up to five attempts); final
+failure records a handoff and internal agent note, then attempts an apology.
+Run the Redis worker alongside the API. Existing `whatsapp_inbound` IDs are
+migrated to processed events to preserve deduplication.

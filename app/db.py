@@ -119,11 +119,16 @@ class EvalCase(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
-class WhatsAppInbound(Base):
-    """Every inbound WhatsApp message ID we have accepted, so Meta's retries are processed once."""
-    __tablename__ = 'whatsapp_inbound'
-    message_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+class InboundEvent(Base):
+    """Durable, deduplicated inbound WhatsApp events."""
+    __tablename__ = 'inbound_events'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    channel_message_id: Mapped[str] = mapped_column(String(128), unique=True)
     tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'), index=True)
+    payload: Mapped[dict] = mapped_column(JSONB, default=dict)
+    status: Mapped[str] = mapped_column(String(20), default='queued')
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 

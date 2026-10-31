@@ -4,7 +4,7 @@ import logging
 import secrets
 from pathlib import Path
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Header, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, Request, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, PlainTextResponse
 from sqlalchemy import select
@@ -12,6 +12,7 @@ from sqlalchemy import select
 from .. import evaluate, ingest, llm, rag, whatsapp
 from ..config import settings
 from ..db import Conversation, EvalCase, Message, Session, Source, Tenant, uid
+from ..jobs.queue import enqueue
 from .shared import (
     UPLOADS,
     WIDGET,
@@ -40,7 +41,7 @@ def whatsapp_verify(mode: str = Query('', alias='hub.mode'), token: str = Query(
 
 
 @router.post('/webhooks/whatsapp')
-async def whatsapp_webhook(request: Request, background: BackgroundTasks):
+async def whatsapp_webhook(request: Request):
     if not settings.whatsapp_enabled:
         raise HTTPException(404)
     body = await request.body()
@@ -51,9 +52,12 @@ async def whatsapp_webhook(request: Request, background: BackgroundTasks):
     except ValueError:
         raise HTTPException(400, 'Invalid JSON') from None
     for message in whatsapp.parse_messages(payload):
-        tenant_id = await run_in_threadpool(whatsapp.accept, message)
-        if tenant_id:
-            background.add_task(whatsapp.handle, tenant_id, message)  # Dev only: use a durable queue in production.
+        event_id = await run_in_threadpool(whatsapp.accept, message)
+        if event_id:
+            try:
+                await enqueue('handle_message', event_id=event_id, _job_id=event_id)
+            except (OSError, ConnectionError, TimeoutError, RuntimeError) as exc:
+                raise HTTPException(503, 'Inbound queue unavailable') from exc
     return {'status': 'ok'}
 
 

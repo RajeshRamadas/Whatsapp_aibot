@@ -92,7 +92,7 @@ def test_number_cannot_be_claimed_twice(client, tenant):
     assert r.status_code == 409
 
 
-def test_send_failure_is_logged_not_raised(client, tenant, chats, monkeypatch):
+def test_send_failure_propagates_for_worker_retry(client, tenant, chats, monkeypatch):
     from app import whatsapp
     calls = []
 
@@ -101,5 +101,5 @@ def test_send_failure_is_logged_not_raised(client, tenant, chats, monkeypatch):
         raise RuntimeError('graph api down')
     monkeypatch.setattr(whatsapp, 'send_text', flaky)
     link_number(client, tenant)
-    assert post(client, wa_payload('hi')).status_code == 200
-    assert len(calls) == 2  # the answer, then the error reply
+    assert post(client, wa_payload('hi')).status_code == 503
+    assert len(calls) == 1  # inline test worker raises; webhook returns queue error
