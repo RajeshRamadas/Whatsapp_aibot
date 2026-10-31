@@ -17,7 +17,8 @@ from alembic.config import Config  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
 from app import llm, rag, whatsapp  # noqa: E402
-from app.api import knowledge, whatsapp as whatsapp_api  # noqa: E402
+from app.api import knowledge  # noqa: E402
+from app.api import whatsapp as whatsapp_api
 from app.db import Base, InboundEvent, Session, engine  # noqa: E402
 from app.jobs.worker import ingest_source  # noqa: E402
 from app.main import app  # noqa: E402
