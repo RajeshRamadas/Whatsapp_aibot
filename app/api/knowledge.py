@@ -128,22 +128,28 @@ async def local_upload(tenant_id: str, filename: str, request: Request,
 @router.post('/api/v1/sources/{source_id}/complete', status_code=202)
 def complete_upload(source_id: str, body: UploadComplete, background: BackgroundTasks,
                     tenant: Tenant = Depends(tenant_for_role('admin'))):
-    with Session.begin() as db:
+    with Session() as db:
         source = db.scalar(select(Source).where(Source.id == source_id,
-            Source.tenant_id == tenant.id).with_for_update())
+            Source.tenant_id == tenant.id))
         if not source:
             raise HTTPException(404, 'Source not found')
         if source.status != 'uploading':
             raise HTTPException(409, 'Upload already completed')
         expected_size, expected_hash = source.error.split(':', 1)
-        if body.size != int(expected_size) or body.sha256 != expected_hash:
-            raise HTTPException(422, 'Upload metadata mismatch')
-        try:
-            data = storage().get(source.file_path.removeprefix('storage:'))
-        except Exception:
-            raise HTTPException(422, 'Uploaded object not found') from None
-        if len(data) != body.size or hashlib.sha256(data).hexdigest() != body.sha256:
-            raise HTTPException(422, 'Uploaded object failed integrity check')
+        key = source.file_path.removeprefix('storage:')
+    if body.size != int(expected_size) or body.sha256 != expected_hash:
+        raise HTTPException(422, 'Upload metadata mismatch')
+    try:
+        data = storage().get(key)
+    except Exception:
+        raise HTTPException(422, 'Uploaded object not found') from None
+    if len(data) != body.size or hashlib.sha256(data).hexdigest() != body.sha256:
+        raise HTTPException(422, 'Uploaded object failed integrity check')
+    with Session.begin() as db:
+        source = db.scalar(select(Source).where(Source.id == source_id,
+            Source.tenant_id == tenant.id).with_for_update())
+        if source.status != 'uploading':
+            raise HTTPException(409, 'Upload already completed')
         source.status, source.error = 'queued', None
     background.add_task(ingest.ingest, source_id)
     return {'source_id': source_id, 'status': 'queued'}
