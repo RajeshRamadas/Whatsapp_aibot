@@ -235,3 +235,17 @@ Call workspace APIs with `Authorization: Bearer sk_live_...` and optionally
 Existing `X-Admin-Key` credentials remain accepted during migration and
 return a `Warning` deprecation header. Run `alembic upgrade head` before
 starting the server.
+
+
+### Audit log (T1.6)
+
+After `alembic upgrade head`, workspace owners and admins can request
+`GET /api/v1/audit-log?limit=50&offset=0` with their session and
+`X-Workspace-Id`. Limits range from 1 to 100. Events are restricted to the
+selected workspace and contain action, target, actor, timestamp and sanitized
+metadata; API secrets and message contents are never stored. The log records
+successful logins for existing workspace members, failed logins for known
+accounts with memberships, invitations, membership changes, API-key creation
+and revocation, knowledge deletion, and workspace settings changes. Failed
+logins for unknown email addresses have no tenant to attribute and are not
+written to this tenant-scoped log.

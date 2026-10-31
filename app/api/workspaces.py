@@ -11,6 +11,7 @@ from sqlalchemy import func, select
 from ..db import Invitation, Membership, Session, Tenant, User, now, uid
 from ..services import auth as security
 from ..services import email
+from ..services.audit import audit
 from .auth import _csrf, _session
 from .principal import Principal, require_role
 from .shared import sha, tenant_view
@@ -82,6 +83,8 @@ def invite(body: InviteInput, principal: Principal = Depends(require_role('admin
                                 role=body.role, token_hash=security.hash_token(raw),
                                 expires_at=now() + timedelta(days=7), invited_by=principal.user.id)
         db.add(invitation)
+        audit(db, principal.tenant.id, 'invitation.created', invitation.id,
+              {'role': body.role}, principal.user.id)
     email.sender.send(address, 'Workspace invitation', raw)
     return {'id': invitation.id, 'email': address, 'role': invitation.role, 'expires_at': invitation.expires_at}
 
@@ -101,6 +104,8 @@ def revoke_invitation(invitation_id: str, principal: Principal = Depends(require
         if not invitation:
             raise HTTPException(404, 'Invitation not found')
         db.delete(invitation)
+        audit(db, principal.tenant.id, 'invitation.revoked', invitation_id,
+              actor_user_id=principal.user.id)
 
 
 @router.post('/invitations/accept')
@@ -117,6 +122,8 @@ def accept_invitation(body: AcceptInput, user: User = Depends(_user)):
         db.add(Membership(id=uid(), user_id=user.id, tenant_id=invitation.tenant_id, role=invitation.role))
         workspace_id = invitation.tenant_id
         db.delete(invitation)
+        audit(db, workspace_id, 'invitation.accepted', invitation.id,
+              actor_user_id=user.id)
     return {'tenant_id': workspace_id, 'status': 'joined'}
 
 
@@ -151,7 +158,10 @@ def change_member_role(user_id: str, body: RoleInput,
         member = _change_member(db, principal, user_id)
         if member.role == 'owner' and principal.role != 'owner':
             raise HTTPException(403, 'Only owners can change owner role')
+        previous_role = member.role
         member.role = body.role
+        audit(db, principal.tenant.id, 'member.role_changed', user_id,
+              {'from': previous_role, 'to': body.role}, principal.user.id if principal.user else None)
     return {'user_id': user_id, 'role': body.role}
 
 
@@ -162,3 +172,5 @@ def remove_member(user_id: str, principal: Principal = Depends(require_role('adm
         if member.role == 'owner' and principal.role != 'owner':
             raise HTTPException(403, 'Only owners can remove owners')
         db.delete(member)
+        audit(db, principal.tenant.id, 'member.removed', user_id,
+              actor_user_id=principal.user.id if principal.user else None)

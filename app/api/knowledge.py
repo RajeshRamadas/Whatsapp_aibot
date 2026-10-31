@@ -12,7 +12,8 @@ from sqlalchemy import select
 from .. import evaluate, ingest, llm, rag, whatsapp
 from ..config import settings
 from ..db import Conversation, EvalCase, Message, Session, Source, Tenant, uid
-from .principal import tenant_for_role
+from ..services.audit import audit
+from .principal import Principal, require_role, tenant_for_role
 from .shared import (
     UPLOADS,
     WIDGET,
@@ -59,13 +60,17 @@ def list_sources(tenant: Tenant = Depends(tenant_for_role('admin'))):
 
 
 @router.delete('/api/v1/sources/{source_id}', status_code=204)
-def delete_source(source_id: str, tenant: Tenant = Depends(tenant_for_role('admin'))):
+def delete_source(source_id: str, principal: Principal = Depends(require_role('admin'))):
+    tenant = principal.tenant
     with Session.begin() as db:
         src = db.scalar(select(Source).where(Source.id == source_id, Source.tenant_id == tenant.id))
         if not src:
             raise HTTPException(404, 'Source not found')
         path = Path(src.file_path)
         db.delete(src)  # its chunks go with it (ON DELETE CASCADE)
+        audit(db, tenant.id, 'knowledge.deleted', source_id,
+              actor_user_id=principal.user.id if principal.user else None,
+              actor_type='user' if principal.user else 'api_key')
     path.unlink(missing_ok=True)
 
 

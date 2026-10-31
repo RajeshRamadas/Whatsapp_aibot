@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from ..db import ApiKey, Session, now, uid
+from ..services.audit import audit
 from .principal import Principal, require_role
 from .shared import sha
 
@@ -37,6 +38,8 @@ def create_key(body: KeyInput, principal: Principal = Depends(require_role('admi
                  expires_at=now() + timedelta(days=body.expires_in_days) if body.expires_in_days else None)
     with Session.begin() as db:
         db.add(key)
+        audit(db, principal.tenant.id, 'api_key.created', key.id,
+              {'name': body.name, 'scope': body.scope}, principal.user.id)
     return {**view(key), 'key': secret}
 
 
@@ -58,3 +61,5 @@ def revoke_key(key_id: str, principal: Principal = Depends(require_role('admin')
         if not key:
             raise HTTPException(404, 'API key not found')
         key.revoked_at = now()
+        audit(db, principal.tenant.id, 'api_key.revoked', key.id,
+              actor_user_id=principal.user.id)
