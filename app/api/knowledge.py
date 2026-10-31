@@ -11,8 +11,8 @@ from sqlalchemy import select
 
 from .. import evaluate, ingest, llm, rag, whatsapp
 from ..config import settings
-from ..services.audit import audit
 from ..db import Conversation, EvalCase, Message, Session, Source, Tenant, uid
+from ..services.audit import audit
 from .principal import Principal, require_role, tenant_for_role
 from .shared import (
     UPLOADS,
