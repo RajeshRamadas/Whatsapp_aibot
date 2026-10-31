@@ -99,24 +99,24 @@ def conversation_for(tenant_id: str, wa_user: str) -> Conversation:
         contact = db.scalar(contact_query)
         if contact is None:
             contact = Contact(tenant_id=tenant_id, channel='whatsapp', external_user=wa_user)
-            with db.begin_nested():
-                try:
+            try:
+                with db.begin_nested():
                     db.add(contact)
                     db.flush()
-                except IntegrityError:
-                    contact = None
+            except IntegrityError:
+                contact = None
             if contact is None:
                 contact = db.scalar(contact_query)
         conv = db.scalar(query)
         if conv is None:
             conv = Conversation(tenant_id=tenant_id, channel='whatsapp',
                                 external_user=wa_user, contact_id=contact.id, status='bot')
-            with db.begin_nested():
-                try:
+            try:
+                with db.begin_nested():
                     db.add(conv)
                     db.flush()
-                except IntegrityError:
-                    conv = None
+            except IntegrityError:
+                conv = None
             if conv is None:
                 conv = db.scalar(query)
         if conv.contact_id is None:
