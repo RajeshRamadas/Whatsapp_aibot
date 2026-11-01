@@ -135,7 +135,7 @@ def save_exchange(conversation: Conversation, *pairs: tuple[str, str], create: b
             db.add(conversation)
         timestamp = now()
         for role, content in pairs:
-            outbound = role in ('assistant', 'agent')
+            outbound = role in ('assistant', 'agent', 'note')
             db.add(Message(conversation_id=conversation.id, role=role, content=content,
                            direction='outbound' if outbound else 'inbound',
                            kind='note' if role == 'note' else 'text',
