@@ -65,5 +65,22 @@
   "needsAttention": "Needs attention",
   "needsAttentionEmpty": "No items to show yet.",
   "sectionEmpty": "This page is coming soon.",
-  "retry": "Try again"
+  "retry": "Try again",
+  "knowledgeDescription": "Upload documents to teach your assistant. Files are processed in the background.",
+  "knowledgeAdminOnly": "Only workspace owners and admins can manage knowledge files.",
+  "dropFiles": "Drop files here or choose files to upload.",
+  "selectFiles": "Choose files",
+  "uploading": "Uploading…",
+  "uploadFailed": "The file upload failed. Please try again.",
+  "uploadedSources": "Uploaded files",
+  "noSources": "No files yet. Upload a document to get started.",
+  "refresh": "Refresh",
+  "ready": "Ready",
+  "processing": "Processing",
+  "deleteSource": "Delete",
+  "confirmDeleteSource": "Delete this file and all its indexed content? This cannot be undone.",
+  "emptyFileAdvice": "Try a document with selectable text instead of a scanned image.",
+  "formatAdvice": "Try a supported document format.",
+  "sizeAdvice": "Choose a smaller file.",
+  "generalFileAdvice": "Check the document and upload it again."
 }
