@@ -51,6 +51,8 @@ async def whatsapp_webhook(request: Request):
         payload = json.loads(body)
     except ValueError:
         raise HTTPException(400, 'Invalid JSON') from None
+    for status in whatsapp.parse_statuses(payload):
+        await run_in_threadpool(whatsapp.record_status, status)
     for message in whatsapp.parse_messages(payload):
         event_id = await run_in_threadpool(whatsapp.accept, message)
         if event_id:
