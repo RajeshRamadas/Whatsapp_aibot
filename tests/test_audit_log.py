@@ -5,7 +5,7 @@ from app.config import settings
 
 def test_audit_log_lifecycle(client, monkeypatch):
     monkeypatch.setattr(settings, 'auth_cookie_secure', False)
-    auth._auth_hits.clear()
+    auth._auth_limiter.clear()
     assert client.post('/api/v1/auth/signup', json={
         'email': 'auditor@example.com', 'name': 'Auditor', 'password': 'strong-passphrase-123'
     }).status_code == 201
