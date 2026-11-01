@@ -42,6 +42,12 @@ services:
         condition: service_healthy
     volumes:
       - uploads:/srv/uploads
+  web:
+    build: ./web
+    ports:
+      - '3000:3000'
+    depends_on:
+      - api
   worker:
     build: .
     command: ['python', '-m', 'app.jobs.worker']
