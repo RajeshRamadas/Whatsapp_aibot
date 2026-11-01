@@ -28,5 +28,20 @@
   "confirm": "Confirm",
   "back": "Back to home",
   "home": "Welcome to your workspace",
-  "homeDescription": "The admin dashboard is being built. Explore the component gallery."
+  "homeDescription": "The admin dashboard is being built. Explore the component gallery.",
+  "signup": "Create account",
+  "login": "Log in",
+  "verify": "Verify email",
+  "forgot": "Forgot password",
+  "reset": "Reset password",
+  "invitation": "Accept invitation",
+  "workspace": "Create workspace",
+  "email": "Email",
+  "password": "Password",
+  "code": "Six-digit code",
+  "token": "Invitation token",
+  "submit": "Continue",
+  "requestAccepted": "If the account exists, reset instructions have been sent.",
+  "genericError": "Something went wrong. Try again.",
+  "dashboard": "Your workspaces"
 }
