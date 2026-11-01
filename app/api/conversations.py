@@ -83,8 +83,8 @@ def agent_reply(conversation_id: str, body: AgentReply, tenant: Tenant = Depends
     if not settings.whatsapp_enabled:
         raise HTTPException(503, 'WhatsApp is not configured')
     # Meta only delivers free-form messages within 24 hours of the user's last message.
-    whatsapp.send_text(tenant.whatsapp_phone_number_id, conv.external_user, body.message)
-    rag.save_exchange(conv, ('agent', body.message))
+    message_id = whatsapp.send_text(tenant.whatsapp_phone_number_id, conv.external_user, body.message)
+    rag.save_exchange(conv, ('agent', body.message), channel_message_id=message_id)
     with Session.begin() as db:
         db.get(Conversation, conv.id).status = 'agent'
     return {'status': 'sent'}
