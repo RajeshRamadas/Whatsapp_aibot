@@ -17,7 +17,7 @@ class RecordingEmail(email.EmailSender):
 def test_signup_verify_login_logout_and_csrf(client, monkeypatch):
     recorder = RecordingEmail()
     monkeypatch.setattr(email, 'sender', recorder)
-    auth._auth_hits.clear()
+    auth._auth_limiter.clear()
     data = {'email': 'HELLO@Example.com', 'password': 'a-long-unique-password', 'name': 'Test User'}
     signup = client.post('/api/v1/auth/signup', json=data)
     assert signup.status_code == 201, signup.text
@@ -39,7 +39,7 @@ def test_signup_verify_login_logout_and_csrf(client, monkeypatch):
 def test_password_reset_revokes_sessions(client, monkeypatch):
     recorder = RecordingEmail()
     monkeypatch.setattr(email, 'sender', recorder)
-    auth._auth_hits.clear()
+    auth._auth_limiter.clear()
     data = {'email': 'reset@example.com', 'password': 'old-unique-password', 'name': 'Test'}
     assert client.post('/api/v1/auth/signup', json=data).status_code == 201
     assert client.post('/api/v1/auth/login', json=data).status_code == 200
@@ -56,7 +56,7 @@ def test_password_reset_revokes_sessions(client, monkeypatch):
 
 def test_login_rate_limit_and_weak_password(client, monkeypatch):
     monkeypatch.setattr(email, 'sender', RecordingEmail())
-    auth._auth_hits.clear()
+    auth._auth_limiter.clear()
     data = {'email': 'limited@example.com', 'password': 'password123', 'name': 'Test'}
     assert client.post('/api/v1/auth/signup', json=data).status_code == 422
     data['password'] = 'strong-unique-password'
