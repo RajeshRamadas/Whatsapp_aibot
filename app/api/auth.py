@@ -1,8 +1,5 @@
 """User registration and cookie-session authentication."""
 import secrets
-import threading
-import time
-from collections import defaultdict, deque
 
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, EmailStr, Field
@@ -10,13 +7,13 @@ from sqlalchemy import delete, select
 
 from ..config import settings
 from ..db import AuthCode, Membership, Session, User, UserSession, now, uid
+from ..rate_limits import RateLimiter
 from ..services import auth as security
 from ..services import email
 from ..services.audit import audit
 
 router = APIRouter(prefix='/api/v1/auth', tags=['auth'])
-_auth_hits = defaultdict(deque)
-_auth_lock = threading.Lock()
+_auth_limiter = RateLimiter(5, window_seconds=900, namespace='auth')
 COOKIE = 'chatbot_session'
 CSRF_COOKIE = 'chatbot_csrf'
 
@@ -98,16 +95,12 @@ def _set_cookies(response: Response, raw: str, csrf: str):
 
 def _rate_limit(request: Request, email_address: str, action: str):
     ip = request.client.host if request.client else 'unknown'
-    timestamp = time.monotonic()
-    with _auth_lock:
-        for key in (f'{action}:ip:{ip}', f'{action}:email:{email_address}'):
-            hits = _auth_hits[key]
-            while hits and hits[0] <= timestamp - 900:
-                hits.popleft()
-            if len(hits) >= 5:
-                raise HTTPException(429, 'Too many attempts. Try again later.')
-        for key in (f'{action}:ip:{ip}', f'{action}:email:{email_address}'):
-            _auth_hits[key].append(timestamp)
+    # Check both dimensions; each is atomic across all API processes.
+    # Charging one dimension before the other is conservative under contention.
+    if not _auth_limiter.allow(f'{action}:ip:{ip}'):
+        raise HTTPException(429, 'Too many attempts. Try again later.')
+    if not _auth_limiter.allow(f'{action}:email:{email_address}'):
+        raise HTTPException(429, 'Too many attempts. Try again later.')
 
 
 @router.post('/signup', status_code=201)
