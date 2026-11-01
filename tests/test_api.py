@@ -103,7 +103,8 @@ def test_failed_ingest_is_reported(client, tenant):
 
 
 def test_rate_limiter_window():
-    limiter = rag.RateLimiter(1, window_seconds=0.05)
+    limiter = rag.RateLimiter(1, window_seconds=0.05, namespace='window-test')
+    limiter.clear()
     assert limiter.allow('k') and not limiter.allow('k')
     time.sleep(0.06)
     assert limiter.allow('k')
