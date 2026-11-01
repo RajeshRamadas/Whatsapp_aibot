@@ -338,7 +338,7 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 - **Tests:** a Playwright test of the full sign-up flow against the API with the test email backend.
 - **Done when:** a new user reaches an empty Home screen.
 
-#### T3.3 App shell, navigation and Home checklist
+#### T3.3 App shell, navigation and Home checklist (implemented in PR #27)
 - **Delivers:** UX_DESIGN §3, §9, ACC-2
 - **Depends on:** T3.2
 - **Size:** M
