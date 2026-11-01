@@ -1,6 +1,7 @@
 'use client';
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input, Card } from '@/components/ui/primitives';
@@ -52,5 +53,12 @@ export function AuthForm({ mode }: { mode: Mode }) {
       {success && <p role="status">{success}</p>}
       <Button type="submit" disabled={busy}>{busy ? messages.loading : messages.submit}</Button>
     </form>
+    <nav className="mt-5 flex flex-wrap gap-3 text-sm underline">
+      <Link href="/login">{messages.login}</Link>
+      <Link href="/signup">{messages.signup}</Link>
+      <Link href="/forgot-password">{messages.forgot}</Link>
+      <Link href="/reset-password">{messages.reset}</Link>
+      <Link href="/accept-invitation">{messages.invitation}</Link>
+    </nav>
   </Card>;
 }
