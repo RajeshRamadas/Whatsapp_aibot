@@ -1,6 +1,20 @@
 from fastapi import APIRouter
 
-from . import api_keys, audit, auth, chat, conversations, evals, jobs, knowledge, onboarding, tenants, whatsapp, widget, workspaces
+from . import (
+    api_keys,
+    audit,
+    auth,
+    chat,
+    conversations,
+    evals,
+    jobs,
+    knowledge,
+    onboarding,
+    tenants,
+    whatsapp,
+    widget,
+    workspaces,
+)
 from .shared import UPLOADS as UPLOADS
 from .shared import origins as origins
 
