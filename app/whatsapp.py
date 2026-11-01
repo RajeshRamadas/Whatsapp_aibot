@@ -14,7 +14,7 @@ from sqlalchemy.exc import IntegrityError
 
 from . import rag
 from .config import settings
-from .db import Contact, Conversation, InboundEvent, Session, Tenant, uid
+from .db import Contact, Conversation, InboundEvent, Message, Session, Tenant, uid
 
 log = logging.getLogger(__name__)
 
@@ -79,7 +79,7 @@ def accept(message: dict) -> str | None:
         return event.id
 
 
-def send_text(phone_number_id: str, to: str, body: str) -> None:
+def send_text(phone_number_id: str, to: str, body: str) -> str | None:
     response = httpx.post(
         f'https://graph.facebook.com/{settings.whatsapp_graph_version}/{phone_number_id}/messages',
         headers={'Authorization': f'Bearer {settings.whatsapp_access_token}'},
@@ -87,6 +87,8 @@ def send_text(phone_number_id: str, to: str, body: str) -> None:
               'type': 'text', 'text': {'preview_url': False, 'body': body[:MAX_TEXT]}},
         timeout=20)
     response.raise_for_status()
+    messages = response.json().get('messages') or []
+    return messages[0].get('id') if messages else None
 
 
 def conversation_for(tenant_id: str, wa_user: str) -> Conversation:
@@ -137,23 +139,74 @@ def handle(tenant_id: str, message: dict) -> None:
         if conv.status in ('waiting', 'agent', 'closed') or conv.handoff:
             rag.save_exchange(conv, placeholder)
         else:
-            send_text(phone_number_id, wa_user, UNSUPPORTED_REPLY)
-            rag.save_exchange(conv, placeholder, ('assistant', UNSUPPORTED_REPLY))
+            message_id = send_text(phone_number_id, wa_user, UNSUPPORTED_REPLY)
+            rag.save_exchange(conv, placeholder, ('assistant', UNSUPPORTED_REPLY), channel_message_id=message_id)
         return
     if conv.handoff:
         rag.save_exchange(conv, ('user', text))
         return
     if text.lower() in settings.handoff_keywords:
-        send_text(phone_number_id, wa_user, HANDOFF_REPLY)
+        message_id = send_text(phone_number_id, wa_user, HANDOFF_REPLY)
         with Session.begin() as db:
             active = db.get(Conversation, conv.id)
             active.handoff = True
             active.status = 'waiting'
-        rag.save_exchange(conv, ('user', text), ('assistant', HANDOFF_REPLY))
+        rag.save_exchange(conv, ('user', text), ('assistant', HANDOFF_REPLY), channel_message_id=message_id)
         return
     if not rag.chat_limiter.allow(f'wa:{tenant_id}:{wa_user}'):
         send_text(phone_number_id, wa_user, RATE_LIMIT_REPLY)
         return
     reply = rag.answer(tenant, conv.id, text).text or ERROR_REPLY
-    send_text(phone_number_id, wa_user, reply)
-    rag.save_exchange(conv, ('user', text), ('assistant', reply))
+    message_id = send_text(phone_number_id, wa_user, reply)
+    rag.save_exchange(conv, ('user', text), ('assistant', reply), channel_message_id=message_id)
+
+
+DELIVERY_RANK = {'sent': 1, 'delivered': 2, 'read': 3}
+
+
+def parse_statuses(payload: dict) -> list[dict]:
+    """Extract delivery receipts with their sending phone-number identity."""
+    found = []
+    for entry in payload.get('entry') or []:
+        for change in entry.get('changes') or []:
+            value = change.get('value') or {}
+            phone_id = (value.get('metadata') or {}).get('phone_number_id')
+            for status in value.get('statuses') or []:
+                if phone_id and status.get('id') and status.get('status') in (*DELIVERY_RANK, 'failed'):
+                    found.append({'phone_number_id': phone_id, **status})
+    return found
+
+
+def record_status(status: dict) -> bool:
+    """Apply a tenant-verified receipt without regressing a known delivery state."""
+    with Session.begin() as db:
+        tenant_id = db.scalar(select(Tenant.id).where(
+            Tenant.whatsapp_phone_number_id == status['phone_number_id']))
+        if not tenant_id:
+            return False
+        row = db.scalar(select(Message).join(Conversation, Message.conversation_id == Conversation.id)
+                        .where(Conversation.tenant_id == tenant_id,
+                               Conversation.channel == 'whatsapp',
+                               Message.direction == 'outbound',
+                               Message.channel_message_id == status['id'])
+                        .with_for_update())
+        if row is None:
+            return False
+        incoming = status['status']
+        previous = row.delivery_status
+        if previous == incoming:
+            return True
+        if previous == 'failed' or (incoming == 'failed' and previous in ('delivered', 'read')):
+            return True
+        if incoming != 'failed' and DELIVERY_RANK.get(incoming, 0) <= DELIVERY_RANK.get(previous, 0):
+            return True
+        row.delivery_status = incoming
+        if incoming == 'failed':
+            errors = status.get('errors') or []
+            first = errors[0] if errors and isinstance(errors[0], dict) else {}
+            code = str(first.get('code', 'unknown'))[:32]
+            title = str(first.get('title', 'Delivery failed'))[:400]
+            row.error = f'{code}: {title}'
+        else:
+            row.error = None
+        return True
