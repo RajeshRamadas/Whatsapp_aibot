@@ -4,7 +4,7 @@ import Link from 'next/link';
 import messages from '@/messages/en.json';
 export default async function Dashboard() {
   const cookie = (await cookies()).toString();
-  const base = process.env.API_INTERNAL_URL ?? 'http://api:8000';
+  const base = process.env.API_INTERNAL_URL ?? 'http://localhost:8000';
   const response = await fetch(base + '/api/v1/auth/me', { headers: { cookie }, cache: 'no-store' });
   if (!response.ok) redirect('/login');
   const workspaces = await fetch(base + '/api/v1/workspaces', { headers: { cookie }, cache: 'no-store' });
