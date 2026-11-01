@@ -24,7 +24,7 @@ def test_upload_intent_and_integrity(client, monkeypatch, tmp_path):
     monkeypatch.setattr(settings, 'auth_cookie_secure', False)
     monkeypatch.setattr(settings, 'storage_backend', 'local')
     monkeypatch.setattr(settings, 'storage_local_path', str(tmp_path))
-    auth._auth_hits.clear()
+    auth._auth_limiter.clear()
     assert client.post('/api/v1/auth/signup', json={
         'email': 'storage@example.com', 'name': 'Storage', 'password': 'strong-passphrase-123'
     }).status_code == 201

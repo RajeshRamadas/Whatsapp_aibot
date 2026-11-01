@@ -26,7 +26,7 @@ def test_workspace_roles_and_invitation(client, monkeypatch):
     monkeypatch.setattr(settings, 'auth_cookie_secure', False)
     recorder = Recorder()
     monkeypatch.setattr(email, 'sender', recorder)
-    auth._auth_hits.clear()
+    auth._auth_limiter.clear()
     owner_headers = login(client, 'owner@demo.example', recorder)
     created = client.post('/api/v1/workspaces', json={'name': 'Demo Workspace'}, headers=owner_headers)
     assert created.status_code == 201, created.text

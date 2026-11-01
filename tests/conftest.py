@@ -75,7 +75,9 @@ def client(chats, tmp_path, monkeypatch):
     config = Config(str(Path(__file__).resolve().parents[1] / 'alembic.ini'))
     config.set_main_option('script_location', str(Path(__file__).resolve().parents[1] / 'migrations'))
     command.stamp(config, 'head')
-    rag.chat_limiter.hits.clear()
+    rag.chat_limiter.clear()
+    from app.api.auth import _auth_limiter
+    _auth_limiter.clear()
 
     async def inline_ingestion(name, **kwargs):
         if name != 'ingest_source':

@@ -5,9 +5,7 @@ those calls can take many seconds and would otherwise exhaust the pool.
 """
 import logging
 import re
-import threading
-import time
-from collections import defaultdict, deque
+from collections import defaultdict
 from dataclasses import dataclass
 from functools import reduce
 
@@ -17,6 +15,7 @@ from . import llm
 from .config import settings
 from .db import Chunk, Conversation, Message, Session, Source, Tenant, now
 from .ingest import source_label
+from .rate_limits import RateLimiter
 
 log = logging.getLogger(__name__)
 
@@ -146,29 +145,6 @@ def save_exchange(conversation: Conversation, *pairs: tuple[str, str], create: b
             conv.last_message_at = timestamp
             if any(role == 'user' for role, _ in pairs):
                 conv.last_inbound_at = timestamp
-
-
-class RateLimiter:
-    """Sliding-window limiter. In memory, so the limit is per API process."""
-
-    def __init__(self, limit: int, window_seconds: float = 60):
-        self.limit, self.window = limit, window_seconds
-        self.hits: dict[str, deque] = defaultdict(deque)
-        self.lock = threading.Lock()
-
-    def allow(self, key: str) -> bool:
-        cutoff = time.monotonic() - self.window
-        with self.lock:
-            q = self.hits[key]
-            while q and q[0] < cutoff:
-                q.popleft()
-            if len(q) >= self.limit:
-                return False
-            q.append(time.monotonic())
-            if len(self.hits) > 100_000:  # drop idle keys so memory stays bounded
-                for k in [k for k, v in self.hits.items() if not v]:
-                    del self.hits[k]
-            return True
 
 
 chat_limiter = RateLimiter(settings.chat_rate_limit_per_minute)
