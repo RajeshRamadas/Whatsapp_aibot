@@ -315,7 +315,7 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 
 ### M3: Admin app shell (DESIGN §11, UX_DESIGN §3–5, §8–10)
 
-#### T3.1 Web app scaffold and design system
+#### T3.1 Web app scaffold and design system (implemented in PR #25)
 - **Delivers:** DESIGN D2, UX_DESIGN VDS-1 to VDS-8, L10N-1
 - **Depends on:** T1.2
 - **Size:** L
