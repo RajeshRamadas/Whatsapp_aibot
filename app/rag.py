@@ -128,14 +128,19 @@ def answer(tenant: Tenant, conversation_id: str | None, question: str) -> Answer
     return Answer(text=text, sources=sources, search_query=query)
 
 
-def save_exchange(conversation: Conversation, *pairs: tuple[str, str], create: bool = False) -> None:
+def save_exchange(conversation: Conversation, *pairs: tuple[str, str], create: bool = False,
+                  channel_message_id: str | None = None) -> None:
     with Session.begin() as db:
         if create:
             db.add(conversation)
         timestamp = now()
-        db.add_all(Message(conversation_id=conversation.id, role=role, content=content,
-                           direction='inbound' if role == 'user' else 'outbound',
-                           kind='note' if role == 'note' else 'text') for role, content in pairs)
+        for role, content in pairs:
+            outbound = role in ('assistant', 'agent')
+            db.add(Message(conversation_id=conversation.id, role=role, content=content,
+                           direction='outbound' if outbound else 'inbound',
+                           kind='note' if role == 'note' else 'text',
+                           channel_message_id=channel_message_id if outbound else None,
+                           delivery_status='sent' if outbound and channel_message_id else None))
         conv = conversation if create else db.get(Conversation, conversation.id)
         if conv and pairs:
             conv.last_message_at = timestamp
