@@ -327,7 +327,7 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
   5. CI job: lint, type check, unit tests, build. A web service in Compose.
 - **Done when:** the gallery renders in both themes, CI is green, and the generated client compiles.
 
-#### T3.2 Auth screens
+#### T3.2 Auth screens (implemented in PR #26)
 - **Delivers:** ACC-1 UI, UX_DESIGN §4.1 steps 1–3
 - **Depends on:** T3.1, T1.4
 - **Size:** M
