@@ -39,7 +39,9 @@ def list_conversations(handoff: bool | None = None, limit: int = Query(50, ge=1,
     with Session() as db:
         rows = db.scalars(query.order_by(Conversation.created_at.desc()).limit(limit)).all()
     return [{'id': c.id, 'channel': c.channel, 'user': c.external_user, 'handoff': c.handoff,
-             'created_at': c.created_at} for c in rows]
+             'contact_id': c.contact_id, 'status': c.status, 'assignee_user_id': c.assignee_user_id,
+             'labels': c.labels, 'last_inbound_at': c.last_inbound_at,
+             'last_message_at': c.last_message_at, 'created_at': c.created_at} for c in rows]
 
 
 def tenant_conversation(db, tenant: Tenant, conversation_id: str) -> Conversation:
@@ -55,14 +57,19 @@ def conversation_messages(conversation_id: str, tenant: Tenant = Depends(tenant_
     with Session() as db:
         conv = tenant_conversation(db, tenant, conversation_id)
         rows = db.scalars(select(Message).where(Message.conversation_id == conv.id).order_by(Message.id)).all()
-    return [{'role': m.role, 'content': m.content, 'created_at': m.created_at} for m in rows]
+    return [{'role': m.role, 'content': m.content, 'created_at': m.created_at,
+             'direction': m.direction, 'kind': m.kind, 'author_user_id': m.author_user_id,
+             'channel_message_id': m.channel_message_id, 'delivery_status': m.delivery_status,
+             'error': m.error} for m in rows]
 
 
 @router.post('/api/v1/conversations/{conversation_id}/handoff')
 def set_handoff(conversation_id: str, active: bool = True, tenant: Tenant = Depends(tenant_for_role('agent'))):
     """active=true: a human takes over and the bot stops replying. active=false: hand back to the bot."""
     with Session.begin() as db:
-        tenant_conversation(db, tenant, conversation_id).handoff = active
+        conv = tenant_conversation(db, tenant, conversation_id)
+        conv.handoff = active
+        conv.status = 'agent' if active else 'bot'
     return {'id': conversation_id, 'handoff': active}
 
 
@@ -78,6 +85,8 @@ def agent_reply(conversation_id: str, body: AgentReply, tenant: Tenant = Depends
     # Meta only delivers free-form messages within 24 hours of the user's last message.
     whatsapp.send_text(tenant.whatsapp_phone_number_id, conv.external_user, body.message)
     rag.save_exchange(conv, ('agent', body.message))
+    with Session.begin() as db:
+        db.get(Conversation, conv.id).status = 'agent'
     return {'status': 'sent'}
 
 

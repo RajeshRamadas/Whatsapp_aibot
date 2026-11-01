@@ -15,7 +15,7 @@ from sqlalchemy import func, literal_column, select
 
 from . import llm
 from .config import settings
-from .db import Chunk, Conversation, Message, Session, Source, Tenant
+from .db import Chunk, Conversation, Message, Session, Source, Tenant, now
 from .ingest import source_label
 
 log = logging.getLogger(__name__)
@@ -91,7 +91,7 @@ def retrieve(tenant_id: str, query: str) -> list[Match]:
 def history(conversation_id: str) -> list[dict]:
     with Session() as db:
         rows = db.scalars(select(Message).where(Message.conversation_id == conversation_id,
-                                                Message.role.in_(('user', 'assistant')))
+                                                Message.role.in_(('user', 'assistant')), Message.kind != 'note')
                           .order_by(Message.id.desc()).limit(settings.history_messages)).all()
     turns = [{'role': m.role, 'content': m.content} for m in reversed(rows)]
     # Every provider needs the history to start with a user turn.
@@ -132,7 +132,15 @@ def save_exchange(conversation: Conversation, *pairs: tuple[str, str], create: b
     with Session.begin() as db:
         if create:
             db.add(conversation)
-        db.add_all(Message(conversation_id=conversation.id, role=role, content=content) for role, content in pairs)
+        timestamp = now()
+        db.add_all(Message(conversation_id=conversation.id, role=role, content=content,
+                           direction='inbound' if role == 'user' else 'outbound',
+                           kind='note' if role == 'note' else 'text') for role, content in pairs)
+        conv = conversation if create else db.get(Conversation, conversation.id)
+        if conv and pairs:
+            conv.last_message_at = timestamp
+            if any(role == 'user' for role, _ in pairs):
+                conv.last_inbound_at = timestamp
 
 
 class RateLimiter:
