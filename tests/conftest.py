@@ -111,6 +111,10 @@ def tenant(client):
     assert r.status_code == 200, r.text
     data = r.json()
     data['headers'] = {'X-Admin-Key': data['admin_key']}
+    # Existing WhatsApp tests exercise the live assistant unless they explicitly pause it.
+    from app.db import Tenant
+    with Session.begin() as db:
+        db.get(Tenant, data['tenant_id']).bot_live = True
     return data
 
 
