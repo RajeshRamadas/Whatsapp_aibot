@@ -121,8 +121,8 @@ def answer(tenant: Tenant, conversation_id: str | None, question: str) -> Answer
     query = standalone_query(chat, model, turns, question) if turns and settings.query_rewrite else question
     matches = retrieve(tenant.id, query)
     evidence = '\n\n'.join(f'[{i + 1}] {m.label}: {m.content}' for i, m in enumerate(matches))
-    platform_prompt = SYSTEM_PROMPT.split('\\n\\nKNOWLEDGE:', 1)[0].format(name=tenant.name)
-    prompt = platform_prompt + tenant_instructions(tenant) + '\\n\\nKNOWLEDGE:\\n' + (evidence or '(none)')
+    platform_prompt = SYSTEM_PROMPT.split('\n\nKNOWLEDGE:', 1)[0].format(name=tenant.name)
+    prompt = platform_prompt + tenant_instructions(tenant) + '\n\nKNOWLEDGE:\n' + (evidence or '(none)')
     text = chat.complete(model, prompt,
                          [*turns, {'role': 'user', 'content': question}])
     sources = [{'number': i + 1, 'filename': m.filename, 'heading': m.heading, 'page': m.page}
