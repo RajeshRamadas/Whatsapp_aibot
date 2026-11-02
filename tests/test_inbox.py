@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from app.db import Conversation, Session, now, uid
+from app.db import Conversation, Session, Tenant, now, uid
 
 
 def make_conv(tenant_id, **kwargs):
@@ -47,6 +47,8 @@ def test_inbox_isolation_actions_and_counts(client, tenant, monkeypatch):
 
 def test_whatsapp_window_and_canned_replies(client, tenant, monkeypatch):
     monkeypatch.setattr('app.api.inbox.publish_sync', lambda *args: None)
+    with Session.begin() as db:
+        db.get(Tenant, tenant['tenant_id']).whatsapp_phone_number_id = 'test-phone-id'
     conversation_id = make_conv(tenant['tenant_id'], last_inbound_at=now() - timedelta(days=2))
     base = f'/api/v1/inbox/conversations/{conversation_id}'
     response = client.post(base + '/reply', headers=tenant['headers'], json={'message': 'Hello'})
