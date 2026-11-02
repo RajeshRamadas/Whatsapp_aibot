@@ -12,6 +12,7 @@ from sqlalchemy import select
 from .. import evaluate, ingest, llm, rag, whatsapp
 from ..config import settings
 from ..db import Conversation, EvalCase, Message, Session, Source, Tenant, uid
+from ..services.events import publish_sync
 from .principal import tenant_for_role
 from .shared import (
     UPLOADS,
@@ -70,6 +71,7 @@ def set_handoff(conversation_id: str, active: bool = True, tenant: Tenant = Depe
         conv = tenant_conversation(db, tenant, conversation_id)
         conv.handoff = active
         conv.status = 'agent' if active else 'bot'
+    publish_sync(tenant.id, 'conversation.updated', {'conversation_id': conversation_id})
     return {'id': conversation_id, 'handoff': active}
 
 
@@ -87,6 +89,7 @@ def agent_reply(conversation_id: str, body: AgentReply, tenant: Tenant = Depends
     rag.save_exchange(conv, ('agent', body.message), channel_message_id=message_id)
     with Session.begin() as db:
         db.get(Conversation, conv.id).status = 'agent'
+    publish_sync(tenant.id, 'conversation.updated', {'conversation_id': conversation_id})
     return {'status': 'sent'}
 
 

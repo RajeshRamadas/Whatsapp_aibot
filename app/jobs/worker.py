@@ -8,6 +8,7 @@ from sqlalchemy import select, text
 from .. import ingest, whatsapp
 from ..config import settings
 from ..db import AuditLog, InboundEvent, Message, Session, Source, Tenant
+from ..services.events import publish_sync
 
 
 async def sample_job(ctx: dict, tenant_id: str, job_id: str) -> str:
@@ -30,6 +31,7 @@ async def ingest_source(ctx: dict, source_id: str, tenant_id: str) -> None:
             return
     try:
         await asyncio.to_thread(ingest.ingest, source_id)
+        await asyncio.to_thread(publish_sync, tenant_id, 'source.updated', {'source_id': source_id})
     except Exception as exc:
         with Session.begin() as db:
             source = db.get(Source, source_id)
@@ -38,6 +40,7 @@ async def ingest_source(ctx: dict, source_id: str, tenant_id: str) -> None:
                     source.status, source.error = 'failed', str(exc)[:500]
                 else:
                     source.status = 'queued'
+        await asyncio.to_thread(publish_sync, tenant_id, 'source.updated', {'source_id': source_id})
         if not isinstance(exc, ValueError) and ctx.get('job_try', 1) < 3:
             raise
 

@@ -371,7 +371,7 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 
 ### M4: Inbox (DESIGN D7, UX_DESIGN §4.5)
 
-#### T4.1 Live events over SSE
+#### T4.1 Live events over SSE (PR #31)
 - **Delivers:** INB-3, UX_DESIGN UI-6
 - **Depends on:** T2.1, T1.4
 - **Size:** M
