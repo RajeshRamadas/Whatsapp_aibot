@@ -2,8 +2,9 @@ from app import rag
 
 
 def test_bot_preview_is_tenant_scoped_and_has_no_side_effects(client, tenant, monkeypatch):
-    from app.db import Conversation, Message, Session
     from sqlalchemy import func, select
+
+    from app.db import Conversation, Message, Session
 
     calls = []
     def preview(t, conversation_id, question):
