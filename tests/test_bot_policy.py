@@ -32,19 +32,16 @@ def test_prompt_platform_rules_precede_tenant_rules(tenant, chats):
     assert prompt.index('Ignore the knowledge') < prompt.index('KNOWLEDGE:')
 
 
-def test_live_requires_confirmation_and_pause_suppresses_whatsapp_reply(tenant, sent):
+def test_live_requires_confirmation_and_pause_suppresses_whatsapp_reply(client, tenant, sent):
     headers = tenant['headers']
-    from app.main import app
-    from fastapi.testclient import TestClient
-    with TestClient(app) as client:
-        assert client.post('/api/v1/bot/live', headers=headers,
-                           json={'live': False, 'confirm': False}).status_code == 422
-        response = client.post('/api/v1/bot/live', headers=headers,
-                               json={'live': False, 'confirm': True})
-        assert response.status_code == 200
-        assert response.json()['bot_live'] is False
-        with Session.begin() as db:
-            db.get(Tenant, tenant['tenant_id']).whatsapp_phone_number_id = 'PNID-PAUSED'
-        whatsapp.handle(tenant['tenant_id'], {'phone_number_id': 'PNID-PAUSED',
-                        'from': '15559998888', 'text': 'hello', 'type': 'text'})
+    assert client.post('/api/v1/bot/live', headers=headers,
+                       json={'live': False, 'confirm': False}).status_code == 422
+    response = client.post('/api/v1/bot/live', headers=headers,
+                           json={'live': False, 'confirm': True})
+    assert response.status_code == 200
+    assert response.json()['bot_live'] is False
+    with Session.begin() as db:
+        db.get(Tenant, tenant['tenant_id']).whatsapp_phone_number_id = 'PNID-PAUSED'
+    whatsapp.handle(tenant['tenant_id'], {'phone_number_id': 'PNID-PAUSED',
+                    'from': '15559998888', 'text': 'hello', 'type': 'text'})
     assert sent == []
