@@ -3,6 +3,7 @@ import json
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+
 # JSON object: weekday (0=Monday..6=Sunday) -> ["HH:MM", "HH:MM"].
 def validate_hours(raw: str) -> dict:
     if not raw:
