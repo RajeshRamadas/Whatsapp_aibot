@@ -49,6 +49,14 @@ class UpdateTenant(BaseModel):
     chat_provider: str | None = None
     chat_model: str | None = Field(default=None, max_length=100)
     whatsapp_phone_number_id: str | None = Field(default=None, max_length=64)
+    bot_name: str | None = Field(default=None, min_length=1, max_length=100)
+    bot_persona: str | None = Field(default=None, max_length=2000)
+    bot_tone: str | None = None
+    bot_rules: str | None = Field(default=None, max_length=4000)
+    business_hours: str | None = Field(default=None, max_length=3000)
+    timezone: str | None = Field(default=None, max_length=64)
+    default_language: str | None = Field(default=None, min_length=2, max_length=16)
+    bot_live: bool | None = None
 
 
 class ChatInput(BaseModel):
@@ -79,6 +87,9 @@ class AgentReply(BaseModel):
 def tenant_view(t: Tenant) -> dict:
     provider, model = llm.resolve_chat(t.chat_provider, t.chat_model)
     return {'tenant_id': t.id, 'name': t.name, 'public_key': t.public_key, 'allowed_origins': origins(t),
-            'chat_provider': provider, 'chat_model': model, 'whatsapp_phone_number_id': t.whatsapp_phone_number_id}
+            'chat_provider': provider, 'chat_model': model, 'whatsapp_phone_number_id': t.whatsapp_phone_number_id,
+            'bot_name': t.bot_name, 'bot_persona': t.bot_persona, 'bot_tone': t.bot_tone,
+            'bot_rules': t.bot_rules, 'business_hours': t.business_hours, 'timezone': t.timezone,
+            'default_language': t.default_language, 'bot_live': t.bot_live}
 
 
