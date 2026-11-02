@@ -50,6 +50,14 @@ class Tenant(Base):
     chat_model: Mapped[str | None] = mapped_column(String(100), nullable=True)
     # The WhatsApp Business phone number ID that routes inbound messages to this tenant.
     whatsapp_phone_number_id: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
+    bot_name: Mapped[str] = mapped_column(String(100), default='Assistant')
+    bot_persona: Mapped[str] = mapped_column(Text, default='')
+    bot_tone: Mapped[str] = mapped_column(String(20), default='neutral')
+    bot_rules: Mapped[str] = mapped_column(Text, default='')
+    business_hours: Mapped[str] = mapped_column(Text, default='')
+    timezone: Mapped[str] = mapped_column(String(64), default='UTC')
+    default_language: Mapped[str] = mapped_column(String(16), default='en')
+    bot_live: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
 class Source(Base):
