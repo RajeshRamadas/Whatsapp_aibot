@@ -15,6 +15,7 @@ from sqlalchemy.exc import IntegrityError
 from . import rag
 from .config import settings
 from .db import Contact, Conversation, InboundEvent, Message, Session, Tenant, uid
+from .services.bot_policy import within_hours
 
 log = logging.getLogger(__name__)
 
@@ -134,6 +135,15 @@ def handle(tenant_id: str, message: dict) -> None:
     if tenant is None:
         return
     conv = conversation_for(tenant_id, wa_user)
+    if not tenant.bot_live or not within_hours(tenant):
+        # Do not send an AI answer when paused or outside configured business hours.
+        # Persist the incoming message and queue the conversation for a human.
+        with Session.begin() as db:
+            active = db.get(Conversation, conv.id)
+            active.handoff = True
+            active.status = 'waiting'
+        rag.save_exchange(conv, ('user', text or f"[{message['type']} message]"))
+        return
     if not text:
         placeholder = ('user', f"[{message['type']} message]")
         if conv.status in ('waiting', 'agent', 'closed') or conv.handoff:
