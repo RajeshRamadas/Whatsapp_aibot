@@ -358,7 +358,7 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
   3. Failure reasons with suggested fixes; delete with confirmation (UI-3).
 - **Done when:** the Playwright test uploads a file and sees it become Ready.
 
-#### T3.5 Bot settings, test chat, go live and pause (in progress: preview and model settings in PR #29)
+#### T3.5 Bot settings, test chat, go live and pause (PR #29 preview + PR #30 completion)
 - **Delivers:** BOT-1, BOT-3 UI, UX_DESIGN §4.4
 - **Depends on:** T3.3
 - **Size:** L
