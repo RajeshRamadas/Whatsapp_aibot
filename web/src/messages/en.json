@@ -92,5 +92,19 @@
   "testChat": "Test chat",
   "testChatDescription": "Preview answers privately without sending to customers or saving a conversation.",
   "testQuestion": "Ask a question",
-  "sendTest": "Run preview"
+  "sendTest": "Run preview",
+  "botName": "Bot name",
+  "botPersona": "Persona",
+  "botTone": "Tone",
+  "botRules": "Additional rules",
+  "businessHours": "Business hours (JSON)",
+  "businessHoursHelp": "Use weekday keys 0 (Monday) through 6 (Sunday), with opening and closing times in HH:MM. Leave blank for 24/7.",
+  "timezone": "Timezone (IANA, e.g. Asia/Kolkata)",
+  "defaultLanguage": "Default language",
+  "botIsLive": "Bot is live",
+  "botIsPaused": "Bot is paused; incoming WhatsApp messages go to agents.",
+  "goLive": "Go live",
+  "pauseBot": "Pause bot",
+  "confirmGoLive": "Take the bot live? It will answer new WhatsApp messages during configured business hours.",
+  "confirmPause": "Pause the bot? New WhatsApp messages will wait for an agent."
 }
