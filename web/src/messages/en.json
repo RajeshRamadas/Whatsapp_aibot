@@ -82,5 +82,15 @@
   "emptyFileAdvice": "Try a document with selectable text instead of a scanned image.",
   "formatAdvice": "Try a supported document format.",
   "sizeAdvice": "Choose a smaller file.",
-  "generalFileAdvice": "Check the document and upload it again."
+  "generalFileAdvice": "Check the document and upload it again.",
+  "botSettingsDescription": "Configure the chat model and preview answers before deploying changes.",
+  "advancedSettings": "Advanced model settings",
+  "provider": "Chat provider",
+  "model": "Model",
+  "saveSettings": "Save settings",
+  "settingsSaved": "Settings saved",
+  "testChat": "Test chat",
+  "testChatDescription": "Preview answers privately without sending to customers or saving a conversation.",
+  "testQuestion": "Ask a question",
+  "sendTest": "Run preview"
 }
