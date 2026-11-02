@@ -1,5 +1,6 @@
 # ruff: noqa: F401
 import json
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import logging
 import secrets
 from pathlib import Path
@@ -62,6 +63,21 @@ def update_tenant(body: UpdateTenant, principal: Principal = Depends(require_rol
         raise HTTPException(422, f'chat_provider must be one of {", ".join(llm.CHAT_PROVIDERS)}')
     if 'chat_provider' in changes and 'chat_model' not in changes:
         changes['chat_model'] = None  # a model name rarely carries over between providers
+    if changes.get('bot_tone') not in (None, 'formal', 'friendly', 'neutral'):
+        raise HTTPException(422, 'Invalid bot tone')
+    if changes.get('timezone'):
+        try:
+            ZoneInfo(changes['timezone'])
+        except ZoneInfoNotFoundError:
+            raise HTTPException(422, 'Invalid timezone') from None
+    if changes.get('business_hours'):
+        from ..services.bot_policy import validate_hours
+        try:
+            validate_hours(changes['business_hours'])
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+    if 'bot_live' in changes:
+        raise HTTPException(422, 'Use the bot live-state endpoint')
     if 'allowed_origins' in changes:
         changes['allowed_origins'] = json.dumps(changes['allowed_origins'] or [])
     if changes.get('whatsapp_phone_number_id') == '':
