@@ -23,4 +23,4 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
   for (const cookie of response.headers.getSetCookie()) outgoing.headers.append('set-cookie', cookie);
   return outgoing;
 }
-export { proxy as GET, proxy as POST, proxy as PATCH, proxy as DELETE };
+export { proxy as GET, proxy as POST, proxy as PATCH, proxy as PUT, proxy as DELETE };

@@ -348,7 +348,7 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
   3. Empty pages for every navigation item, each with its empty state.
 - **Done when:** navigation works at 320 px and 1440 px and passes axe checks.
 
-#### T3.4 Knowledge screens
+#### T3.4 Knowledge screens (implemented in PR #28)
 - **Delivers:** KN-1 UI, UX_DESIGN §4.3
 - **Depends on:** T3.3, T2.2
 - **Size:** M
