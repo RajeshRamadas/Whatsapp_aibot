@@ -16,6 +16,7 @@ from ..config import settings
 from ..db import Conversation, EvalCase, Message, Session, Source, Tenant, uid
 from ..jobs.queue import enqueue
 from ..services.audit import audit
+from ..services.events import publish_sync
 from ..services.storage import LocalStorage, storage
 from .principal import Principal, require_role, tenant_for_role
 from .shared import (
@@ -54,6 +55,7 @@ async def upload(file: UploadFile = File(...),
         await enqueue('ingest_source', source_id=source_id, tenant_id=tenant.id, _job_id=source_id)
     except (OSError, ConnectionError, TimeoutError, RuntimeError) as exc:
         raise HTTPException(503, 'Background queue unavailable') from exc
+    publish_sync(tenant.id, 'source.updated', {'source_id': source_id})
     return {'source_id': source_id, 'status': 'queued'}
 
 
@@ -76,6 +78,7 @@ def delete_source(source_id: str, principal: Principal = Depends(require_role('a
         audit(db, tenant.id, 'knowledge.deleted', source_id,
               actor_user_id=principal.user.id if principal.user else None,
               actor_type='user' if principal.user else 'api_key')
+    publish_sync(tenant.id, 'source.updated', {'source_id': source_id, 'deleted': True})
     if path.startswith('storage:'):
         storage().delete(path.removeprefix('storage:'))
     else:
