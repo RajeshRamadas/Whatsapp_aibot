@@ -16,8 +16,8 @@ from .config import settings
 from .db import Chunk, Conversation, Message, Session, Source, Tenant, now
 from .ingest import source_label
 from .rate_limits import RateLimiter
-from .services.events import publish_sync
 from .services.bot_policy import tenant_instructions
+from .services.events import publish_sync
 
 log = logging.getLogger(__name__)
 
