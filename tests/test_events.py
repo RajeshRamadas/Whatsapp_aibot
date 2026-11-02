@@ -15,7 +15,7 @@ def test_event_format_and_scoping():
     assert events.stream_key('workspace-a') != events.stream_key('workspace-b')
     assert events.channel_key('workspace-a') == 'tenant:workspace-a'
     frame = events.encode_event('123-0', 'message.created', json.dumps({'conversation_id': 'c1'}))
-    assert frame == 'id: 123-0\\nevent: message.created\\ndata: {"conversation_id": "c1"}\\n\\n'
+    assert frame == 'id: 123-0\nevent: message.created\ndata: {"conversation_id": "c1"}\n\n'
 
 
 def test_replay_only_after_last_id(monkeypatch):
@@ -47,7 +47,7 @@ def test_replay_only_after_last_id(monkeypatch):
         return frames
 
     frames = asyncio.run(collect())
-    assert frames[0].startswith('id: 101-0\\nevent: message.created\\n')
+    assert frames[0].startswith('id: 101-0\nevent: message.created\n')
     assert fake.calls == [({'tenant:workspace-a:events': '100-0'}, 100, 15000)]
     assert fake.closed
 
@@ -66,4 +66,4 @@ def test_heartbeat_when_no_events(monkeypatch):
         await generator.aclose()
         return frame
 
-    assert asyncio.run(collect()) == ': heartbeat\\n\\n'
+    assert asyncio.run(collect()) == ': heartbeat\n\n'
