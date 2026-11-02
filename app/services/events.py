@@ -7,7 +7,9 @@ import json
 import logging
 import re
 
+from redis import Redis as SyncRedis
 from redis.asyncio import Redis
+from redis.exceptions import RedisError
 
 from ..config import settings
 
@@ -81,3 +83,22 @@ async def listen(tenant_id: str, last_id: str | None, disconnected):
                         yield encode_event(event_id, fields['event'], fields['data'])
     finally:
         await redis.aclose()
+
+
+def publish_sync(tenant_id: str, event: str, data: dict) -> None:
+    """Best-effort notification after a committed synchronous write."""
+    if event not in EVENT_TYPES:
+        raise ValueError('Unsupported live event')
+    redis = SyncRedis.from_url(settings.redis_url, decode_responses=True, socket_timeout=1)
+    try:
+        key = stream_key(tenant_id)
+        with redis.pipeline(transaction=True) as pipe:
+            pipe.xadd(key, {'event': event, 'data': json.dumps(data)}, maxlen=STREAM_MAX)
+            pipe.expire(key, STREAM_TTL)
+            result = pipe.execute()
+        redis.publish(channel_key(tenant_id),
+                      json.dumps({'id': result[0], 'event': event, 'data': data}))
+    except RedisError:
+        log.warning('Live event publish failed; committed write remains valid', exc_info=True)
+    finally:
+        redis.close()
