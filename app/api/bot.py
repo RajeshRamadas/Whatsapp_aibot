@@ -4,10 +4,9 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from .. import llm, rag
 from ..db import Session
 from ..services.audit import audit
-
-from .. import llm, rag
 from .principal import Principal, require_role
 
 log = logging.getLogger(__name__)
