@@ -381,7 +381,7 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
   3. Support `Last-Event-ID`, keeping the last 100 events per tenant for 10 minutes for replay, and send a heartbeat every 15 s.
 - **Done when:** a test receives an event published by a job, and a reconnect replays missed events.
 
-#### T4.2 Inbox API
+#### T4.2 Inbox API (PR #32)
 - **Delivers:** INB-1, INB-2, INB-4, INB-5 (backend)
 - **Depends on:** T2.4, T4.1
 - **Size:** L
