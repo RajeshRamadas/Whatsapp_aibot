@@ -18,5 +18,5 @@ def onboarding(principal: Principal = Depends(require_role('viewer'))):
         'connect_whatsapp': bool(tenant.whatsapp_phone_number_id),
         'add_knowledge': knowledge_ready,
         'test_bot': False,
-        'go_live': False,
+        'go_live': tenant.bot_live,
     }
