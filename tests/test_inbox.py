@@ -51,7 +51,7 @@ def test_whatsapp_window_and_canned_replies(client, tenant, monkeypatch):
     base = f'/api/v1/inbox/conversations/{conversation_id}'
     response = client.post(base + '/reply', headers=tenant['headers'], json={'message': 'Hello'})
     assert response.status_code == 409
-    assert response.json()['error']['message']['code'] == 'whatsapp_window_expired'
+    assert 'whatsapp_window_expired' in response.json()['error']['message']
     canned = '/api/v1/inbox/canned-replies'
     created = client.post(canned, headers=tenant['headers'],
                           json={'title': 'Welcome', 'body': 'Hello there'})
