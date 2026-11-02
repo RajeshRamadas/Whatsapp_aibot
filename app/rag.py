@@ -16,6 +16,7 @@ from .config import settings
 from .db import Chunk, Conversation, Message, Session, Source, Tenant, now
 from .ingest import source_label
 from .rate_limits import RateLimiter
+from .services.events import publish_sync
 from .services.bot_policy import tenant_instructions
 
 log = logging.getLogger(__name__)
@@ -148,6 +149,9 @@ def save_exchange(conversation: Conversation, *pairs: tuple[str, str], create: b
             conv.last_message_at = timestamp
             if any(role == 'user' for role, _ in pairs):
                 conv.last_inbound_at = timestamp
+    if pairs:
+        publish_sync(conversation.tenant_id, 'message.created', {'conversation_id': conversation.id})
+        publish_sync(conversation.tenant_id, 'conversation.updated', {'conversation_id': conversation.id})
 
 
 chat_limiter = RateLimiter(settings.chat_rate_limit_per_minute)
