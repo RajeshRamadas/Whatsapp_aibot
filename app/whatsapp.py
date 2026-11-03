@@ -7,6 +7,7 @@ straight away and reply from a background task.
 import hashlib
 import hmac
 import logging
+from datetime import timedelta
 
 import httpx
 from sqlalchemy import select
@@ -17,6 +18,8 @@ from .config import settings
 from .db import Contact, Conversation, InboundEvent, Message, Session, Tenant, now, uid
 from .services.bot_policy import within_hours
 from .services.channels import access_token, find_whatsapp, tenant_for_phone
+from .services.events import publish_sync
+from .services.whatsapp_copy import copy_for, format_reply, handoff_notice, interactive_payload
 
 log = logging.getLogger(__name__)
 
@@ -45,6 +48,7 @@ def parse_messages(payload: dict) -> list[dict]:
                 if not (phone_number_id and msg.get('id') and msg.get('from')):
                     continue
                 kind = msg.get('type')
+                choice = None
                 if kind == 'text':
                     text = (msg.get('text') or {}).get('body') or ''
                 elif kind == 'button':
@@ -53,10 +57,11 @@ def parse_messages(payload: dict) -> list[dict]:
                     reply = (msg.get('interactive') or {})
                     reply = reply.get('button_reply') or reply.get('list_reply') or {}
                     text = reply.get('title') or ''
+                    choice = reply.get('id')
                 else:
                     text = ''
                 found.append({'phone_number_id': phone_number_id, 'from': msg['from'], 'id': msg['id'],
-                              'type': kind, 'text': text.strip()})
+                              'type': kind, 'text': text.strip(), 'choice': choice})
     return found
 
 
@@ -89,16 +94,35 @@ def accept(message: dict) -> str | None:
         return event.id
 
 
-def send_text(phone_number_id: str, to: str, body: str, *, tenant_id: str | None = None) -> str | None:
+def graph_message(phone_number_id, payload, tenant_id, timeout=20):
     response = httpx.post(
         f'https://graph.facebook.com/{settings.whatsapp_graph_version}/{phone_number_id}/messages',
         headers={'Authorization': f'Bearer {access_token(phone_number_id, tenant_id)}'},
-        json={'messaging_product': 'whatsapp', 'recipient_type': 'individual', 'to': to,
-              'type': 'text', 'text': {'preview_url': False, 'body': body[:MAX_TEXT]}},
-        timeout=20)
+        json={'messaging_product': 'whatsapp', **payload},
+        timeout=timeout)
     response.raise_for_status()
-    messages = response.json().get('messages') or []
+    return response
+
+
+def send_text(phone_number_id: str, to: str, body: str, *, tenant_id: str | None = None,
+              interactive: dict | None = None) -> str | None:
+    payload = {'recipient_type': 'individual', 'to': to}
+    if interactive is not None:
+        payload.update(type='interactive', interactive=interactive)
+    else:
+        payload.update(type='text', text={'preview_url': False, 'body': body[:MAX_TEXT]})
+    messages = graph_message(phone_number_id, payload, tenant_id).json().get('messages') or []
     return messages[0].get('id') if messages else None
+
+
+def mark_typing(phone_id, message_id, tenant_id):
+    if not message_id:
+        return
+    try:
+        graph_message(phone_id, {'status': 'read', 'message_id': message_id,
+                                 'typing_indicator': {'type': 'text'}}, tenant_id, timeout=2)
+    except (httpx.HTTPError, ValueError, RuntimeError):
+        log.debug('WhatsApp typing indicator unavailable')
 
 
 def conversation_for(tenant_id: str, wa_user: str) -> Conversation:
@@ -138,54 +162,94 @@ def conversation_for(tenant_id: str, wa_user: str) -> Conversation:
 
 def handle(tenant_id: str, message: dict) -> None:
     """Answer a worker-owned inbound turn. Failures propagate to the retry policy."""
-    phone_number_id, wa_user, text = message['phone_number_id'], message['from'], message['text']
+    phone_id, wa_user, text = message['phone_number_id'], message['from'], message['text']
     with Session() as db:
         tenant = db.get(Tenant, tenant_id)
     if tenant is None:
         return
     conv = conversation_for(tenant_id, wa_user)
-    if not tenant.bot_live or not within_hours(tenant):
-        # Do not send an AI answer when paused or outside configured business hours.
-        # Persist the incoming message and queue the conversation for a human.
+    copy = copy_for(tenant)
+    incoming = ('user', text or f"[{message['type']} message]")
+    parts = message.get('parts', [message])
+    keywords = {'stop', 'बंद', *tenant.whatsapp_opt_out_keywords}
+    consent = next((value for part in reversed(parts)
+                    if (value := part.get('text', '').strip().casefold()) in keywords | {'start'}), None)
+    choices = {part.get('choice') for part in parts}
+    wants_handoff = 'handoff' in choices or any(
+        part.get('text', '').strip().lower() in settings.handoff_keywords for part in parts)
+    timestamp = now()
+
+    def reply(body, options=None, sources=None, lead_fields=None):
+        interactive = interactive_payload(body, options, copy)
+        message_id = send_text(phone_id, wa_user, body, tenant_id=tenant_id, interactive=interactive)
+        rag.save_exchange(conv, incoming, ('assistant', body), channel_message_id=message_id,
+                          sources=sources, lead_fields=lead_fields)
+
+    if consent is not None:
         with Session.begin() as db:
+            contact = db.get(Contact, conv.contact_id, with_for_update=True)
+            if consent == 'start':
+                contact.opt_in_at, contact.opt_out_at = timestamp, None
+            else:
+                contact.opt_out_at = timestamp
+        reply(copy['start' if consent == 'start' else 'stop'])
+        return
+
+    if conv.handoff or conv.status in ('waiting', 'agent', 'closed'):
+        if (tenant.bot_live and conv.status == 'waiting' and conv.last_message_at
+                and timestamp - conv.last_message_at >= timedelta(hours=1)):
+            reply(handoff_notice(tenant, timestamp))
+        else:
+            rag.save_exchange(conv, incoming)
+        return
+
+    open_now = within_hours(tenant, timestamp)
+    if wants_handoff or not tenant.bot_live or not open_now:
+        with Session() as db:
             active = db.get(Conversation, conv.id)
-            active.handoff = True
-            active.status = 'waiting'
-        rag.save_exchange(conv, ('user', text or f"[{message['type']} message]"))
+            should_notify = active.status == 'bot' and not active.handoff
+        if should_notify and (wants_handoff or tenant.bot_live):
+            reply(handoff_notice(tenant, timestamp))
+        else:
+            rag.save_exchange(conv, incoming)
+        with Session.begin() as db:
+            active = db.get(Conversation, conv.id, with_for_update=True)
+            if active.status == 'bot' and not active.handoff:
+                active.handoff = True
+                active.status = 'waiting'
+        publish_sync(tenant_id, 'conversation.updated', {'conversation_id': conv.id})
+        return
+    if 'handoff-decline' in choices:
+        reply(copy['declined'])
         return
     if not text:
-        placeholder = ('user', f"[{message['type']} message]")
-        if conv.status in ('waiting', 'agent', 'closed') or conv.handoff:
-            rag.save_exchange(conv, placeholder)
-        else:
-            message_id = send_text(phone_number_id, wa_user, UNSUPPORTED_REPLY, tenant_id=tenant_id)
-            rag.save_exchange(conv, placeholder, ('assistant', UNSUPPORTED_REPLY), channel_message_id=message_id)
-        return
-    if conv.handoff:
-        rag.save_exchange(conv, ('user', text))
-        return
-    if text.lower() in settings.handoff_keywords:
-        message_id = send_text(phone_number_id, wa_user, HANDOFF_REPLY, tenant_id=tenant_id)
-        with Session.begin() as db:
-            active = db.get(Conversation, conv.id)
-            active.handoff = True
-            active.status = 'waiting'
-        rag.save_exchange(conv, ('user', text), ('assistant', HANDOFF_REPLY), channel_message_id=message_id)
+        reply(copy['unsupported'])
         return
     if not rag.chat_limiter.allow(f'wa:{tenant_id}:{wa_user}'):
-        send_text(phone_number_id, wa_user, RATE_LIMIT_REPLY, tenant_id=tenant_id)
+        send_text(phone_id, wa_user, copy['rate'], tenant_id=tenant_id)
         return
-    answer = rag.answer(tenant, conv.id, text)
-    reply = answer.text or ERROR_REPLY
+
+    mark_typing(phone_id, parts[-1].get('id'), tenant_id)
+    answer = rag.answer(tenant, conv.id, text, whatsapp=True)
     with Session() as db:
         current = db.get(Conversation, conv.id)
         can_send = current is not None and not current.handoff and current.status == 'bot'
+        has_history = db.scalar(select(Message.id).where(
+            Message.conversation_id == conv.id, Message.role == 'user').limit(1)) is not None
     if not can_send:
-        rag.save_exchange(conv, ('user', text))
+        rag.save_exchange(conv, incoming)
         return
-    message_id = send_text(phone_number_id, wa_user, reply, tenant_id=tenant_id)
-    rag.save_exchange(conv, ('user', text), ('assistant', reply), channel_message_id=message_id,
-                      sources=answer.sources if answer.text else [], lead_fields=answer.lead_fields)
+    greeting = '' if has_history else copy['greeting'].format(bot=tenant.bot_name, business=tenant.name)
+    sources = answer.sources if answer.text and not answer.uncertain else []
+    if answer.uncertain:
+        options = [('handoff', copy['yes']), ('handoff-decline', copy['no'])]
+        body = copy['unknown']
+    else:
+        options = [(f'option-{index}', title) for index, title in enumerate(answer.choices or [])]
+        if len(options) < 3:
+            options.append(('handoff', copy['team']))
+        body = answer.text or copy['error']
+    reply(format_reply(body, sources, copy, greeting), options, sources, answer.lead_fields)
 
 
 DELIVERY_RANK = {'sent': 1, 'delivered': 2, 'read': 3}

@@ -83,6 +83,7 @@ def sent(monkeypatch):
 @pytest.fixture
 def client(chats, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(whatsapp, 'mark_typing', lambda *args: None)
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
     config = Config(str(Path(__file__).resolve().parents[1] / 'alembic.ini'))

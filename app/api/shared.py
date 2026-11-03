@@ -48,6 +48,7 @@ class UpdateTenant(BaseModel):
     allowed_origins: list[str] | None = None
     chat_provider: str | None = None
     chat_model: str | None = Field(default=None, max_length=100)
+    whatsapp_opt_out_keywords: list[str] = Field(default_factory=list, max_length=20)
     whatsapp_phone_number_id: str | None = Field(default=None, max_length=64)
     bot_name: str | None = Field(default=None, min_length=1, max_length=100)
     bot_persona: str | None = Field(default=None, max_length=2000)
@@ -87,6 +88,7 @@ class AgentReply(BaseModel):
 def tenant_view(t: Tenant) -> dict:
     provider, model = llm.resolve_chat(t.chat_provider, t.chat_model)
     return {'tenant_id': t.id, 'name': t.name, 'public_key': t.public_key, 'allowed_origins': origins(t),
+            'whatsapp_opt_out_keywords': t.whatsapp_opt_out_keywords,
             'chat_provider': provider, 'chat_model': model, 'whatsapp_phone_number_id': t.whatsapp_phone_number_id,
             'bot_name': t.bot_name, 'bot_persona': t.bot_persona, 'bot_tone': t.bot_tone,
             'bot_rules': t.bot_rules, 'business_hours': t.business_hours, 'timezone': t.timezone,

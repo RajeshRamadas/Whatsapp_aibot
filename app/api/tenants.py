@@ -85,6 +85,11 @@ def update_tenant(body: UpdateTenant, principal: Principal = Depends(require_rol
         raise HTTPException(422, 'Use the bot live-state endpoint')
     if 'allowed_origins' in changes:
         changes['allowed_origins'] = json.dumps(changes['allowed_origins'] or [])
+    if 'whatsapp_opt_out_keywords' in changes:
+        keywords = list(dict.fromkeys(word.strip().casefold() for word in changes['whatsapp_opt_out_keywords']))
+        if any(not word or len(word) > 60 or word == 'start' for word in keywords):
+            raise HTTPException(422, 'Opt-out keywords must be 1–60 characters and cannot be START')
+        changes['whatsapp_opt_out_keywords'] = keywords
     if changes.get('whatsapp_phone_number_id') == '':
         changes['whatsapp_phone_number_id'] = None
     if changes.get('whatsapp_phone_number_id'):
