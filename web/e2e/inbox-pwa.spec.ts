@@ -55,6 +55,7 @@ test('install assets and workspace notification opt-in work', async ({ page, con
   await expect(page.getByText('15550001234', { exact: false })).toBeVisible();
   await context.setOffline(false);
   await page.goto('/dashboard/inbox', { waitUntil: 'domcontentloaded' });
+  await expect(enable).toBeEnabled();
   await page.getByRole('button', { name: 'Log out', exact: true }).click({ timeout: 5000 });
   await expect(page).toHaveURL(/\/login$/);
   await expect.poll(async () => page.evaluate(async () =>
