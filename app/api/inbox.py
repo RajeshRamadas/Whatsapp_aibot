@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
 
-from .. import rag, whatsapp
+from .. import whatsapp
 from ..config import settings
 from ..db import CannedReply, Contact, Conversation, Membership, Message, Session, now, uid
 from ..services.events import publish_sync
@@ -134,9 +134,9 @@ def add_note(conversation_id: str, body: Note, principal: Principal = Depends(re
 
 @router.post('/api/v1/inbox/conversations/{conversation_id}/reply')
 def reply(conversation_id: str, body: Reply, principal: Principal = Depends(require_role('agent'))):
-    with Session() as db:
+    with Session.begin() as db:
         conv = conversation(db, principal.tenant.id, conversation_id)
-        original_state = (conv.status, conv.handoff, conv.assignee_user_id)
+        db.refresh(conv, with_for_update=True)
         if conv.status == 'closed':
             raise HTTPException(409, 'Reopen the conversation before replying')
         if conv.channel != 'whatsapp' or not principal.tenant.whatsapp_phone_number_id:
@@ -146,14 +146,17 @@ def reply(conversation_id: str, body: Reply, principal: Principal = Depends(requ
                                       'message': 'The 24-hour customer service window has expired'})
         if not settings.whatsapp_enabled:
             raise HTTPException(503, 'WhatsApp is not configured')
-    message_id = whatsapp.send_text(principal.tenant.whatsapp_phone_number_id, conv.external_user, body.message)
-    rag.save_exchange(conv, ('agent', body.message), channel_message_id=message_id)
-    with Session.begin() as db:
-        current = conversation(db, principal.tenant.id, conversation_id)
-        if (current.status, current.handoff, current.assignee_user_id) == original_state:
-            current.handoff, current.status = True, 'agent'
+        message = Message(conversation_id=conv.id, role='agent', direction='outbound',
+                          kind='text', author_user_id=principal.user.id if principal.user else None,
+                          content=body.message, delivery_status='queued')
+        db.add(message)
+        conv.handoff, conv.status = True, 'agent'
+        conv.last_message_at = now()
+        db.flush()
+        message_id = message.id
+    publish_sync(principal.tenant.id, 'message.created', {'conversation_id': conversation_id})
     publish_sync(principal.tenant.id, 'conversation.updated', {'conversation_id': conversation_id})
-    return {'status': 'sent', 'message_id': message_id}
+    return {'status': 'queued', 'message_id': message_id}
 
 
 @router.post('/api/v1/inbox/conversations/{conversation_id}/hand-back')
