@@ -1,0 +1,18 @@
+{
+  "id": "/dashboard/inbox",
+  "name": "WhatsApp AI Inbox",
+  "short_name": "Inbox",
+  "start_url": "/dashboard/inbox",
+  "scope": "/dashboard/",
+  "display": "standalone",
+  "theme_color": "#064e3b",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/inbox-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
