@@ -199,9 +199,16 @@ type Theme = {
       'Could not reach the chat service. Try again.');
     return result.json() as Promise<T>;
   }
+  function requestId() {
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    bytes[6] = (bytes[6] & 15) | 64;
+    bytes[8] = (bytes[8] & 63) | 128;
+    const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+    return [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20)].join('-');
+  }
   function queue(message: string, handoffRequest = false) {
     if (state.pending) return;
-    state.pending = { request_id: crypto.randomUUID(), conversation_id: state.conversation,
+    state.pending = { request_id: requestId(), conversation_id: state.conversation,
       message, handoff: handoffRequest };
     append({ who: 'You', text: message });
     void deliver();
@@ -245,7 +252,7 @@ type Theme = {
       persist();
       const turn = await awaitTurn(queued);
       if (turn.state === 'failed') {
-        state.pending = { ...state.pending, conversation_id: state.conversation, request_id: crypto.randomUUID() };
+        state.pending = { ...state.pending, conversation_id: state.conversation, request_id: requestId() };
         persist();
         throw new Error('We couldn’t answer that message. Please try again.');
       }

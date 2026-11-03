@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
 
 test('embedded widget survives an offline send and reload', async ({ page, context }) => {
+  const browserErrors: string[] = [];
+  page.on('pageerror', error => browserErrors.push(error.message));
   const host = 'http://localhost:3000/widget-fixture';
   const api = 'http://localhost:3000/api/v1/chat/fixture/widget';
   const bundle = await page.request.get('http://127.0.0.1:8000/widget.js');
@@ -42,7 +44,8 @@ test('embedded widget survives an offline send and reload', async ({ page, conte
   await page.evaluate(() => Object.defineProperty(navigator, 'onLine', { configurable: true, value: false }));
   await page.getByRole('textbox', { name: 'Ask a question' }).fill('Opening hours?');
   await page.getByRole('button', { name: 'Send', exact: true }).click();
-  await expect(page.getByText(/You’re offline/)).toBeVisible();
+  await expect(page.getByText(/You’re offline/), browserErrors.join('\n')).toBeVisible();
+  expect(browserErrors).toEqual([]);
   expect(queued).toBe(0);
   await context.setOffline(false);
   await page.evaluate(() => {
