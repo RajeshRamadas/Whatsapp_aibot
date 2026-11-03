@@ -9,6 +9,7 @@ from sqlalchemy import select, text, update
 from .. import ingest, whatsapp
 from ..config import settings
 from ..db import AuditLog, Conversation, InboundEvent, Message, Session, Source, Tenant, now
+from ..services.billing import reconcile_settlements, reconcile_subscriptions
 from ..services.channels import whatsapp_channel
 from ..services.events import publish_sync
 from ..services.inbox_push import deliver_waiting
@@ -196,12 +197,18 @@ async def dispatch_usage_alerts(ctx: dict) -> None:
     await asyncio.to_thread(send_alerts)
 
 
+async def reconcile_billing(ctx: dict) -> None:
+    await asyncio.to_thread(reconcile_subscriptions)
+    await asyncio.to_thread(reconcile_settlements)
+
+
 class WorkerSettings:
     cron_jobs = [cron(dispatch_agent_replies, second={0, 10, 20, 30, 40, 50}),
                  cron(notify_inbox, second={5, 15, 25, 35, 45, 55}),
                  cron(dispatch_widget_turn, second=set(range(0, 60, 2)), timeout=600),
                  cron(reconcile_usage, hour=1, minute=0, second=0, timeout=600),
-                 cron(dispatch_usage_alerts, second=25)]
+                 cron(dispatch_usage_alerts, second=25),
+                 cron(reconcile_billing, hour=2, minute=0, second=0, timeout=600)]
     functions = [sample_job, ingest_source, handle_message]
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
     max_jobs = 10

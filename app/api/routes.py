@@ -4,6 +4,7 @@ from . import (
     api_keys,
     audit,
     auth,
+    billing,
     bot,
     channels,
     chat,
@@ -30,7 +31,7 @@ from .shared import UPLOADS as UPLOADS
 from .shared import origins as origins
 
 router = APIRouter()
-for module in (auth, audit, api_keys, workspaces, tenants, channels, knowledge, onboarding, bot, jobs,
+for module in (auth, audit, api_keys, workspaces, tenants, billing, channels, knowledge, onboarding, bot, jobs,
                chat, conversations, evals, events, inbox, leads, meta_signup, push, qa, templates, usage, whatsapp,
                widget, widget_chat):
     router.include_router(module.router)

@@ -12,7 +12,7 @@ from sqlalchemy import select
 from .. import evaluate, ingest, llm, rag, whatsapp
 from ..config import settings
 from ..db import Conversation, EvalCase, Message, Session, Source, Tenant, uid
-from ..services.usage import QUOTA_NOTICE, reserve
+from ..services.usage import blocked_notice, reserve
 from .shared import (
     UPLOADS,
     WIDGET,
@@ -58,8 +58,9 @@ def public_chat(public_key: str, body: ChatInput, request: Request):
     if not reserve(t.id, 'legacy-web:' + uid()):
         is_new = conv is None
         conv = conv or Conversation(id=uid(), tenant_id=t.id, channel='web', status='bot')
-        rag.save_exchange(conv, ('user', body.message), ('assistant', QUOTA_NOTICE), create=is_new, waiting=True)
-        return {'conversation_id': conv.id, 'answer': QUOTA_NOTICE, 'sources': []}
+        notice = blocked_notice(t.id)
+        rag.save_exchange(conv, ('user', body.message), ('assistant', notice), create=is_new, waiting=True)
+        return {'conversation_id': conv.id, 'answer': notice, 'sources': []}
     try:
         result = rag.answer(t, conv.id if conv else None, body.message)
     except llm.ProviderNotConfigured as e:
