@@ -391,3 +391,18 @@ through a real Android push service remains a manual acceptance step.
 ### Curated Q&A
 
 Workspace owners and admins can add, edit, or delete entries under Knowledge → Curated Q&A. A matching entry supplies the sole factual source for the reply and appears as FAQ in citations. Questions below the similarity threshold continue through document retrieval. Set `QA_MIN_SIMILARITY` between 0 and 1 to adjust matching. The default is 0.9. FAQ embeddings use the same embedding provider and dimensions as documents.
+
+
+### Workspace WhatsApp channels
+
+Existing WhatsApp number IDs are backfilled into channel records by migration
+`0017_channels`. Link a number with `PATCH /api/v1/tenant`, then use
+`GET /api/v1/channels` to find the channel ID. Workspace admins can set
+`access_token` with `PATCH /api/v1/channels/{channel_id}`. The API encrypts
+the token using the workspace data key and returns only whether a token exists.
+Set `MASTER_KEY` before adding credentials. Passing `null` removes the
+channel token and restores the shared `WHATSAPP_ACCESS_TOKEN` fallback.
+
+Set `WHATSAPP_VERIFY_TOKEN` and `WHATSAPP_APP_SECRET` to accept signed
+webhooks. Channel status reports local configuration and the last webhook
+received. Meta Embedded Signup is tracked separately as T6.2.

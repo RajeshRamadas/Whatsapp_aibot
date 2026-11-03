@@ -320,3 +320,18 @@ class QAPair(Base):
     question: Mapped[str] = mapped_column(Text)
     answer: Mapped[str] = mapped_column(Text)
     embedding: Mapped[list] = mapped_column(Vector(settings.embedding_dimensions))
+
+
+class Channel(Base):
+    __tablename__ = 'channels'
+    __table_args__ = (
+        UniqueConstraint('kind', 'external_id', name='uq_channel_external'),
+        UniqueConstraint('tenant_id', 'kind', name='uq_channel_tenant_kind'),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'))
+    kind: Mapped[str] = mapped_column(String(20))
+    external_id: Mapped[str] = mapped_column(String(64))
+    display_name: Mapped[str | None] = mapped_column(String(200))
+    credentials_enc: Mapped[bytes | None] = mapped_column(LargeBinary)
+    last_webhook_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

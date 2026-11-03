@@ -104,7 +104,7 @@ def test_send_failure_propagates_for_worker_retry(client, tenant, chats, monkeyp
     from app import whatsapp
     calls = []
 
-    def flaky(pid, to, body):
+    def flaky(pid, to, body, **kwargs):
         calls.append(body)
         raise RuntimeError('graph api down')
     monkeypatch.setattr(whatsapp, 'send_text', flaky)

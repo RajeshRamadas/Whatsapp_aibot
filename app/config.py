@@ -60,7 +60,7 @@ class Settings(BaseSettings):
     max_upload_mb: int = 15
     chat_rate_limit_per_minute: int = 20
 
-    # WhatsApp Cloud API (Meta). The webhook is disabled until all three are set.
+    # WhatsApp Cloud API (Meta). Webhook verification requires the verify token and app secret.
     whatsapp_verify_token: str | None = None
     whatsapp_app_secret: str | None = None
     whatsapp_access_token: str | None = None
@@ -78,7 +78,7 @@ class Settings(BaseSettings):
 
     @property
     def whatsapp_enabled(self) -> bool:
-        return bool(self.whatsapp_verify_token and self.whatsapp_app_secret and self.whatsapp_access_token)
+        return bool(self.whatsapp_verify_token and self.whatsapp_app_secret)
 
     @property
     def handoff_keywords(self) -> set[str]:
