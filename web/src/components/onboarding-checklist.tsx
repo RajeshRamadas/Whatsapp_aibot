@@ -1,10 +1,11 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { WhatsAppSignup } from '@/components/whatsapp-signup';
 import { api } from '@/lib/api';
 import messages from '@/messages/en.json';
 type Steps = { connect_whatsapp: boolean; add_knowledge: boolean; test_bot: boolean; go_live: boolean };
 const keys = ['connect_whatsapp', 'add_knowledge', 'test_bot', 'go_live'] as const;
-export function OnboardingChecklist({ workspaceId }: { workspaceId: string }) {
+export function OnboardingChecklist({ workspaceId, canConnect }: { workspaceId: string; canConnect: boolean }) {
   const [steps, setSteps] = useState<Steps | null>(null);
   const [error, setError] = useState('');
   const [reload, setReload] = useState(0);
@@ -26,5 +27,6 @@ export function OnboardingChecklist({ workspaceId }: { workspaceId: string }) {
         <span className="ml-auto text-sm text-muted">{steps[key] ? messages.complete : messages.pending}</span>
       </li>)}
     </ul>}
+    {canConnect && <WhatsAppSignup workspaceId={workspaceId} onConnected={() => setReload(n => n + 1)} />}
   </section>;
 }

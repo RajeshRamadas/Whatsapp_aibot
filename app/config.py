@@ -62,6 +62,8 @@ class Settings(BaseSettings):
 
     # WhatsApp Cloud API (Meta). Webhook verification requires the verify token and app secret.
     whatsapp_verify_token: str | None = None
+    whatsapp_app_id: str | None = None
+    whatsapp_signup_config_id: str | None = None
     whatsapp_app_secret: str | None = None
     whatsapp_access_token: str | None = None
     whatsapp_graph_version: str = 'v23.0'
