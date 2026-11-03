@@ -1,7 +1,6 @@
 """Billing provider boundary. Tests substitute a fake at this boundary."""
 from datetime import date
 from typing import Protocol
-
 from urllib.parse import urlencode
 
 import httpx
