@@ -5,8 +5,8 @@ from sqlalchemy import delete
 from sqlalchemy.dialects.postgresql import insert
 
 from ..config import settings
-from ..services.inbox_push import configured, supported_endpoint
 from ..db import InboxPushSubscription, Session
+from ..services.inbox_push import configured, supported_endpoint
 from .principal import Principal, require_role
 from .shared import sha
 
