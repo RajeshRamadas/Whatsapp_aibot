@@ -23,7 +23,8 @@ def conversation(db, tenant_id: str, conversation_id: str) -> Conversation:
 
 
 def can_reply(conv: Conversation) -> bool:
-    return bool(conv.last_inbound_at and conv.last_inbound_at >= now() - timedelta(hours=24))
+    return bool(conv.channel == 'whatsapp' and conv.last_inbound_at
+                and conv.last_inbound_at > now() - timedelta(hours=24))
 
 
 def view(conv: Conversation) -> dict:
@@ -65,7 +66,9 @@ def inbox_list(status: str | None = None, channel: str | None = None, assignee: 
         query = query.where(Conversation.status == status)
     if channel:
         query = query.where(Conversation.channel == channel)
-    if assignee:
+    if assignee == 'unassigned':
+        query = query.where(Conversation.assignee_user_id.is_(None))
+    elif assignee:
         query = query.where(Conversation.assignee_user_id == assignee)
     if label:
         query = query.where(Conversation.labels.contains([label]))
@@ -106,8 +109,9 @@ def assign(conversation_id: str, body: Assign, principal: Principal = Depends(re
     with Session.begin() as db:
         conv = conversation(db, principal.tenant.id, conversation_id)
         if body.user_id is not None and not db.scalar(select(Membership).where(
-                Membership.user_id == body.user_id, Membership.tenant_id == principal.tenant.id)):
-            raise HTTPException(422, 'Assignee must belong to this workspace')
+                Membership.user_id == body.user_id, Membership.tenant_id == principal.tenant.id,
+                Membership.role.in_(('owner', 'admin', 'agent')))):
+            raise HTTPException(422, 'Assignee must be a workspace owner, admin, or agent')
         conv.assignee_user_id = body.user_id
         conv.handoff = True
         conv.status = 'agent' if body.user_id else 'waiting'
@@ -124,6 +128,7 @@ def add_note(conversation_id: str, body: Note, principal: Principal = Depends(re
                        author_user_id=principal.user.id if principal.user else None, content=body.text))
         conv.last_message_at = now()
     publish_sync(principal.tenant.id, 'message.created', {'conversation_id': conversation_id})
+    publish_sync(principal.tenant.id, 'conversation.updated', {'conversation_id': conversation_id})
     return {'status': 'saved'}
 
 
@@ -131,6 +136,9 @@ def add_note(conversation_id: str, body: Note, principal: Principal = Depends(re
 def reply(conversation_id: str, body: Reply, principal: Principal = Depends(require_role('agent'))):
     with Session() as db:
         conv = conversation(db, principal.tenant.id, conversation_id)
+        original_state = (conv.status, conv.handoff, conv.assignee_user_id)
+        if conv.status == 'closed':
+            raise HTTPException(409, 'Reopen the conversation before replying')
         if conv.channel != 'whatsapp' or not principal.tenant.whatsapp_phone_number_id:
             raise HTTPException(409, 'Only WhatsApp conversations support agent replies')
         if not can_reply(conv):
@@ -142,7 +150,8 @@ def reply(conversation_id: str, body: Reply, principal: Principal = Depends(requ
     rag.save_exchange(conv, ('agent', body.message), channel_message_id=message_id)
     with Session.begin() as db:
         current = conversation(db, principal.tenant.id, conversation_id)
-        current.handoff, current.status = True, 'agent'
+        if (current.status, current.handoff, current.assignee_user_id) == original_state:
+            current.handoff, current.status = True, 'agent'
     publish_sync(principal.tenant.id, 'conversation.updated', {'conversation_id': conversation_id})
     return {'status': 'sent', 'message_id': message_id}
 
