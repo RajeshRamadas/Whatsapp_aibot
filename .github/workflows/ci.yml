@@ -35,6 +35,28 @@ jobs:
       - run: alembic upgrade head
       - run: alembic check
       - run: pytest -q
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run authenticated inbox browser test
+        env:
+          AUTH_COOKIE_SECURE: 'false'
+          WHATSAPP_VERIFY_TOKEN: fixture
+          WHATSAPP_APP_SECRET: fixture
+          WHATSAPP_ACCESS_TOKEN: fixture
+          API_INTERNAL_URL: http://127.0.0.1:8000
+        run: |
+          python -m scripts.seed_inbox_e2e
+          uvicorn app.main:app --port 8000 &
+          cd web
+          npm install
+          npx playwright install --with-deps chromium
+          npm run dev &
+          for attempt in {1..60}; do
+            if curl -fsS http://localhost:3000/login >/dev/null; then break; fi
+            sleep 1
+          done
+          npm run test:e2e
 
   web:
     runs-on: ubuntu-latest

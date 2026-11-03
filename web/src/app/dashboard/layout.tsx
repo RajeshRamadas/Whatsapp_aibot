@@ -9,7 +9,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!me.ok) redirect('/login');
   const response = await fetch(base + '/api/v1/workspaces', { headers: { cookie }, cache: 'no-store' });
   if (!response.ok) redirect('/login');
-  const workspaces = await response.json() as Workspace[];
+  const rows = await response.json() as (Omit<Workspace, 'id'> & { tenant_id: string })[];
+  const workspaces = rows.map(row => ({ ...row, id: row.tenant_id }));
   if (!workspaces.length) redirect('/create-workspace');
   const selected = jar.get('active_workspace')?.value;
   const active = workspaces.find(item => item.id === selected) ?? workspaces[0];
