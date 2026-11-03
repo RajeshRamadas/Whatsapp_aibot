@@ -150,7 +150,7 @@ def save_exchange(conversation: Conversation, *pairs: tuple[str, str], create: b
         if conv and pairs:
             conv.last_message_at = timestamp
             if any(role == 'user' for role, _ in pairs):
-                if conv.channel != 'whatsapp':
+                if conv.channel != 'whatsapp' or conv.last_inbound_at is None:
                     conv.last_inbound_at = timestamp
     if pairs:
         publish_sync(conversation.tenant_id, 'message.created', {'conversation_id': conversation.id})
