@@ -484,3 +484,24 @@ chat and pending message.
 The checked-in script is built from `widget/widget.ts`. Run
 `node widget/build.mjs` on Node 22.13 or newer after edits. CI verifies the
 checked-in bundle, its TypeScript types and its 30 KiB gzip budget.
+
+
+### AI usage and workspace quotas
+
+Migration `0021_usage` seeds Starter, Growth and Business from the product plan.
+Existing and new workspaces start on Starter with pause-and-handoff behavior.
+Workspace owners can read `GET /api/v1/usage` and set the limit behavior with
+`PUT /api/v1/usage/quota-policy` using `{"behavior":"pause"}` or
+`{"behavior":"overage"}`. Overage turns are recorded for future billing.
+
+A live AI answer attempt reserves one message for the UTC month. Worker retries
+of the same widget or WhatsApp turn reuse the reservation. Human replies and
+handoff confirmations do not use quota. Preview, evaluation and ingestion calls
+record provider usage without reserving customer messages. Token counts use
+provider-reported values. Configure `AI_PRICES_USD` as a JSON map from
+`provider:model` to `[input, output]` USD per million tokens. Costs use those
+base rates. Unavailable token counts or rates are retained as unpriced calls.
+
+Run the worker for nightly UTC daily rollups and Redis reconciliation. The usage
+ledger is authoritative during Redis outages. Alerts at 80% and 100% use the
+configured email sender. The default sender records a delivery request in logs.

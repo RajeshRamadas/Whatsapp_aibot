@@ -13,6 +13,7 @@ from ..services.channels import whatsapp_channel
 from ..services.events import publish_sync
 from ..services.inbox_push import deliver_waiting
 from ..services.templates import eligible_contact, render, send_payload, template_for_send
+from ..services.usage import reconcile, send_alerts
 from ..services.whatsapp_copy import copy_for
 from ..services.widget_turns import process_turn
 
@@ -187,10 +188,20 @@ async def dispatch_widget_turn(ctx: dict) -> None:
     await asyncio.to_thread(process_turn)
 
 
+async def reconcile_usage(ctx: dict) -> None:
+    await asyncio.to_thread(reconcile)
+
+
+async def dispatch_usage_alerts(ctx: dict) -> None:
+    await asyncio.to_thread(send_alerts)
+
+
 class WorkerSettings:
     cron_jobs = [cron(dispatch_agent_replies, second={0, 10, 20, 30, 40, 50}),
                  cron(notify_inbox, second={5, 15, 25, 35, 45, 55}),
-                 cron(dispatch_widget_turn, second=set(range(0, 60, 2)), timeout=600)]
+                 cron(dispatch_widget_turn, second=set(range(0, 60, 2)), timeout=600),
+                 cron(reconcile_usage, hour=1, minute=0, second=0, timeout=600),
+                 cron(dispatch_usage_alerts, second=25)]
     functions = [sample_job, ingest_source, handle_message]
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
     max_jobs = 10

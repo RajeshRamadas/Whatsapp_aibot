@@ -1,4 +1,5 @@
 import re
+from decimal import Decimal
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -34,6 +35,7 @@ class Settings(BaseSettings):
     gemini_api_key: str | None = None
     chat_provider: str = 'openai'  # openai | anthropic | gemini; tenants can override
     chat_model: str | None = None  # defaults to DEFAULT_CHAT_MODELS[chat_provider]
+    ai_prices_usd: dict[str, tuple[Decimal, Decimal]] = Field(default_factory=dict)
     llm_timeout_seconds: float = 60
     # Embeddings are shared by every tenant: changing provider, model or
     # dimensions requires recreating the chunks table and re-ingesting.
@@ -70,6 +72,13 @@ class Settings(BaseSettings):
     whatsapp_handoff_keywords: str = 'human,agent'
 
     model_config = SettingsConfigDict(env_file='.env', extra='ignore')
+
+    @field_validator('ai_prices_usd')
+    @classmethod
+    def valid_ai_prices(cls, prices):
+        if any(not rate.is_finite() or rate < 0 or rate > 1000000 for pair in prices.values() for rate in pair):
+            raise ValueError('AI prices must be finite nonnegative USD amounts per million tokens')
+        return prices
 
     @field_validator('text_search_config')
     @classmethod

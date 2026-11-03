@@ -21,6 +21,7 @@ from sqlalchemy import delete
 from . import llm
 from .db import Chunk, Session, Source
 from .services.storage import storage
+from .services.usage import meter
 
 SUPPORTED_SUFFIXES = {'.pdf', '.docx', '.txt', '.md', '.csv', '.xlsx', '.json'}
 EMBED_BATCH = 32
@@ -224,7 +225,8 @@ def ingest(source_id: str) -> None:
             rows = []
             for i in range(0, len(pieces), EMBED_BATCH):
                 batch = pieces[i:i + EMBED_BATCH]
-                vectors = embedder.embed([embedding_text(src.filename, p) for p in batch])
+                with meter(src.tenant_id):
+                    vectors = embedder.embed([embedding_text(src.filename, p) for p in batch])
                 rows += [Chunk(tenant_id=src.tenant_id, source_id=src.id, position=i + n, content=p.content,
                                heading=p.heading, page=p.page, embedding=v)
                          for n, (p, v) in enumerate(zip(batch, vectors, strict=True))]
