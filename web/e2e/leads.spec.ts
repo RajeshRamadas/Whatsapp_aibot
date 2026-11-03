@@ -15,9 +15,9 @@ test('lead status is saved and exported from the filtered board', async ({ page,
   await lead.getByRole('button', { name: 'Save lead' }).click();
   await expect(lead.getByRole('button', { name: 'Save lead' })).toBeDisabled();
   await page.getByRole('button', { name: 'Board', exact: true }).click();
-  await expect(page.getByRole('region', { name: 'Qualified' }).getByText('Asha Demo')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Qualified' }).getByRole('heading', { name: 'Asha Demo', exact: true })).toBeVisible();
   await page.getByLabel('Source', { exact: true }).selectOption('web');
-  await expect(page.getByRole('region', { name: 'Qualified' }).getByText('Asha Demo')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Qualified' }).getByRole('heading', { name: 'Asha Demo', exact: true })).toBeVisible();
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export CSV' }).click();
   const download = await downloadPromise;
