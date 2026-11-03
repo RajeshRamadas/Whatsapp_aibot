@@ -24,7 +24,7 @@ test('install assets and workspace notification opt-in work', async ({ page, con
   const [workspace] = await workspaces.json();
   await context.addCookies([{ name: 'active_workspace', value: workspace.tenant_id,
     url: 'http://localhost:3000' }]);
-  await page.goto('/dashboard/inbox');
+  await page.goto('/dashboard/inbox', { waitUntil: 'domcontentloaded' });
   const enable = page.getByRole('button', { name: 'Enable notifications' });
   await expect(enable).toBeEnabled();
   await enable.click();
@@ -50,12 +50,13 @@ test('install assets and workspace notification opt-in work', async ({ page, con
     !!await caches.match('/dashboard/inbox-offline-snapshot'),
   )).toBe(true);
   await context.setOffline(true);
-  await page.reload();
+  await page.reload({ waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'Offline inbox' })).toBeVisible();
   await expect(page.getByText('15550001234', { exact: false })).toBeVisible();
   await context.setOffline(false);
-  await page.goto('/dashboard/inbox');
-  await page.getByRole('button', { name: 'Log out' }).click();
+  await page.goto('/dashboard/inbox', { waitUntil: 'domcontentloaded' });
+  await page.getByRole('button', { name: 'Log out', exact: true }).click({ timeout: 5000 });
+  await expect(page).toHaveURL(/\/login$/);
   await expect.poll(async () => page.evaluate(async () =>
     (await caches.keys()).includes('inbox-offline-v1'),
   )).toBe(false);
