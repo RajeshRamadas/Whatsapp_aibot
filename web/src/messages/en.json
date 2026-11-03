@@ -106,5 +106,12 @@
   "goLive": "Go live",
   "pauseBot": "Pause bot",
   "confirmGoLive": "Take the bot live? It will answer new WhatsApp messages during configured business hours.",
-  "confirmPause": "Pause the bot? New WhatsApp messages will wait for an agent."
+  "confirmPause": "Pause the bot? New WhatsApp messages will wait for an agent.",
+  "pushSettings": "Inbox notifications",
+  "pushUnavailable": "Notifications are unavailable. Contact your workspace administrator.",
+  "pushDenied": "Allow notifications in your browser settings, then try again.",
+  "pushEnabled": "Notifications enabled for this workspace on this device.",
+  "pushDisabled": "Notifications disabled for this workspace on this device.",
+  "pushEnable": "Enable notifications",
+  "pushDisable": "Disable notifications"
 }

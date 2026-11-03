@@ -16,12 +16,15 @@ export function AppShell({ workspaces, active, children }: { workspaces: Workspa
   const [selected, setSelected] = useState(active.id);
   const pages = visiblePages(active.role);
   function switchWorkspace(id: string) {
+    navigator.serviceWorker?.controller?.postMessage({ type: 'CLEAR_INBOX' });
     setSelected(id);
     document.cookie = 'active_workspace=' + encodeURIComponent(id) + '; Path=/; SameSite=Lax';
     router.refresh();
   }
   async function logout() {
     await api('auth/logout', { method: 'POST' });
+    if ('caches' in window) await caches.delete('inbox-offline-v1');
+    navigator.serviceWorker?.controller?.postMessage({ type: 'CLEAR_INBOX' });
     router.replace('/login');
     router.refresh();
   }

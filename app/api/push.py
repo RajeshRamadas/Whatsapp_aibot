@@ -1,10 +1,11 @@
 """Manage a signed-in agent's Inbox notification subscriptions."""
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field, HttpUrl, field_validator
 from sqlalchemy import delete
 from sqlalchemy.dialects.postgresql import insert
 
 from ..config import settings
+from ..services.inbox_push import configured, supported_endpoint
 from ..db import InboxPushSubscription, Session
 from .principal import Principal, require_role
 from .shared import sha
@@ -18,8 +19,8 @@ class SubscriptionEndpoint(BaseModel):
     @field_validator('endpoint')
     @classmethod
     def validate_endpoint(cls, value: HttpUrl) -> HttpUrl:
-        if value.scheme != 'https' or value.username or value.password or value.fragment:
-            raise ValueError('Expected an HTTPS push endpoint')
+        if not supported_endpoint(str(value)):
+            raise ValueError('Unsupported push provider endpoint')
         return value
 
 
@@ -36,6 +37,8 @@ class Subscription(SubscriptionEndpoint):
 def subscribe(body: Subscription, principal: Principal = Depends(require_role('agent'))):
     if principal.user is None:
         raise HTTPException(403, 'User session required')
+    if not configured():
+        raise HTTPException(503, 'Push notifications are not configured')
     endpoint = str(body.endpoint)
     with Session.begin() as db:
         statement = insert(InboxPushSubscription).values(
@@ -64,4 +67,14 @@ def unsubscribe(body: SubscriptionEndpoint, principal: Principal = Depends(requi
 def push_config(principal: Principal = Depends(require_role('agent'))):
     if principal.user is None:
         raise HTTPException(403, 'User session required')
-    return {'public_key': settings.inbox_vapid_public_key}
+    return {'public_key': settings.inbox_vapid_public_key if configured() else None}
+
+
+@router.get('/api/v1/inbox/push-subscription')
+def subscription_status(endpoint: str = Query(min_length=1, max_length=4096),
+                        principal: Principal = Depends(require_role('agent'))):
+    if principal.user is None:
+        raise HTTPException(403, 'User session required')
+    with Session() as db:
+        row = db.get(InboxPushSubscription, (principal.tenant.id, principal.user.id, sha(endpoint)))
+    return {'enabled': row is not None}

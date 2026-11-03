@@ -412,7 +412,7 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 - **Tests:** Playwright: take over, reply, hand back, close; a new message appears without refresh.
 - **Done when:** UX_DESIGN §4.5 requirements pass.
 
-#### T4.4 Installable app and push notifications
+#### T4.4 Installable app and push notifications (PR #35)
 - **Delivers:** INB-6, UX_DESIGN §9 (PWA)
 - **Depends on:** T4.3
 - **Size:** M
@@ -420,6 +420,8 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
   1. Web app manifest and service worker.
   2. Web Push (VAPID keys) for conversations waiting for an agent and new leads (T5.2), with per-user settings.
 - **Done when:** a push notification is received in a manual test on Android Chrome, and subscription storage is covered by tests.
+- **Status:** implementation and automated verification in PR #35; Android Chrome device receipt pending. New-lead notifications follow T5.2.
+- **Notes:** per-user, per-workspace browser opt-in; PostgreSQL delivery state; generic notification content; read-only offline snapshot expires after 15 minutes. See README for VAPID setup and the manual acceptance steps.
 
 ### M5: Leads and Q&A (DESIGN §6)
 

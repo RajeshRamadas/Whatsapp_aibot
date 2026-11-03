@@ -155,7 +155,7 @@ async def notify_inbox(ctx: dict) -> None:
 
 
 class WorkerSettings:
-    cron_jobs = [cron(dispatch_agent_replies, second={0, 10, 20, 30, 40, 50}), cron(notify_inbox, second=5)]
+    cron_jobs = [cron(dispatch_agent_replies, second={0, 10, 20, 30, 40, 50}), cron(notify_inbox, second={5, 15, 25, 35, 45, 55})]
     functions = [sample_job, ingest_source, handle_message]
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
     max_jobs = 10

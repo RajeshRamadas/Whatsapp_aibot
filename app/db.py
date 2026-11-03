@@ -294,6 +294,8 @@ class InboxPushSubscription(Base):
     tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'), primary_key=True)
     user_id: Mapped[str] = mapped_column(ForeignKey('users.id', ondelete='CASCADE'), primary_key=True)
     endpoint_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    notification_state: Mapped[dict] = mapped_column(JSONB, default=dict)
+    next_attempt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     endpoint: Mapped[str] = mapped_column(Text)
     p256dh: Mapped[str] = mapped_column(String(128))
     auth: Mapped[str] = mapped_column(String(64))

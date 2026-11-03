@@ -334,3 +334,55 @@ provider failures retry with exponential backoff (up to five attempts); final
 failure records a handoff and internal agent note, then attempts an apology.
 Run the Redis worker alongside the API. Existing `whatsapp_inbound` IDs are
 migrated to processed events to preserve deduplication.
+
+
+### Installable Inbox and push notifications (T4.4)
+
+The Inbox can be installed from the browser's install menu over HTTPS. It includes
+192px and 512px PNG icons. Agents can enable or disable notifications independently
+for each workspace and browser. Owners, admins, and agents are eligible.
+
+Generate a VAPID key pair once:
+
+```bash
+python -m scripts.generate_vapid --subject mailto:ops@example.com
+```
+
+This creates a new, owner-readable `.env.push` file and refuses to overwrite an
+existing file. Copy its three settings into the API and worker's environment or
+deployment secret store. Keep the same key pair across restarts. Changing it
+requires browsers to unsubscribe from the old PushManager subscription and opt in
+again. The private key is never returned by the API. Configure HTTPS and run
+`alembic upgrade head`, the API, the web app, and `python -m app.jobs.worker`.
+
+The worker checks opted-in agents in small batches every ten seconds. Delivery
+state and temporary claims live in PostgreSQL, so Redis restarts and older waiting
+conversations do not erase pending alerts. Each device receives one generic alert
+for newly waiting or updated conversations. Successful deliveries are deduplicated;
+transient failures retry after a minute and 404/410 responses remove expired
+subscriptions. A crash after the provider accepts an alert can cause a duplicate
+after the two-minute claim expires. Alerts coalesce under a workspace-specific tag.
+Provider endpoints are limited to Chrome/FCM, Firefox/Mozilla and Apple Web Push.
+A notification opens the corresponding workspace; API membership checks still apply.
+New-lead alerts are deferred to T5.2, which introduces lead capture.
+
+The last-loaded conversation list and open transcript are available read-only
+offline in this browser for 15 minutes. The offline copy is cleared on workspace
+switch and logout. Reconnect to send replies or refresh data.
+
+Automated checks cover subscription authentication, CSRF, role and tenant
+boundaries, repeated opt-ins, per-device opt-out, unsupported endpoints, delivery
+deduplication, retry, expired subscriptions, and browser install/offline behavior.
+
+Manual Android Chrome acceptance (requires a deployed HTTPS origin and real VAPID
+keys):
+1. Sign in as an agent, open Inbox, and use Chrome's Install app menu.
+2. Open the installed app and choose Enable notifications. Allow the browser prompt.
+3. Put the app in the background. Cause a conversation to enter Waiting for agent.
+4. Confirm a generic notification arrives, tap it, and verify the correct workspace opens.
+5. Disable notifications for that workspace and verify a subsequent waiting message
+   produces no notification on this device.
+
+Record the device, Chrome version, origin, time, and outcome in PR #35. A headless
+browser test exercises the UI and stored opt-in with a fake PushManager; receipt
+through a real Android push service remains a manual acceptance step.

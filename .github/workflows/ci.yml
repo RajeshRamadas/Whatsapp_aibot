@@ -46,6 +46,10 @@ jobs:
           WHATSAPP_ACCESS_TOKEN: fixture
           API_INTERNAL_URL: http://127.0.0.1:8000
         run: |
+          python -m scripts.generate_vapid --subject mailto:ci@example.com --output /tmp/inbox-push.env
+          set -a
+          source /tmp/inbox-push.env
+          set +a
           python -m scripts.seed_inbox_e2e
           uvicorn app.main:app --port 8000 &
           cd web
