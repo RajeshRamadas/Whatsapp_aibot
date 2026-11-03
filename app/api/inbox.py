@@ -255,3 +255,9 @@ def delete_canned(reply_id: str, principal: Principal = Depends(require_role('ad
         if row is None:
             raise HTTPException(404, 'Canned reply not found')
         db.delete(row)
+
+
+@router.get('/api/v1/inbox/conversations/{conversation_id}')
+def inbox_conversation(conversation_id: str, principal: Principal = Depends(require_role('viewer'))):
+    with Session() as db:
+        return view(conversation(db, principal.tenant.id, conversation_id))
