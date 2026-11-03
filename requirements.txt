@@ -21,3 +21,4 @@ arq>=0.26,<1
 redis>=5,<7
 pywebpush>=2,<3
 jsonschema>=4.23,<5
+reportlab>=4.2,<5

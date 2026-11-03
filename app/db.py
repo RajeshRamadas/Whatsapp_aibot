@@ -61,6 +61,7 @@ class Tenant(Base):
     business_hours: Mapped[str] = mapped_column(Text, default='')
     timezone: Mapped[str] = mapped_column(String(64), default='UTC')
     plan_id: Mapped[str] = mapped_column(ForeignKey('plans.id'), default='starter', server_default='starter')
+    billing_details: Mapped[dict | None] = mapped_column(JSONB)
     trial_ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: now() + timedelta(days=14),
                                                     server_default=text("now() + interval '14 days'"))
     quota_behavior: Mapped[str] = mapped_column(String(16), default='pause', server_default='pause')
@@ -439,3 +440,19 @@ class BillingEvent(Base):
     amount_paise: Mapped[int | None] = mapped_column(BigInteger)
     settled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class InvoiceSequence(Base):
+    __tablename__ = 'invoice_sequences'
+    financial_year: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
+    last_number: Mapped[int] = mapped_column(Integer)
+
+
+class Invoice(Base):
+    __tablename__ = 'invoices'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    tenant_id: Mapped[str | None] = mapped_column(ForeignKey('tenants.id', ondelete='SET NULL'), index=True)
+    payment_id: Mapped[str] = mapped_column(String(64), unique=True)
+    number: Mapped[str] = mapped_column(String(16), unique=True)
+    issued_on: Mapped[date] = mapped_column(Date)
+    snapshot: Mapped[dict] = mapped_column(JSONB)

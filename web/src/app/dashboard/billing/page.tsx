@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { InvoiceSettings } from '@/components/invoice-settings';
 import { useWorkspace } from '@/components/app-shell';
 import { api } from '@/lib/api';
 
@@ -10,7 +11,7 @@ type Subscription = {
 };
 type Billing = {
   enabled: boolean; trial_ends_at: string; current_plan: string; entitled: boolean;
-  subscription: Subscription | null; plans: { id: string; price_inr: number; available: boolean }[];
+  tax_rate: string | null; subscription: Subscription | null; plans: { id: string; price_inr: number; available: boolean }[];
 };
 
 function WorkspaceBilling({ id }: { id: string }) {
@@ -50,6 +51,7 @@ function WorkspaceBilling({ id }: { id: string }) {
     <h1 className="text-2xl font-semibold">Billing</h1>
     {error && <p role="alert">{error}</p>}
     {!data && !error && <p role="status">Loading billing…</p>}
+    <InvoiceSettings workspaceId={id} />
     {data && <>
       <p>Current plan: {data.current_plan}</p>
       <p>Trial ends: {new Date(data.trial_ends_at).toLocaleDateString()}</p>
@@ -69,7 +71,7 @@ function WorkspaceBilling({ id }: { id: string }) {
           <select className={field} value={inCheckout ? subscription.plan : choice} disabled={inCheckout}
             onChange={event => setChoice(event.target.value)}>
             {data.plans.map(item => <option key={item.id} value={item.id} disabled={!item.available}>
-              {item.id} · ₹{item.price_inr}/month
+              {item.id} · ₹{item.price_inr}/month{data.tax_rate && ' + GST'}
             </option>)}
           </select>
         </label>

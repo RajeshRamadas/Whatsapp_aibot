@@ -1,0 +1,22 @@
+{
+  "title": "Billing details",
+  "loading": "Loading billing details…",
+  "beforeCheckout": "Save your billing address before checkout. GSTIN is optional for unregistered customers.",
+  "disabled": "Invoice issuance is unavailable until the platform configures its GST details.",
+  "name": "Legal name",
+  "address": "Billing address",
+  "state": "State or union territory",
+  "choose": "Select your state",
+  "postal": "PIN code",
+  "gstin": "GSTIN (optional)",
+  "save": "Save billing details",
+  "saved": "Billing details saved.",
+  "invoices": "Tax invoices",
+  "empty": "No invoices yet.",
+  "download": "Download PDF",
+  "previous": "Previous page",
+  "next": "Next page",
+  "loadError": "Could not load billing details or invoices.",
+  "saveError": "Could not save billing details.",
+  "downloadError": "Could not download the invoice."
+}

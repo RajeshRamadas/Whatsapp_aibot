@@ -14,6 +14,7 @@ from ..config import settings
 from ..db import BillingEvent, Plan, Session, Subscription, Tenant, now, uid
 from ..services.billing import TERMINAL, apply_snapshot, configured, entitled, save_snapshot
 from ..services.billing_provider import BillingError, provider
+from ..services.invoices import issue
 from .principal import tenant_for_role
 
 router = APIRouter()
@@ -50,6 +51,7 @@ def status(tenant: Tenant = Depends(tenant_for_role('owner'))):
         row = db.get(Subscription, tenant.id)
         plans = db.scalars(select(Plan).order_by(Plan.id)).all()
         return {'enabled': configured(), 'trial_ends_at': tenant.trial_ends_at, 'current_plan': tenant.plan_id,
+                'tax_rate': str(settings.gst_invoice_issuer.tax_rate) if settings.gst_invoice_issuer else None,
                 'entitled': entitled(db, tenant, now()), 'subscription': public_view(row) if row else None,
                 'plans': [{'id': plan.id, 'price_inr': plan.limits.get('price_inr'),
                            'available': bool(settings.razorpay_plan_ids.get(plan.id))} for plan in plans]}
@@ -61,6 +63,8 @@ def checkout(body: PlanChoice, tenant: Tenant = Depends(tenant_for_role('owner')
     remote_plan = mapped(body.plan)
     with Session.begin() as db:
         workspace = db.get(Tenant, tenant.id, with_for_update=True)
+        if settings.gst_invoice_issuer is not None and not workspace.billing_details:
+            raise HTTPException(409, 'Save your billing details before checkout')
         trial_end = workspace.trial_ends_at
         row = db.get(Subscription, tenant.id, with_for_update=True)
         new = row is None or (row.status in TERMINAL and (not row.period_end or row.period_end <= now()))
@@ -171,6 +175,7 @@ def process_event(event_id, name, payload):
             if name == 'subscription.charged' and payment.get('id') and isinstance(payment.get('amount'), int):
                 stored = db.get(BillingEvent, event_id)
                 stored.tenant_id, stored.payment_id, stored.amount_paise = tenant.id, payment['id'], payment['amount']
+                issue(db, tenant, payment)
             row.reconcile_issue = None
 
 
