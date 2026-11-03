@@ -1,7 +1,7 @@
 """Inbox actions with workspace and role enforcement."""
 from datetime import timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
 
@@ -133,10 +133,19 @@ def add_note(conversation_id: str, body: Note, principal: Principal = Depends(re
 
 
 @router.post('/api/v1/inbox/conversations/{conversation_id}/reply')
-def reply(conversation_id: str, body: Reply, principal: Principal = Depends(require_role('agent'))):
+def reply(conversation_id: str, body: Reply, principal: Principal = Depends(require_role('agent')),
+          idempotency_key: str | None = Header(None, min_length=1, max_length=128)):
     with Session.begin() as db:
         conv = conversation(db, principal.tenant.id, conversation_id)
         db.refresh(conv, with_for_update=True)
+        user_id = principal.user.id if principal.user else None
+        if idempotency_key is not None:
+            existing = db.scalar(select(Message).where(
+                Message.conversation_id == conv.id, Message.reply_key == idempotency_key))
+            if existing:
+                if existing.content != body.message or existing.author_user_id != user_id:
+                    raise HTTPException(409, 'Idempotency key already used for another reply')
+                return {'status': existing.delivery_status, 'message_id': existing.id}
         if conv.status == 'closed':
             raise HTTPException(409, 'Reopen the conversation before replying')
         if conv.channel != 'whatsapp' or not principal.tenant.whatsapp_phone_number_id:
@@ -148,7 +157,7 @@ def reply(conversation_id: str, body: Reply, principal: Principal = Depends(requ
             raise HTTPException(503, 'WhatsApp is not configured')
         message = Message(conversation_id=conv.id, role='agent', direction='outbound',
                           kind='text', author_user_id=principal.user.id if principal.user else None,
-                          content=body.message, delivery_status='queued')
+                          content=body.message, delivery_status='queued', reply_key=idempotency_key)
         db.add(message)
         conv.handoff, conv.status = True, 'agent'
         conv.last_message_at = now()
