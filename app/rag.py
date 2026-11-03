@@ -9,7 +9,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from functools import reduce
 
-from sqlalchemy import func, literal_column, select
+from sqlalchemy import or_, func, literal_column, select
 
 from . import llm
 from .config import settings
@@ -92,9 +92,10 @@ def retrieve(tenant_id: str, query: str) -> list[Match]:
 def history(conversation_id: str) -> list[dict]:
     with Session() as db:
         rows = db.scalars(select(Message).where(Message.conversation_id == conversation_id,
-                                                Message.role.in_(('user', 'assistant')), Message.kind != 'note')
+                                                Message.role.in_(('user', 'assistant', 'agent')), Message.kind != 'note',
+                                                or_(Message.role != 'agent', Message.channel_message_id.is_not(None)))
                           .order_by(Message.id.desc()).limit(settings.history_messages)).all()
-    turns = [{'role': m.role, 'content': m.content} for m in reversed(rows)]
+    turns = [{'role': 'assistant' if m.role == 'agent' else m.role, 'content': m.content} for m in reversed(rows)]
     # Every provider needs the history to start with a user turn.
     while turns and turns[0]['role'] != 'user':
         turns.pop(0)
