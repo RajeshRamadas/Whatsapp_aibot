@@ -8,7 +8,6 @@ from ..db import Lead, Membership, Session, User
 from . import email
 from .events import publish_sync
 
-
 log = logging.getLogger(__name__)
 
 
