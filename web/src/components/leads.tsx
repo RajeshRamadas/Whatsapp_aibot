@@ -164,7 +164,7 @@ export function Leads({ workspace }: { workspace: Workspace }) {
         </select>
       </label>
       <label className="grid gap-1">{copy.source}
-        <select className={control} value={filters.source} onChange={event => filter('source', event.target.value)}>
+        <select className={control} aria-label={copy.source} value={filters.source} onChange={event => filter('source', event.target.value)}>
           <option value="">{copy.allSources}</option>
           {Object.entries(copy.sources).map(([source, name]) => <option key={source} value={source}>{name}</option>)}
         </select>
