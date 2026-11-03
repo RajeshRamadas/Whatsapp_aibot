@@ -77,5 +77,6 @@ def set_handoff(conversation_id: str, active: bool = True, tenant: Tenant = Depe
 
 
 @router.post('/api/v1/conversations/{conversation_id}/reply')
-def agent_reply(conversation_id: str, body: AgentReply, principal: Principal = Depends(require_role('agent'))):
-    return reply(conversation_id, Reply(message=body.message), principal)
+def agent_reply(conversation_id: str, body: AgentReply, principal: Principal = Depends(require_role('agent')),
+                idempotency_key: str | None = Header(None, min_length=1, max_length=128)):
+    return reply(conversation_id, Reply(message=body.message), principal, idempotency_key)
