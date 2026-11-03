@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     database_url: str
     redis_url: str = 'redis://localhost:6379/0'
     admin_bootstrap_token: str
+    inbox_vapid_public_key: str | None = None
     auth_cookie_secure: bool = True
     environment: str = 'development'
     master_key: str | None = None
