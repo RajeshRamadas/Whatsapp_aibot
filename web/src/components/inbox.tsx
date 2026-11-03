@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
+import { InboxTemplatePicker } from '@/components/inbox-template-picker';
 import { useWorkspace } from '@/components/app-shell';
 import { api } from '@/lib/api';
 
@@ -257,12 +258,11 @@ export function Inbox({ canAct }: { canAct: boolean }) {
                 || active.status === 'closed'}>Send reply</button>
               <button type="button" className={field} disabled={busy || !draft.trim()}
                 onClick={() => action('note', { text: draft.trim() })}>Add internal note</button>
-              {active.channel === 'whatsapp' && !active.can_reply_freely &&
-                <button type="button" disabled className={field} aria-describedby="template-help">Send a template</button>}
             </div>
-            {active.channel === 'whatsapp' && !active.can_reply_freely &&
-              <p id="template-help">The 24-hour reply window is closed. Template sending is coming in a later release.</p>}
           </form>}
+          {canAct && active.channel === 'whatsapp' && !active.can_reply_freely && active.status !== 'closed' &&
+            <InboxTemplatePicker key={selected} conversationId={selected}
+              onQueued={() => refresh(value => value + 1)} />}
         </section>
         <aside aria-label="Contact details" className="rounded border border-border p-3">
           <h2 className="font-semibold">Contact</h2>

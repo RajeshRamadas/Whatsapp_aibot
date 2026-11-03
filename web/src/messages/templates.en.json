@@ -1,0 +1,14 @@
+{
+  "title": "Send a template",
+  "windowClosed": "The 24-hour reply window is closed. You can use an approved template if the contact has opted in.",
+  "loading": "Loading templates…",
+  "empty": "No approved text templates are available.",
+  "template": "Template",
+  "choose": "Choose a template",
+  "variable": "Variable",
+  "preview": "Preview",
+  "queued": "Template queued.",
+  "loadError": "Could not load approved templates.",
+  "sendError": "Could not queue the template.",
+  "deliveryUnconfirmed": "Template delivery could not be confirmed. Check the transcript before retrying."
+}

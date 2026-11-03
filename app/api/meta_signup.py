@@ -90,6 +90,9 @@ def complete_signup(body: SignupInput, principal: Principal = Depends(admin_sess
             db.flush()
             channel = whatsapp_channel(db, tenant_id)
             channel.credentials_enc = credentials
+            if channel.waba_id and channel.waba_id != body.waba_id:
+                raise HTTPException(409, 'Unlink this number before changing its WhatsApp Business Account')
+            channel.waba_id = body.waba_id
             channel.display_name = name
             return view(channel)
     except IntegrityError:

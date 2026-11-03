@@ -12,6 +12,7 @@ from ..db import AuditLog, Conversation, InboundEvent, Message, Session, Source,
 from ..services.channels import whatsapp_channel
 from ..services.events import publish_sync
 from ..services.inbox_push import deliver_waiting
+from ..services.templates import eligible_contact, render, send_payload, template_for_send
 from ..services.whatsapp_copy import copy_for
 
 
@@ -124,14 +125,35 @@ def dispatch_agent_reply() -> bool:
         eligible = (conversation.handoff and conversation.status == 'agent' and phone
                     and conversation.last_inbound_at
                     and conversation.last_inbound_at > now() - timedelta(hours=24))
+        template_payload = None
+        if message.template_payload is not None:
+            queued = message.template_payload
+            template = template_for_send(db, channel.id, queued['template_id']) if channel else None
+            eligible = bool(conversation.channel == 'whatsapp' and conversation.handoff
+                            and conversation.status == 'agent' and template and eligible_contact(db, conversation))
+            if eligible:
+                try:
+                    eligible = render(template.body, queued['values']) == content
+                except ValueError:
+                    eligible = False
+            if eligible:
+                template_payload = send_payload(template, queued['values'])
         message.delivery_status = 'sending' if eligible else 'failed'
         if eligible:
             message.dispatch_started_at = now()
         if not eligible:
-            message.error = 'Conversation is no longer eligible for a free-form reply'
+            message.error = 'Conversation is no longer eligible for this WhatsApp reply'
     if eligible:
         try:
-            provider_id = whatsapp.send_text(phone, recipient, content, tenant_id=tenant_id)
+            if template_payload is None:
+                provider_id = whatsapp.send_text(phone, recipient, content, tenant_id=tenant_id)
+            else:
+                response = whatsapp.graph_message(phone, {
+                    'recipient_type': 'individual', 'to': recipient, 'type': 'template',
+                    'template': template_payload,
+                }, tenant_id)
+                messages = response.json().get('messages') or []
+                provider_id = messages[0].get('id') if messages else None
         except Exception:
             provider_id = None
         with Session.begin() as db:

@@ -13,6 +13,7 @@ from .. import evaluate, ingest, llm, rag, whatsapp
 from ..config import settings
 from ..db import Conversation, EvalCase, Message, Session, Source, Tenant, uid
 from ..jobs.queue import enqueue
+from ..services.templates import record_status as record_template_status
 from .shared import (
     UPLOADS,
     WIDGET,
@@ -51,6 +52,15 @@ async def whatsapp_webhook(request: Request):
         payload = json.loads(body)
     except ValueError:
         raise HTTPException(400, 'Invalid JSON') from None
+    for entry in payload.get('entry') or []:
+        for change in entry.get('changes') or []:
+            if change.get('field') != 'message_template_status_update':
+                continue
+            value = change.get('value') or {}
+            status = value.get('event')
+            meta_id = value.get('message_template_id')
+            if isinstance(status, str) and 1 <= len(status) <= 32 and meta_id and entry.get('id'):
+                await run_in_threadpool(record_template_status, str(entry['id']), str(meta_id), status.upper())
     for status in whatsapp.parse_statuses(payload):
         await run_in_threadpool(whatsapp.record_status, status)
     for message in whatsapp.parse_messages(payload):
