@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { useWorkspace } from '@/components/app-shell';
 import { api } from '@/lib/api';
@@ -19,6 +20,8 @@ export function Inbox({ canAct }: { canAct: boolean }) {
   const workspace = useWorkspace();
   const [page, setPage] = useState<Page>();
   const [selected, select] = useState('');
+  const [linkedConversation, setLinkedConversation] = useState<Conversation>();
+  const [lead, setLead] = useState<{ id: string; status: string; fields: Record<string, string> }>();
   const [messages, setMessages] = useState<Message[]>([]);
   const [canned, setCanned] = useState<Canned[]>([]);
   const [status, setStatus] = useState('');
@@ -34,13 +37,19 @@ export function Inbox({ canAct }: { canAct: boolean }) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [revision, refresh] = useState(0);
-  const active = page?.items.find(item => item.id === selected);
+  const active = page?.items.find(item => item.id === selected)
+    ?? (linkedConversation?.id === selected ? linkedConversation : undefined);
   const draft = drafts[selected] ?? '';
+
+  useEffect(() => {
+    const linked = new URLSearchParams(window.location.search).get('conversation');
+    if (linked) select(linked);
+  }, []);
 
   useEffect(() => {
     const stream = new EventSource('/api/backend/events');
     const invalidate = () => refresh(value => value + 1);
-    for (const event of ['conversation.updated', 'message.created', 'message.updated']) {
+    for (const event of ['conversation.updated', 'message.created', 'message.updated', 'lead.created']) {
       stream.addEventListener(event, invalidate);
     }
     let timeout: ReturnType<typeof setTimeout> | undefined;
@@ -71,7 +80,15 @@ export function Inbox({ canAct }: { canAct: boolean }) {
   useEffect(() => {
     if (!selected) return;
     const controller = new AbortController();
-    api<Message[]>('conversations/' + selected + '/messages', { signal: controller.signal })
+    const id = encodeURIComponent(selected);
+    api<Conversation>(endpoint + '/' + id, { signal: controller.signal })
+      .then(result => { if (!controller.signal.aborted) setLinkedConversation(result); })
+      .catch((failure: Error) => { if (!controller.signal.aborted) setError(failure.message); });
+    api<{ id: string; status: string; fields: Record<string, string> }>('leads/' + id, {
+      signal: controller.signal,
+    }).then(result => { if (!controller.signal.aborted) setLead(result); })
+      .catch(() => { if (!controller.signal.aborted) setLead(undefined); });
+    api<Message[]>('conversations/' + id + '/messages', { signal: controller.signal })
       .then(result => { if (!controller.signal.aborted) setMessages(result); })
       .catch((failure: Error) => { if (!controller.signal.aborted) setError(failure.message); });
     return () => controller.abort();
@@ -254,7 +271,10 @@ export function Inbox({ canAct }: { canAct: boolean }) {
           <p>Labels: {active.labels.join(', ') || 'None'}</p>
           <p className="break-all">Assignee: {active.assignee_user_id ?? 'Unassigned'}</p>
           <h3 className="mt-4 font-semibold">Lead</h3>
-          <p>Lead capture is planned for a later milestone.</p>
+          {lead?.id === selected ? <>
+            <p className="break-words">{lead.fields.name || lead.fields.phone || 'Unnamed lead'} · {lead.status}</p>
+            <Link href="/dashboard/leads" className="underline">View leads</Link>
+          </> : <p>No lead captured.</p>}
         </aside>
       </> : <p className="hidden lg:block">Choose a conversation to see its messages.</p>}
     </div>
