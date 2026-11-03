@@ -4,7 +4,7 @@ from datetime import timedelta
 
 from arq import Retry, cron, run_worker
 from arq.connections import RedisSettings
-from sqlalchemy import select, text
+from sqlalchemy import select, text, update
 
 from .. import ingest, whatsapp
 from ..config import settings
@@ -118,6 +118,8 @@ def dispatch_agent_reply() -> bool:
                     and conversation.last_inbound_at
                     and conversation.last_inbound_at > now() - timedelta(hours=24))
         message.delivery_status = 'sending' if eligible else 'failed'
+        if eligible:
+            message.dispatch_started_at = now()
         if not eligible:
             message.error = 'Conversation is no longer eligible for a free-form reply'
     if eligible:
@@ -129,7 +131,7 @@ def dispatch_agent_reply() -> bool:
             message = db.get(Message, message_id)
             if message:
                 message.channel_message_id = provider_id
-                message.delivery_status = 'sent' if provider_id else 'failed'
+                message.delivery_status = 'sent' if provider_id else 'unknown'
                 if not provider_id:
                     message.error = 'WhatsApp delivery could not be confirmed'
     publish_sync(tenant_id, 'message.updated', {'conversation_id': conversation_id})
@@ -137,6 +139,11 @@ def dispatch_agent_reply() -> bool:
 
 
 async def dispatch_agent_replies(ctx: dict) -> None:
+    with Session.begin() as db:
+        db.execute(update(Message).where(
+            Message.role == 'agent', Message.delivery_status == 'sending',
+            Message.dispatch_started_at < now() - timedelta(minutes=2),
+        ).values(delivery_status='unknown', error='WhatsApp delivery could not be confirmed'))
     for _ in range(20):
         if not await asyncio.to_thread(dispatch_agent_reply):
             break
