@@ -14,7 +14,7 @@ type Canned = { id: string; title: string; body: string };
 const endpoint = 'inbox/conversations';
 const field = 'min-h-11 rounded border border-border bg-surface p-2';
 
-export function Inbox() {
+export function Inbox({ canAct }: { canAct: boolean }) {
   const [page, setPage] = useState<Page>();
   const [selected, select] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -84,6 +84,7 @@ export function Inbox() {
   }, []);
 
   async function action(name: string, payload?: object, key?: string) {
+    if (!canAct || busy) return;
     setBusy(true);
     setError('');
     try {
@@ -170,13 +171,13 @@ export function Inbox() {
         <section aria-label="Conversation" className="min-w-0">
           <button className={field + ' mb-2 lg:hidden'} onClick={() => choose('')}>Back to conversations</button>
           <h2 className="break-all text-lg font-semibold">{active.user}</h2>
-          <div className="my-3 flex flex-wrap gap-2">
+          {canAct && <div className="my-3 flex flex-wrap gap-2">
             <button className={field} disabled={busy} onClick={() => action('take-over')}>Take over</button>
             <button className={field} disabled={busy} onClick={() => action('hand-back')}>Hand back to bot</button>
             <button className={field} disabled={busy} onClick={() => action(active.status === 'closed' ? 'reopen' : 'close')}>
               {active.status === 'closed' ? 'Reopen' : 'Close'}
             </button>
-          </div>
+          </div>}
           <ol aria-label="Messages" aria-live="polite" className="mb-4 grid max-h-[50vh] gap-2 overflow-auto">
             {messages.map((message, index) => <li key={index} className="rounded border border-border p-2">
               <span className="text-sm font-semibold">{message.kind === 'note' ? 'Internal note' : message.role}</span>
@@ -190,7 +191,7 @@ export function Inbox() {
               {message.delivery_status && <span className="text-sm">{message.delivery_status}</span>}
             </li>)}
           </ol>
-          <form className="grid gap-2" onSubmit={event => {
+          {canAct && <form className="grid gap-2" onSubmit={event => {
             event.preventDefault();
             if (draft.trim() && active.can_reply_freely && active.status !== 'closed' && !busy) {
               const text = draft.trim();
@@ -231,7 +232,7 @@ export function Inbox() {
             </div>
             {active.channel === 'whatsapp' && !active.can_reply_freely &&
               <p id="template-help">The 24-hour reply window is closed. Template sending is coming in a later release.</p>}
-          </form>
+          </form>}
         </section>
         <aside aria-label="Contact details" className="rounded border border-border p-3">
           <h2 className="font-semibold">Contact</h2>
