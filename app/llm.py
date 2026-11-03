@@ -119,7 +119,7 @@ class OpenAIChat:
                 history.append({'role': 'assistant', 'content': message.content,
                                 'tool_calls': [call.model_dump(exclude_none=True) for call in requests]})
                 history.extend({'role': 'tool', 'tool_call_id': call.id, 'content': json.dumps(result)}
-                               for call, result in zip(requests, results))
+                               for call, result in zip(requests, results, strict=True))
 
             return message.content or '', [(c.function.name, c.function.arguments) for c in requests], respond
 
@@ -169,7 +169,7 @@ class AnthropicChat:
                 history.append({'role': 'assistant', 'content': response.content})
                 history.append({'role': 'user', 'content': [
                     {'type': 'tool_result', 'tool_use_id': call.id, 'content': json.dumps(result),
-                     'is_error': 'error' in result} for call, result in zip(requests, results)
+                     'is_error': 'error' in result} for call, result in zip(requests, results, strict=True)
                 ]})
 
             if response.stop_reason == 'refusal':
@@ -223,7 +223,7 @@ class GeminiChat:
                 history.append(types.Content(role='user', parts=[
                     types.Part(function_response=types.FunctionResponse(
                         id=call.id, name=call.name, response=result))
-                    for call, result in zip(requests, results)
+                    for call, result in zip(requests, results, strict=True)
                 ]))
 
             text = ''.join(part.text for part in parts if part.text and not part.thought)
