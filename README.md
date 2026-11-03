@@ -386,3 +386,8 @@ keys):
 Record the device, Chrome version, origin, time, and outcome in PR #35. A headless
 browser test exercises the UI and stored opt-in with a fake PushManager; receipt
 through a real Android push service remains a manual acceptance step.
+
+
+### Curated Q&A
+
+Workspace owners and admins can add, edit, or delete entries under Knowledge → Curated Q&A. A matching entry supplies the sole factual source for the reply and appears as FAQ in citations. Questions below the similarity threshold continue through document retrieval. Set `QA_MIN_SIMILARITY` between 0 and 1 to adjust matching. The default is 0.9. FAQ embeddings use the same embedding provider and dimensions as documents.

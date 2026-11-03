@@ -1,6 +1,6 @@
 import re
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Used when neither the tenant nor CHAT_MODEL / EMBEDDING_MODEL names a model.
@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     embedding_dimensions: int = 1536
 
     # Retrieval
+    qa_min_similarity: float = Field(0.9, ge=0, le=1)
     retrieval_top_k: int = 6
     retrieval_candidates: int = 20  # per search method, before the results are merged
     retrieval_max_distance: float = 0.8  # cosine distance; chunks further away are ignored

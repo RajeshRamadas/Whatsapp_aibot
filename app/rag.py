@@ -13,7 +13,7 @@ from sqlalchemy import func, literal_column, or_, select
 
 from . import llm
 from .config import settings
-from .db import Chunk, Conversation, Message, Session, Source, Tenant, now
+from .db import Chunk, Conversation, Message, QAPair, Session, Source, Tenant, now
 from .ingest import source_label
 from .rate_limits import RateLimiter
 from .services.bot_policy import tenant_instructions
@@ -65,9 +65,10 @@ def keyword_query(text: str):
     return reduce(lambda a, b: a.op('||')(b), [func.plainto_tsquery(config, w) for w in words])
 
 
-def retrieve(tenant_id: str, query: str) -> list[Match]:
+def retrieve(tenant_id: str, query: str, vector: list[float] | None = None) -> list[Match]:
     """Hybrid search: meaning (embeddings) and exact words (Postgres full text), merged by rank."""
-    vector = llm.embedder().embed([query], query=True)[0]
+    if vector is None:
+        vector = llm.embedder().embed([query], query=True)[0]
     distance = Chunk.embedding.cosine_distance(vector)
     columns = (Chunk.id, Chunk.content, Source.filename, Chunk.heading, Chunk.page)
     base = select(*columns).join(Source, Chunk.source_id == Source.id) \
@@ -124,10 +125,21 @@ def answer(tenant: Tenant, conversation_id: str | None, question: str) -> Answer
     chat = llm.chat_provider(provider)
     turns = history(conversation_id) if conversation_id else []
     query = standalone_query(chat, model, turns, question) if turns and settings.query_rewrite else question
-    matches = retrieve(tenant.id, query)
+    vector = llm.embedder().embed([query], query=True)[0]
+    distance = QAPair.embedding.cosine_distance(vector)
+    with Session() as db:
+        faq = db.scalar(select(QAPair.answer).where(
+            QAPair.tenant_id == tenant.id, distance <= 1 - settings.qa_min_similarity,
+        ).order_by(distance, QAPair.id).limit(1))
+    matches = [Match(faq, 'FAQ', None, None)] if faq is not None else retrieve(tenant.id, query, vector)
     evidence = '\n\n'.join(f'[{i + 1}] {m.label}: {m.content}' for i, m in enumerate(matches))
     platform_prompt = SYSTEM_PROMPT.split('\n\nKNOWLEDGE:', 1)[0].format(name=tenant.name)
     prompt = platform_prompt + tenant_instructions(tenant) + '\n\nKNOWLEDGE:\n' + (evidence or '(none)')
+    if faq is not None:
+        prompt += (
+            '\n\nUse the curated FAQ as the sole factual answer. Rephrase only for the customer’s '
+            'language and tone, preserve every fact, and cite [1].'
+        )
     messages = [*turns, {'role': 'user', 'content': question}]
     captured = {}
     if tenant.lead_fields:
