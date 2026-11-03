@@ -31,7 +31,20 @@ def test_inbox_isolation_actions_and_counts(client, tenant, monkeypatch):
                            params={'limit': 1, 'cursor': page['next_cursor']}).json()
     assert len(next_page['items']) == 1
     assert next_page['items'][0]['id'] != page['items'][0]['id']
-    assert client.post(f'{url}/{foreign}/close', headers=tenant['headers']).status_code == 404
+    actions = [
+        ('POST', 'take-over', None), ('POST', 'assign', {'user_id': None}),
+        ('POST', 'note', {'text': 'Private'}), ('POST', 'reply', {'message': 'Hello'}),
+        ('POST', 'hand-back', None), ('POST', 'close', None), ('POST', 'reopen', None),
+        ('PUT', 'labels', {'labels': ['vip']}), ('POST', 'typing', None),
+    ]
+    for method, action, body in actions:
+        assert client.request(method, f'{url}/{first}/{action}', json=body).status_code == 401
+        if action != 'take-over':
+            assert client.request(method, f'{url}/{foreign}/{action}', headers=tenant['headers'],
+                                  json=body).status_code == 404
+    assert client.post(f'{url}/{first}/typing', headers=tenant['headers']).json()['expires_in_seconds'] == 5
+    assert client.post(f'{url}/{first}/assign', headers=tenant['headers'],
+                       json={'user_id': None}).json()['status'] == 'waiting'
     assert client.post(f'{url}/{first}/take-over', headers=tenant['headers']).status_code == 403
     assert client.post(f'{url}/{first}/close', headers=tenant['headers']).status_code == 200
     assert client.get(url, headers=tenant['headers'], params={'status': 'closed'}).json()['items'][0]['id'] == first
@@ -62,5 +75,6 @@ def test_whatsapp_window_and_canned_replies(client, tenant, monkeypatch):
     assert client.get(canned, headers=tenant['headers']).json()[0]['id'] == reply_id
     assert client.put(f'{canned}/{reply_id}', headers=tenant['headers'],
                       json={'title': 'Welcome', 'body': 'Updated'}).status_code == 200
+    assert client.get(canned, headers=tenant['headers']).json()[0]['body'] == 'Updated'
     assert client.delete(f'{canned}/{reply_id}', headers=tenant['headers']).status_code == 204
     assert client.get(canned, headers=tenant['headers']).json() == []
