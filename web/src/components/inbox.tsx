@@ -87,11 +87,13 @@ export function Inbox({ canAct }: { canAct: boolean }) {
 
   useEffect(() => {
     if (!page || !workspace || !('serviceWorker' in navigator)) return;
-    const worker = navigator.serviceWorker.controller;
-    worker?.postMessage({
+    const saveSnapshot = () => navigator.serviceWorker.controller?.postMessage({
       type: 'INBOX_SNAPSHOT', workspace: workspace.name,
       conversations: page.items, messages,
     });
+    saveSnapshot();
+    navigator.serviceWorker.addEventListener('controllerchange', saveSnapshot);
+    return () => navigator.serviceWorker.removeEventListener('controllerchange', saveSnapshot);
   }, [page, messages, workspace]);
 
   async function action(name: string, payload?: object, key?: string) {
