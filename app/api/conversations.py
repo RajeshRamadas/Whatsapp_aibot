@@ -13,7 +13,8 @@ from .. import evaluate, ingest, llm, rag, whatsapp
 from ..config import settings
 from ..db import Conversation, EvalCase, Message, Session, Source, Tenant, uid
 from ..services.events import publish_sync
-from .principal import tenant_for_role
+from .inbox import Reply, reply
+from .principal import Principal, require_role, tenant_for_role
 from .shared import (
     UPLOADS,
     WIDGET,
@@ -76,20 +77,6 @@ def set_handoff(conversation_id: str, active: bool = True, tenant: Tenant = Depe
 
 
 @router.post('/api/v1/conversations/{conversation_id}/reply')
-def agent_reply(conversation_id: str, body: AgentReply, tenant: Tenant = Depends(tenant_for_role('agent'))):
-    """Send a message from a human agent to a WhatsApp user."""
-    with Session() as db:
-        conv = tenant_conversation(db, tenant, conversation_id)
-    if conv.channel != 'whatsapp' or not tenant.whatsapp_phone_number_id:
-        raise HTTPException(409, 'Agent replies are only available for WhatsApp conversations')
-    if not settings.whatsapp_enabled:
-        raise HTTPException(503, 'WhatsApp is not configured')
-    # Meta only delivers free-form messages within 24 hours of the user's last message.
-    message_id = whatsapp.send_text(tenant.whatsapp_phone_number_id, conv.external_user, body.message)
-    rag.save_exchange(conv, ('agent', body.message), channel_message_id=message_id)
-    with Session.begin() as db:
-        db.get(Conversation, conv.id).status = 'agent'
-    publish_sync(tenant.id, 'conversation.updated', {'conversation_id': conversation_id})
-    return {'status': 'sent'}
-
-
+def agent_reply(conversation_id: str, body: AgentReply, principal: Principal = Depends(require_role('agent')),
+                idempotency_key: str | None = Header(None, min_length=1, max_length=128)):
+    return reply(conversation_id, Reply(message=body.message), principal, idempotency_key)

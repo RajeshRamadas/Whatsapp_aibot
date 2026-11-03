@@ -128,6 +128,7 @@ class Conversation(Base):
 
 class Message(Base):
     __tablename__ = 'messages'
+    __table_args__ = (UniqueConstraint('conversation_id', 'reply_key', name='uq_message_reply_key'),)
     # Sequential so history order is exact even when rows share a timestamp.
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     conversation_id: Mapped[str] = mapped_column(ForeignKey('conversations.id', ondelete='CASCADE'), index=True)
@@ -136,10 +137,24 @@ class Message(Base):
     author_user_id: Mapped[str | None] = mapped_column(ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     kind: Mapped[str] = mapped_column(String(20), default='text')
     channel_message_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    reply_key: Mapped[str | None] = mapped_column(String(128))
+    dispatch_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     delivery_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     content: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+
+
+class CannedReply(Base):
+    __tablename__ = 'canned_replies'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'), index=True)
+    title: Mapped[str] = mapped_column(String(100))
+    body: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
 
 
 class EvalCase(Base):

@@ -1,13 +1,14 @@
 """arq worker entry point: python -m app.jobs.worker."""
 import asyncio
+from datetime import timedelta
 
-from arq import Retry, run_worker
+from arq import Retry, cron, run_worker
 from arq.connections import RedisSettings
-from sqlalchemy import select, text
+from sqlalchemy import select, text, update
 
 from .. import ingest, whatsapp
 from ..config import settings
-from ..db import AuditLog, InboundEvent, Message, Session, Source, Tenant
+from ..db import AuditLog, Conversation, InboundEvent, Message, Session, Source, Tenant, now
 from ..services.events import publish_sync
 
 
@@ -99,7 +100,57 @@ async def handle_message(ctx: dict, event_id: str) -> None:
         raise Retry(defer=min(2 ** ctx.get('job_try', 1), 60))
 
 
+def dispatch_agent_reply() -> bool:
+    with Session.begin() as db:
+        row = db.execute(
+            select(Message, Conversation, Tenant)
+            .join(Conversation, Conversation.id == Message.conversation_id)
+            .join(Tenant, Tenant.id == Conversation.tenant_id)
+            .where(Message.role == 'agent', Message.delivery_status == 'queued')
+            .order_by(Message.id).limit(1).with_for_update(skip_locked=True, of=Message)
+        ).first()
+        if row is None:
+            return False
+        message, conversation, tenant = row
+        message_id, conversation_id, tenant_id = message.id, conversation.id, tenant.id
+        phone, recipient, content = tenant.whatsapp_phone_number_id, conversation.external_user, message.content
+        eligible = (conversation.handoff and conversation.status == 'agent' and phone
+                    and conversation.last_inbound_at
+                    and conversation.last_inbound_at > now() - timedelta(hours=24))
+        message.delivery_status = 'sending' if eligible else 'failed'
+        if eligible:
+            message.dispatch_started_at = now()
+        if not eligible:
+            message.error = 'Conversation is no longer eligible for a free-form reply'
+    if eligible:
+        try:
+            provider_id = whatsapp.send_text(phone, recipient, content)
+        except Exception:
+            provider_id = None
+        with Session.begin() as db:
+            message = db.get(Message, message_id)
+            if message:
+                message.channel_message_id = provider_id
+                message.delivery_status = 'sent' if provider_id else 'unknown'
+                if not provider_id:
+                    message.error = 'WhatsApp delivery could not be confirmed'
+    publish_sync(tenant_id, 'message.updated', {'conversation_id': conversation_id})
+    return True
+
+
+async def dispatch_agent_replies(ctx: dict) -> None:
+    with Session.begin() as db:
+        db.execute(update(Message).where(
+            Message.role == 'agent', Message.delivery_status == 'sending',
+            Message.dispatch_started_at < now() - timedelta(minutes=2),
+        ).values(delivery_status='unknown', error='WhatsApp delivery could not be confirmed'))
+    for _ in range(20):
+        if not await asyncio.to_thread(dispatch_agent_reply):
+            break
+
+
 class WorkerSettings:
+    cron_jobs = [cron(dispatch_agent_replies, second={0, 10, 20, 30, 40, 50})]
     functions = [sample_job, ingest_source, handle_message]
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
     max_jobs = 10

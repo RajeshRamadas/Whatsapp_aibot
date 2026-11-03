@@ -14,7 +14,7 @@ from sqlalchemy.exc import IntegrityError
 
 from . import rag
 from .config import settings
-from .db import Contact, Conversation, InboundEvent, Message, Session, Tenant, uid
+from .db import Contact, Conversation, InboundEvent, Message, Session, Tenant, now, uid
 from .services.bot_policy import within_hours
 
 log = logging.getLogger(__name__)
@@ -66,7 +66,12 @@ def accept(message: dict) -> str | None:
         if not tenant_id:
             log.warning('WhatsApp message for unknown phone_number_id %s', message['phone_number_id'])
             return None
-        event = InboundEvent(id=uid(), channel_message_id=message['id'], tenant_id=tenant_id,
+        received_at = now()
+        conv = conversation_for(tenant_id, message['from'])
+        current = db.get(Conversation, conv.id, with_for_update=True)
+        if current.last_inbound_at is None or current.last_inbound_at < received_at:
+            current.last_inbound_at = received_at
+        event = InboundEvent(received_at=received_at, id=uid(), channel_message_id=message['id'], tenant_id=tenant_id,
                              payload=message, status='queued', attempts=0)
         db.add(event)
         try:
@@ -167,6 +172,12 @@ def handle(tenant_id: str, message: dict) -> None:
         send_text(phone_number_id, wa_user, RATE_LIMIT_REPLY)
         return
     reply = rag.answer(tenant, conv.id, text).text or ERROR_REPLY
+    with Session() as db:
+        current = db.get(Conversation, conv.id)
+        can_send = current is not None and not current.handoff and current.status == 'bot'
+    if not can_send:
+        rag.save_exchange(conv, ('user', text))
+        return
     message_id = send_text(phone_number_id, wa_user, reply)
     rag.save_exchange(conv, ('user', text), ('assistant', reply), channel_message_id=message_id)
 
