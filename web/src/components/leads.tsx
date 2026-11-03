@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import type { Workspace } from '@/components/app-shell';
 import { api } from '@/lib/api';
 import messages from '@/messages/en.json';
+import copy from '@/messages/leads.en.json';
 
 const stages = ['new', 'contacted', 'qualified', 'won', 'lost'] as const;
 type Stage = typeof stages[number];
@@ -13,7 +14,6 @@ type Lead = {
   owner_id: string | null; notes: string; created_at: string; source: 'web' | 'whatsapp';
 };
 type Owner = { id: string; name: string };
-const copy = messages.leadUi;
 const control = 'min-h-11 rounded border border-border bg-surface px-3 py-2';
 const size = 30;
 const fieldNames = copy.fields as Record<string, string>;
