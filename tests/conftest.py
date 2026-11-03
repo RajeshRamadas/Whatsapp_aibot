@@ -39,6 +39,19 @@ class FakeEmbedder:
 class FakeChat:
     def __init__(self, name):
         self.name, self.calls, self.rewrites = name, [], []
+        self.tool_turns = []
+
+    def run(self, model, system, messages, tools):
+        if not self.tool_turns:
+            return llm.ChatResult(self.complete(model, system, messages), [])
+        turns = iter(self.tool_turns)
+        results = []
+
+        def turn(enabled):
+            text, requests = next(turns)(results, enabled)
+            return text, requests, results.extend
+
+        return llm._run(turn, tools)
 
     def complete(self, model, system, messages):
         if system == rag.REWRITE_PROMPT:
