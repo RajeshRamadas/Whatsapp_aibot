@@ -12,6 +12,7 @@ from ..db import AuditLog, Conversation, InboundEvent, Message, Session, Source,
 from ..services.channels import whatsapp_channel
 from ..services.events import publish_sync
 from ..services.inbox_push import deliver_waiting
+from ..services.whatsapp_copy import copy_for
 
 
 async def sample_job(ctx: dict, tenant_id: str, job_id: str) -> str:
@@ -71,6 +72,7 @@ async def handle_message(ctx: dict, event_id: str) -> None:
         if not batch:
             return
         combined = dict(batch[0].payload)
+        combined['parts'] = [row.payload for row in batch]
         combined['text'] = '\\n'.join(row.payload.get('text', '') for row in batch if row.payload.get('text'))
         try:
             # This call performs synchronous LLM and HTTP work off the event loop.
@@ -90,7 +92,8 @@ async def handle_message(ctx: dict, event_id: str) -> None:
                     row.status = 'failed'
                 try:
                     await asyncio.to_thread(whatsapp.send_text, combined['phone_number_id'],
-                                            contact, whatsapp.ERROR_REPLY, tenant_id=tenant_id)
+                                            contact, copy_for(db.get(Tenant, tenant_id))['error'],
+                                            tenant_id=tenant_id)
                 except Exception:
                     pass  # Handoff remains recorded even if Meta is unavailable.
         else:

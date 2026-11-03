@@ -33,7 +33,9 @@ def test_answers_text_and_dedupes_retries(client, tenant, sent, chats):
     link_number(client, tenant)
     assert post(client, wa_payload('What are your hours?')).status_code == 200
     assert post(client, wa_payload('What are your hours?')).status_code == 200  # Meta retry, same wamid
-    assert sent == [('PNID1', '15551234567', 'openai:gpt-4.1-mini: What are your hours?')]
+    assert len(sent) == 1 and sent[0][:2] == ('PNID1', '15551234567')
+    assert 'automated assistant' in sent[0][2]
+    assert sent[0][2].endswith('openai:gpt-4.1-mini: What are your hours?')
 
     post(client, wa_payload('And refunds?', msg_id='wamid.2'))
     assert len(sent) == 2

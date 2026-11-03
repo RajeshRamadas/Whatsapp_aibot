@@ -428,3 +428,20 @@ shows the connected number. Send a test message to your own opted-in number
 with the dashboard button. The sender must have the `hello_world` template
 available and Meta must permit the recipient. Check delivery on the phone and
 send a reply to verify the signed inbound webhook reaches the workspace.
+
+
+### WhatsApp conversation behavior
+
+The first automated answer introduces the bot and explains how to reach the team.
+Replies use WhatsApp formatting and render citations in a short source line.
+When a reply is long, the bot offers the remaining detail in a follow-up.
+The bot can show reply buttons or lists and offer a handoff when it lacks an answer.
+
+System messages use English or Hindi according to the workspace default language.
+Handoff messages show the next opening time in the workspace time zone when the
+business is closed. Waiting conversations suppress automated answers and may
+receive a reminder after an hour of inactivity.
+
+`STOP` and `बंद` record marketing opt-out. Add workspace-specific equivalents
+through `PATCH /api/v1/tenant` using `whatsapp_opt_out_keywords`. `START` records
+renewed consent. Opted-out contacts can still ask support questions.

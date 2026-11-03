@@ -57,6 +57,7 @@ class Tenant(Base):
     bot_rules: Mapped[str] = mapped_column(Text, default='')
     business_hours: Mapped[str] = mapped_column(Text, default='')
     timezone: Mapped[str] = mapped_column(String(64), default='UTC')
+    whatsapp_opt_out_keywords: Mapped[list] = mapped_column(JSONB, default=list)
     default_language: Mapped[str] = mapped_column(String(16), default='en')
     bot_live: Mapped[bool] = mapped_column(Boolean, default=False)
 

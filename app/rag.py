@@ -54,6 +54,8 @@ class Answer:
     sources: list[dict]
     search_query: str
     lead_fields: dict | None = None
+    choices: list[str] | None = None
+    uncertain: bool = False
 
 
 def keyword_query(text: str):
@@ -119,7 +121,7 @@ def standalone_query(chat, model: str, turns: list[dict], question: str) -> str:
     return query if 0 < len(query) <= 500 else question
 
 
-def answer(tenant: Tenant, conversation_id: str | None, question: str) -> Answer:
+def answer(tenant: Tenant, conversation_id: str | None, question: str, *, whatsapp: bool = False) -> Answer:
     """Generate a reply. Persisting it is up to the caller (see save_exchange)."""
     provider, model = llm.resolve_chat(tenant.chat_provider, tenant.chat_model)
     chat = llm.chat_provider(provider)
@@ -142,6 +144,36 @@ def answer(tenant: Tenant, conversation_id: str | None, question: str) -> Answer
         )
     messages = [*turns, {'role': 'user', 'content': question}]
     captured = {}
+    choices = []
+    uncertain = False
+    tools = []
+    if whatsapp:
+        prompt += (
+            '\n\nWhatsApp: reply in the customer’s language and script, or the workspace default if unclear. '
+            'Keep replies under 600 characters. Use *bold*, _italic_ and simple lists. '
+            'Keep numbered source markers for the adapter to render. Avoid tables and Markdown headings. '
+            'Use offer_handoff when the knowledge does not answer the question. '
+            'Use offer_choices for 2–10 short, distinct next steps supported by the knowledge.'
+        )
+
+        def offer_choices(args):
+            choices[:] = [label.strip() for label in args['choices'] if label.strip()]
+            return {'accepted': True}
+
+        def offer_handoff(args):
+            nonlocal uncertain
+            uncertain = True
+            return {'accepted': True}
+
+        tools.extend([
+            llm.Tool('offer_choices', 'Show selectable next steps', {
+                'type': 'object', 'required': ['choices'], 'additionalProperties': False,
+                'properties': {'choices': {'type': 'array', 'minItems': 2, 'maxItems': 10, 'uniqueItems': True,
+                                           'items': {'type': 'string', 'minLength': 1, 'maxLength': 24}}},
+            }, offer_choices),
+            llm.Tool('offer_handoff', 'Offer human help when an answer is unavailable',
+                     {'type': 'object', 'additionalProperties': False}, offer_handoff),
+        ])
     if tenant.lead_fields:
         properties = {key: {'type': 'string', 'minLength': 1, 'maxLength': 500} for key in tenant.lead_fields}
         required = [key for key, rule in tenant.lead_fields.items() if rule == 'required']
@@ -157,13 +189,12 @@ def answer(tenant: Tenant, conversation_id: str | None, question: str) -> Answer
             'Use capture_lead only with values the customer has provided and agreed to share. '
             'Optional fields can be skipped. Never invent values or copy lead details from knowledge.'
         )
-        tool = llm.Tool('capture_lead', 'Save lead details agreed to by the customer', schema, capture)
-        text = chat.run(model, prompt, messages, [tool]).text
-    else:
-        text = chat.complete(model, prompt, messages)
+        tools.append(llm.Tool('capture_lead', 'Save lead details agreed to by the customer', schema, capture))
+    text = chat.run(model, prompt, messages, tools).text if tools else chat.complete(model, prompt, messages)
     sources = [{'number': i + 1, 'filename': m.filename, 'heading': m.heading, 'page': m.page}
                for i, m in enumerate(matches)]
-    return Answer(text=text, sources=sources, search_query=query, lead_fields=captured or None)
+    return Answer(text=text, sources=sources, search_query=query, lead_fields=captured or None,
+                  choices=choices or None, uncertain=uncertain)
 
 
 def save_exchange(conversation: Conversation, *pairs: tuple[str, str], create: bool = False,
