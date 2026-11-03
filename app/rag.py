@@ -9,7 +9,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from functools import reduce
 
-from sqlalchemy import or_, func, literal_column, select
+from sqlalchemy import func, literal_column, or_, select
 
 from . import llm
 from .config import settings
@@ -149,7 +149,8 @@ def save_exchange(conversation: Conversation, *pairs: tuple[str, str], create: b
         if conv and pairs:
             conv.last_message_at = timestamp
             if any(role == 'user' for role, _ in pairs):
-                conv.last_inbound_at = timestamp
+                if conv.channel != 'whatsapp':
+                    conv.last_inbound_at = timestamp
     if pairs:
         publish_sync(conversation.tenant_id, 'message.created', {'conversation_id': conversation.id})
         publish_sync(conversation.tenant_id, 'conversation.updated', {'conversation_id': conversation.id})
