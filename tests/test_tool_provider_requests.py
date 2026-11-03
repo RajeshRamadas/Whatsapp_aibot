@@ -22,7 +22,9 @@ def test_tool_request_and_result_round_trip(provider):
         if provider == 'anthropic':
             content = ([{'type': 'tool_use', 'id': 'toolu_1', 'name': 'lookup', 'input': {'id': 7}}]
                        if first else [{'type': 'text', 'text': 'Found it'}])
-            return httpx.Response(200, json={'content': content, 'stop_reason': 'tool_use' if first else 'end_turn'})
+            import httpx2
+
+            return httpx2.Response(200, json={'content': content, 'stop_reason': 'tool_use' if first else 'end_turn'})
         parts = [{'functionCall': {'name': 'lookup', 'args': {'id': 7}}}] if first else [{'text': 'Found it'}]
         return httpx.Response(200, json={'candidates': [{'content': {'role': 'model', 'parts': parts}}]})
 
@@ -33,10 +35,11 @@ def test_tool_request_and_result_round_trip(provider):
         chat = OpenAIChat.__new__(OpenAIChat)
         chat.client = OpenAI(api_key='test', http_client=httpx.Client(transport=transport))
     elif provider == 'anthropic':
+        import httpx2
         from anthropic import Anthropic
 
         chat = AnthropicChat.__new__(AnthropicChat)
-        chat.client = Anthropic(api_key='test', http_client=httpx.Client(transport=transport))
+        chat.client = Anthropic(api_key='test', http_client=httpx2.Client(transport=httpx2.MockTransport(reply)))
     else:
         from google import genai
         from google.genai import types
@@ -62,7 +65,10 @@ def test_tool_request_and_result_round_trip(provider):
         assert block['tool_use_id'] == 'toolu_1'
         assert json.loads(block['content']) == {'result': 8}
     else:
-        assert first['tools'][0]['functionDeclarations'][0]['parametersJsonSchema'] == tool.parameters
+        declaration = first['tools'][0]['functionDeclarations'][0]
+        assert declaration.get('parametersJsonSchema', declaration.get('parameters_json_schema')) == tool.parameters, (
+            declaration
+        )
         block = second['contents'][-1]['parts'][0]['functionResponse']
         assert block['name'] == 'lookup'
         assert block['response'] == {'result': 8}
