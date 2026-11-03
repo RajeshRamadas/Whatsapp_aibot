@@ -70,13 +70,17 @@ def test_handoff_to_human_and_back(client, tenant, sent, chats):
     post(client, wa_payload('hello?', msg_id='wamid.2'))
     assert len(sent) == 1 and chats['openai'].calls == []  # bot stays silent
 
-    r = client.post(f"/api/v1/conversations/{conv['id']}/reply", headers=tenant['headers'],
-                    json={'message': 'Hi, this is Sam.'})
+    headers = {**tenant['headers'], 'Idempotency-Key': 'agent-reply-1'}
+    payload = {'message': 'Hi, this is Sam.'}
+    r = client.post(f"/api/v1/conversations/{conv['id']}/reply", headers=headers, json=payload)
+    retry = client.post(f"/api/v1/inbox/conversations/{conv['id']}/reply", headers=headers, json=payload)
+    assert retry.status_code == 200 and retry.json() == r.json()
     from app.jobs.worker import dispatch_agent_reply
 
     assert r.status_code == 200 and r.json()['status'] == 'queued'
     assert len(sent) == 1
     assert dispatch_agent_reply()
+    assert not dispatch_agent_reply()
     assert sent[-1] == ('PNID1', '15551234567', 'Hi, this is Sam.')
 
     client.post(f"/api/v1/conversations/{conv['id']}/handoff?active=false", headers=tenant['headers'])
