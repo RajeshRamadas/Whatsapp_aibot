@@ -6,6 +6,11 @@ test('agent handles an inbound conversation with live transcript updates', async
     data: { email: 'inbox@example.com', password: 'inbox-test-passphrase-392' },
   });
   expect(login.ok()).toBeTruthy();
+  const workspaces = await page.request.get('/api/backend/workspaces');
+  expect(workspaces.ok()).toBeTruthy();
+  const [workspace] = await workspaces.json();
+  await page.context().addCookies([{ name: 'active_workspace', value: workspace.tenant_id,
+    url: 'http://localhost:3000' }]);
   await page.goto('/dashboard/inbox');
   await page.getByRole('button', { name: new RegExp(conversation) }).click();
   await page.getByRole('button', { name: 'Take over' }).click();
