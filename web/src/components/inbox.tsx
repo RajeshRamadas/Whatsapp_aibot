@@ -42,9 +42,9 @@ export function Inbox() {
     }
     let timeout: ReturnType<typeof setTimeout> | undefined;
     stream.addEventListener('typing.updated', (event: MessageEvent<string>) => {
-      const data = JSON.parse(event.data) as { conversation_id: string; user_id?: string };
+      const data = JSON.parse(event.data) as { conversation_id: string; user_id?: string; user_name?: string };
       if (data.conversation_id !== selected) return;
-      setTyping(data.user_id ? 'An agent is typing…' : 'Someone is typing…');
+      setTyping(data.user_name ? data.user_name + ' is typing…' : 'An agent is typing…');
       clearTimeout(timeout);
       timeout = setTimeout(() => setTyping(''), 5000);
     });
@@ -232,6 +232,8 @@ export function Inbox() {
           <p>{active.channel} · {active.status}</p>
           <p>Labels: {active.labels.join(', ') || 'None'}</p>
           <p className="break-all">Assignee: {active.assignee_user_id ?? 'Unassigned'}</p>
+          <h3 className="mt-4 font-semibold">Lead</h3>
+          <p>Lead capture is planned for a later milestone.</p>
         </aside>
       </> : <p className="hidden lg:block">Choose a conversation to see its messages.</p>}
     </div>
