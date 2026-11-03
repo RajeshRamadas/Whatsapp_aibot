@@ -39,11 +39,16 @@ test('embedded widget survives an offline send and reload', async ({ page, conte
   await page.getByRole('button', { name: 'Host button' }).click();
   await page.getByRole('button', { name: 'Open chat' }).click();
   await context.setOffline(true);
+  await page.evaluate(() => Object.defineProperty(navigator, 'onLine', { configurable: true, value: false }));
   await page.getByRole('textbox', { name: 'Ask a question' }).fill('Opening hours?');
   await page.getByRole('button', { name: 'Send', exact: true }).click();
   await expect(page.getByText(/You’re offline/)).toBeVisible();
   expect(queued).toBe(0);
   await context.setOffline(false);
+  await page.evaluate(() => {
+    Reflect.deleteProperty(navigator, 'onLine');
+    window.dispatchEvent(new Event('online'));
+  });
   await expect(page.getByText('We open at nine.')).toBeVisible();
   expect(queued).toBe(1);
   await page.getByText('Sources (1)', { exact: true }).click();
