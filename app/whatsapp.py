@@ -181,7 +181,7 @@ def handle(tenant_id: str, message: dict) -> None:
         return
     message_id = send_text(phone_number_id, wa_user, reply)
     rag.save_exchange(conv, ('user', text), ('assistant', reply), channel_message_id=message_id,
-                      sources=answer.sources if answer.text else [])
+                      sources=answer.sources if answer.text else [], lead_fields=answer.lead_fields)
 
 
 DELIVERY_RANK = {'sent': 1, 'delivered': 2, 'read': 3}
