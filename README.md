@@ -445,3 +445,23 @@ receive a reminder after an hour of inactivity.
 `STOP` and `बंद` record marketing opt-out. Add workspace-specific equivalents
 through `PATCH /api/v1/tenant` using `whatsapp_opt_out_keywords`. `START` records
 renewed consent. Opted-out contacts can still ask support questions.
+
+
+### WhatsApp templates outside the reply window
+
+Embedded Signup records the WhatsApp Business Account ID for new channels.
+For an existing channel, an admin can bind it with
+`PUT /api/v1/whatsapp/templates/account` and a `waba_id`. The API verifies
+that the connected phone belongs to that account.
+
+Admins can sync templates with `POST /api/v1/whatsapp/templates/sync` or
+submit a text template with `POST /api/v1/whatsapp/templates`. Provide
+`name`, `language`, `category`, `body`, and ordered `examples` for any
+numbered variables such as `{{1}}`. Subscribe the Meta app to
+`message_template_status_update` for approval changes. Sync reconciles the
+local catalog with Meta.
+
+The Inbox picker supports approved templates with text bodies and numbered
+variables. Templates with headers, media, buttons or named variables can be
+tracked in the catalog. Sending requires recorded contact opt-in. The worker
+rechecks approval and consent before dispatch.

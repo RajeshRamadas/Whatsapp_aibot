@@ -141,6 +141,7 @@ class Message(Base):
     channel_message_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     sources: Mapped[list] = mapped_column(JSONB, default=list)
     reply_key: Mapped[str | None] = mapped_column(String(128))
+    template_payload: Mapped[dict | None] = mapped_column(JSONB)
     dispatch_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     delivery_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -334,5 +335,19 @@ class Channel(Base):
     kind: Mapped[str] = mapped_column(String(20))
     external_id: Mapped[str] = mapped_column(String(64))
     display_name: Mapped[str | None] = mapped_column(String(200))
+    waba_id: Mapped[str | None] = mapped_column(String(32), unique=True)
     credentials_enc: Mapped[bytes | None] = mapped_column(LargeBinary)
     last_webhook_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class Template(Base):
+    __tablename__ = 'templates'
+    __table_args__ = (UniqueConstraint('channel_id', 'meta_id', name='uq_template_channel_meta'),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    channel_id: Mapped[str] = mapped_column(ForeignKey('channels.id', ondelete='CASCADE'))
+    meta_id: Mapped[str] = mapped_column(String(64))
+    name: Mapped[str] = mapped_column(String(512))
+    language: Mapped[str] = mapped_column(String(32))
+    category: Mapped[str] = mapped_column(String(32))
+    status: Mapped[str] = mapped_column(String(32))
+    body: Mapped[str | None] = mapped_column(Text)
