@@ -10,6 +10,7 @@ from .. import ingest, whatsapp
 from ..config import settings
 from ..db import AuditLog, Conversation, InboundEvent, Message, Session, Source, Tenant, now
 from ..services.events import publish_sync
+from ..services.inbox_push import deliver_waiting
 
 
 async def sample_job(ctx: dict, tenant_id: str, job_id: str) -> str:
@@ -149,8 +150,12 @@ async def dispatch_agent_replies(ctx: dict) -> None:
             break
 
 
+async def notify_inbox(ctx: dict) -> None:
+    await asyncio.to_thread(deliver_waiting)
+
+
 class WorkerSettings:
-    cron_jobs = [cron(dispatch_agent_replies, second={0, 10, 20, 30, 40, 50})]
+    cron_jobs = [cron(dispatch_agent_replies, second={0, 10, 20, 30, 40, 50}), cron(notify_inbox, second=5)]
     functions = [sample_job, ingest_source, handle_message]
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
     max_jobs = 10
