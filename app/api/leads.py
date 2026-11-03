@@ -59,7 +59,8 @@ def lead_query(tenant_id, status, owner_id, source, from_date, to_date):
 
 def view(row, source=None):
     return {'id': row.conversation_id, 'conversation_id': row.conversation_id, 'fields': row.fields,
-            'source': source, 'status': row.status, 'owner_id': row.owner_id, 'notes': row.notes, 'created_at': row.created_at}
+            'source': source, 'status': row.status, 'owner_id': row.owner_id, 'notes': row.notes,
+            'created_at': row.created_at}
 
 
 @router.get('/leads')
