@@ -17,7 +17,8 @@ log = logging.getLogger(__name__)
 STREAM_MAX = 100
 STREAM_TTL = 600
 VALID_ID = re.compile(r'^[0-9]+-[0-9]+$')
-EVENT_TYPES = {'conversation.updated', 'message.created', 'source.updated', 'lead.created', 'typing.updated'}
+EVENT_TYPES = {'conversation.updated', 'message.created', 'message.updated',
+               'source.updated', 'lead.created', 'typing.updated'}
 
 
 def stream_key(tenant_id: str) -> str:
