@@ -216,7 +216,7 @@ def typing(conversation_id: str, principal: Principal = Depends(require_role('ag
         conversation(db, principal.tenant.id, conversation_id)
     publish_sync(principal.tenant.id, 'typing.updated',
                  {'conversation_id': conversation_id, 'user_id': principal.user.id if principal.user else None,
-                  'expires_in_seconds': 5})
+                  'user_name': principal.user.name if principal.user else None, 'expires_in_seconds': 5})
     return {'status': 'ok', 'expires_in_seconds': 5}
 
 
