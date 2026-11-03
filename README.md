@@ -406,3 +406,25 @@ channel token and restores the shared `WHATSAPP_ACCESS_TOKEN` fallback.
 Set `WHATSAPP_VERIFY_TOKEN` and `WHATSAPP_APP_SECRET` to accept signed
 webhooks. Channel status reports local configuration and the last webhook
 received. Meta Embedded Signup is tracked separately as T6.2.
+
+
+### Meta Embedded Signup
+
+Configure a Meta Tech Provider or BSP app for Embedded Signup and add the
+dashboard HTTPS origin to its allowed domains. Set `WHATSAPP_APP_ID`,
+`WHATSAPP_SIGNUP_CONFIG_ID`, `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN`,
+and `MASTER_KEY` on the API. Configure the Meta webhook callback at
+`/webhooks/whatsapp` and subscribe to WhatsApp message events.
+
+From the workspace dashboard, an owner or admin can enter a six-digit
+registration PIN and launch **Connect with Meta**. The API exchanges the
+authorization code, verifies that the phone belongs to the selected WABA,
+subscribes the app, registers the number, and stores the encrypted channel
+credential. Keep the PIN in your business password manager. If a Meta step
+fails, the dashboard shows an error and you can start a fresh signup.
+
+For live acceptance, use a Meta test business and verify that the dashboard
+shows the connected number. Send a test message to your own opted-in number
+with the dashboard button. The sender must have the `hello_world` template
+available and Meta must permit the recipient. Check delivery on the phone and
+send a reply to verify the signed inbound webhook reaches the workspace.

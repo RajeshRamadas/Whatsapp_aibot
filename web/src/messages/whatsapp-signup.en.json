@@ -1,0 +1,20 @@
+{
+  "title": "Connect WhatsApp",
+  "loading": "Checking WhatsApp setup…",
+  "loadError": "Could not load WhatsApp setup.",
+  "unavailable": "Embedded Signup is unavailable. Contact your workspace administrator.",
+  "configured": "Configured",
+  "precheck": "Have your Meta business account, the phone number you control, and a six-digit registration PIN ready.",
+  "pin": "Six-digit registration PIN",
+  "connect": "Connect with Meta",
+  "recipient": "Your test recipient number, including country code",
+  "test": "Send me a test message",
+  "testHint": "Use your own opted-in number. Meta must allow the hello_world template for this sender.",
+  "testAccepted": "Meta accepted the test message. Check WhatsApp for delivery.",
+  "connected": "WhatsApp connected.",
+  "cancelled": "Signup was cancelled. You can start again.",
+  "metaError": "Meta could not complete signup. Check your account and try again.",
+  "sdkError": "The Meta signup window could not load.",
+  "timeout": "Signup timed out. Start again to connect your number.",
+  "working": "Working with Meta…"
+}
