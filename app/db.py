@@ -311,3 +311,12 @@ class Lead(Base):
     owner_id: Mapped[str | None] = mapped_column(ForeignKey('users.id', ondelete='SET NULL'))
     notes: Mapped[str] = mapped_column(Text, default='')
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class QAPair(Base):
+    __tablename__ = 'qa_pairs'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'), index=True)
+    question: Mapped[str] = mapped_column(Text)
+    answer: Mapped[str] = mapped_column(Text)
+    embedding: Mapped[list] = mapped_column(Vector(settings.embedding_dimensions))

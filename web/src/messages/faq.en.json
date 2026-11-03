@@ -1,0 +1,19 @@
+{
+  "title": "Curated Q&A",
+  "documents": "Documents",
+  "description": "A matching FAQ takes priority over uploaded documents.",
+  "question": "Question",
+  "answer": "Answer",
+  "add": "Add FAQ",
+  "save": "Save FAQ",
+  "edit": "Edit",
+  "remove": "Delete",
+  "cancel": "Cancel",
+  "confirmDelete": "Delete this FAQ entry?",
+  "loading": "Loading FAQs…",
+  "empty": "No FAQ entries yet.",
+  "loadError": "Could not load FAQ entries.",
+  "saveError": "Could not save the FAQ change.",
+  "previous": "Previous page",
+  "next": "Next page"
+}
