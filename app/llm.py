@@ -4,8 +4,13 @@ Chat: OpenAI, Anthropic (Claude) or Google Gemini, chosen per tenant.
 Embeddings: OpenAI or Gemini, chosen once for the whole deployment.
 SDK clients are created lazily, so only the providers you configure need a key.
 """
+import json
+from collections.abc import Callable
+from dataclasses import dataclass
 from functools import cache
 from typing import Protocol
+
+from jsonschema import Draft202012Validator
 
 from .config import DEFAULT_CHAT_MODELS, DEFAULT_EMBEDDING_MODELS, settings
 
@@ -19,7 +24,57 @@ class ProviderNotConfigured(RuntimeError):
     pass
 
 
+@dataclass(frozen=True)
+class Tool:
+    name: str
+    description: str
+    parameters: dict
+    handler: Callable[[dict], object]
+
+
+@dataclass(frozen=True)
+class ChatResult:
+    text: str
+    tool_calls: list[str]
+
+
+def _run(turn, tools: list[Tool]) -> ChatResult:
+    registry = {tool.name: tool for tool in tools}
+    validators = {name: Draft202012Validator(tool.parameters) for name, tool in registry.items()}
+    calls = []
+    remaining = 5
+    while True:
+        text, requests, respond = turn(remaining > 0)
+        if not requests or not remaining:
+            return ChatResult(text, calls)
+        results = []
+        for name, arguments in requests:
+            if not remaining:
+                results.append({'error': 'Tool call limit reached'})
+                continue
+            remaining -= 1
+            try:
+                args = json.loads(arguments) if isinstance(arguments, str) else arguments
+            except ValueError:
+                args = None
+            if name not in registry:
+                result = {'error': 'Unknown tool'}
+            elif not isinstance(args, dict) or not validators[name].is_valid(args):
+                result = {'error': 'Invalid tool arguments'}
+            else:
+                calls.append(name)
+                try:
+                    result = {'result': registry[name].handler(args)}
+                    json.dumps(result, allow_nan=False)
+                except Exception:
+                    result = {'error': 'Tool execution failed'}
+            results.append(result)
+        respond(results)
+
+
 class ChatProvider(Protocol):
+    def run(self, model: str, system: str, messages: list[dict], tools: list[Tool]) -> ChatResult: ...
+
     def complete(self, model: str, system: str, messages: list[dict]) -> str:
         """messages alternate {'role': 'user' | 'assistant', 'content': str} and end with a user turn."""
 
@@ -46,6 +101,31 @@ class OpenAIChat:
         return response.choices[0].message.content or ''
 
 
+    def run(self, model, system, messages, tools):
+        if not tools:
+            return ChatResult(self.complete(model, system, messages), [])
+        history = [{'role': 'system', 'content': system}, *messages]
+        declarations = [{'type': 'function', 'function': {
+            'name': t.name, 'description': t.description, 'parameters': t.parameters,
+        }} for t in tools]
+
+        def turn(enabled):
+            response = self.client.chat.completions.create(
+                model=model, messages=history, **({'tools': declarations} if enabled else {}))
+            message = response.choices[0].message
+            requests = message.tool_calls or []
+
+            def respond(results):
+                history.append({'role': 'assistant', 'content': message.content,
+                                'tool_calls': [call.model_dump(exclude_none=True) for call in requests]})
+                history.extend({'role': 'tool', 'tool_call_id': call.id, 'content': json.dumps(result)}
+                               for call, result in zip(requests, results))
+
+            return message.content or '', [(c.function.name, c.function.arguments) for c in requests], respond
+
+        return _run(turn, tools)
+
+
 class AnthropicChat:
     def __init__(self):
         import anthropic
@@ -68,6 +148,37 @@ class AnthropicChat:
         return ''.join(block.text for block in response.content if block.type == 'text')
 
 
+    def run(self, model, system, messages, tools):
+        if not tools:
+            return ChatResult(self.complete(model, system, messages), [])
+        history = list(messages)
+        declarations = [{'name': t.name, 'description': t.description, 'input_schema': t.parameters}
+                        for t in tools]
+
+        def turn(enabled):
+            options = {'tools': declarations, 'tool_choice': {'type': 'auto'}} if enabled else {}
+            response = self.client.beta.messages.create(
+                model=model, max_tokens=4096, system=system, messages=history,
+                output_config={'effort': 'low'}, betas=['server-side-fallback-2026-07-01'],
+                fallbacks='default', **options,
+            )
+            requests = [block for block in response.content if block.type == 'tool_use']
+            text = ''.join(block.text for block in response.content if block.type == 'text')
+
+            def respond(results):
+                history.append({'role': 'assistant', 'content': response.content})
+                history.append({'role': 'user', 'content': [
+                    {'type': 'tool_result', 'tool_use_id': call.id, 'content': json.dumps(result),
+                     'is_error': 'error' in result} for call, result in zip(requests, results)
+                ]})
+
+            if response.stop_reason == 'refusal':
+                return REFUSAL_REPLY, [], respond
+            return text, [(call.name, call.input) for call in requests], respond
+
+        return _run(turn, tools)
+
+
 class GeminiChat:
     def __init__(self):
         from google import genai
@@ -83,6 +194,42 @@ class GeminiChat:
                 system_instruction=system,
                 http_options=types.HttpOptions(timeout=int(settings.llm_timeout_seconds * 1000))))
         return response.text or ''
+
+
+    def run(self, model, system, messages, tools):
+        if not tools:
+            return ChatResult(self.complete(model, system, messages), [])
+        from google.genai import types
+
+        history = [types.Content(role='model' if m['role'] == 'assistant' else 'user',
+                                 parts=[types.Part(text=m['content'])]) for m in messages]
+        declarations = [types.FunctionDeclaration(
+            name=t.name, description=t.description, parameters_json_schema=t.parameters) for t in tools]
+
+        def turn(enabled):
+            response = self.client.models.generate_content(
+                model=model, contents=history, config=types.GenerateContentConfig(
+                    system_instruction=system,
+                    tools=[types.Tool(function_declarations=declarations)] if enabled else None,
+                    automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+                    http_options=types.HttpOptions(timeout=int(settings.llm_timeout_seconds * 1000)),
+                ))
+            content = response.candidates[0].content if response.candidates else None
+            parts = content.parts or [] if content else []
+            requests = [part.function_call for part in parts if part.function_call]
+
+            def respond(results):
+                history.append(content)
+                history.append(types.Content(role='user', parts=[
+                    types.Part(function_response=types.FunctionResponse(
+                        id=call.id, name=call.name, response=result))
+                    for call, result in zip(requests, results)
+                ]))
+
+            text = ''.join(part.text for part in parts if part.text and not part.thought)
+            return text, [(call.name, call.args or {}) for call in requests], respond
+
+        return _run(turn, tools)
 
 
 class OpenAIEmbedder:
