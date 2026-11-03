@@ -137,6 +137,7 @@ class Message(Base):
     author_user_id: Mapped[str | None] = mapped_column(ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     kind: Mapped[str] = mapped_column(String(20), default='text')
     channel_message_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    sources: Mapped[list] = mapped_column(JSONB, default=list)
     reply_key: Mapped[str | None] = mapped_column(String(128))
     dispatch_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     delivery_status: Mapped[str | None] = mapped_column(String(20), nullable=True)

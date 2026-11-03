@@ -171,7 +171,8 @@ def handle(tenant_id: str, message: dict) -> None:
     if not rag.chat_limiter.allow(f'wa:{tenant_id}:{wa_user}'):
         send_text(phone_number_id, wa_user, RATE_LIMIT_REPLY)
         return
-    reply = rag.answer(tenant, conv.id, text).text or ERROR_REPLY
+    answer = rag.answer(tenant, conv.id, text)
+    reply = answer.text or ERROR_REPLY
     with Session() as db:
         current = db.get(Conversation, conv.id)
         can_send = current is not None and not current.handoff and current.status == 'bot'
@@ -179,7 +180,8 @@ def handle(tenant_id: str, message: dict) -> None:
         rag.save_exchange(conv, ('user', text))
         return
     message_id = send_text(phone_number_id, wa_user, reply)
-    rag.save_exchange(conv, ('user', text), ('assistant', reply), channel_message_id=message_id)
+    rag.save_exchange(conv, ('user', text), ('assistant', reply), channel_message_id=message_id,
+                      sources=answer.sources if answer.text else [])
 
 
 DELIVERY_RANK = {'sent': 1, 'delivered': 2, 'read': 3}

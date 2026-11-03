@@ -62,7 +62,7 @@ def conversation_messages(conversation_id: str, tenant: Tenant = Depends(tenant_
     return [{'role': m.role, 'content': m.content, 'created_at': m.created_at,
              'direction': m.direction, 'kind': m.kind, 'author_user_id': m.author_user_id,
              'channel_message_id': m.channel_message_id, 'delivery_status': m.delivery_status,
-             'error': m.error} for m in rows]
+             'sources': m.sources, 'error': m.error} for m in rows]
 
 
 @router.post('/api/v1/conversations/{conversation_id}/handoff')

@@ -1,12 +1,15 @@
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { createContext, useContext, useState } from 'react';
 import { api } from '@/lib/api';
 import { visiblePages, type Role } from '@/lib/navigation';
 import messages from '@/messages/en.json';
 
 export type Workspace = { id: string; name: string; role: Role };
+const WorkspaceContext = createContext<Workspace | null>(null);
+export const useWorkspace = () => useContext(WorkspaceContext);
+
 export function AppShell({ workspaces, active, children }: { workspaces: Workspace[]; active: Workspace; children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -43,7 +46,7 @@ export function AppShell({ workspaces, active, children }: { workspaces: Workspa
           {workspaces.map(workspace => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}
         </select>
       </header>
-      {children}
+      <WorkspaceContext.Provider value={active}>{children}</WorkspaceContext.Provider>
     </div>
     <nav aria-label={messages.navigation} className="fixed inset-x-0 bottom-0 z-10 flex gap-1 overflow-x-auto border-t border-border bg-surface p-2 md:hidden">
       {pages.map(page => <Link key={page.key} href={page.path} aria-current={pathname === page.path ? 'page' : undefined}

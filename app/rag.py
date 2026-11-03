@@ -134,7 +134,7 @@ def answer(tenant: Tenant, conversation_id: str | None, question: str) -> Answer
 
 
 def save_exchange(conversation: Conversation, *pairs: tuple[str, str], create: bool = False,
-                  channel_message_id: str | None = None) -> None:
+                  channel_message_id: str | None = None, sources: list[dict] | None = None) -> None:
     with Session.begin() as db:
         if create:
             db.add(conversation)
@@ -143,6 +143,7 @@ def save_exchange(conversation: Conversation, *pairs: tuple[str, str], create: b
             outbound = role in ('assistant', 'agent', 'note')
             db.add(Message(conversation_id=conversation.id, role=role, content=content,
                            direction='outbound' if outbound else 'inbound',
+                           sources=(sources or []) if role == 'assistant' else [],
                            kind='note' if role == 'note' else 'text',
                            channel_message_id=channel_message_id if outbound else None,
                            delivery_status='sent' if outbound and channel_message_id else None))
