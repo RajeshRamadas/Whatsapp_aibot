@@ -10,8 +10,8 @@ test('embedded widget survives an offline send and reload', async ({ page, conte
   await page.route('http://localhost:3000/widget.js', route => route.fulfill({ response: bundle }));
   await page.addInitScript(() => Reflect.deleteProperty(window, 'EventSource'));
   await page.route(host, route => route.fulfill({
-    contentType: 'text/html',
-    body: '<button>Host button</button><script async src="/widget.js" data-chatbot-key="fixture"></script>',
+    contentType: 'text/html; charset=utf-8',
+    body: '<!doctype html><meta charset="utf-8"><button>Host button</button><script async src="/widget.js" data-chatbot-key="fixture"></script>',
   }));
   let queued = 0;
   await page.route(api + '/**', async route => {
@@ -44,7 +44,7 @@ test('embedded widget survives an offline send and reload', async ({ page, conte
   await page.evaluate(() => Object.defineProperty(navigator, 'onLine', { configurable: true, value: false }));
   await page.getByRole('textbox', { name: 'Ask a question' }).fill('Opening hours?');
   await page.getByRole('button', { name: 'Send', exact: true }).click();
-  await expect(page.getByText(/You’re offline/), browserErrors.join('\n')).toBeVisible();
+  await expect(page.getByRole('status'), browserErrors.join('\n')).toContainText('offline');
   expect(browserErrors).toEqual([]);
   expect(queued).toBe(0);
   await context.setOffline(false);
