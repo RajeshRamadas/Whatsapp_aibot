@@ -59,7 +59,7 @@ def public_chat(public_key: str, body: ChatInput, request: Request):
     conv = conv or Conversation(id=uid(), tenant_id=t.id, channel='web')
     # Saved only after a successful answer, so failed requests leave nothing behind.
     rag.save_exchange(conv, ('user', body.message), ('assistant', result.text), create=is_new,
-                      sources=result.sources)
+                      sources=result.sources, lead_fields=result.lead_fields)
     return {'conversation_id': conv.id, 'answer': result.text, 'sources': result.sources}
 
 

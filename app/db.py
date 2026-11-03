@@ -42,6 +42,7 @@ class Tenant(Base):
     __tablename__ = 'tenants'
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
     name: Mapped[str] = mapped_column(String(200))
+    lead_fields: Mapped[dict] = mapped_column(JSONB, default=dict)
     admin_key_hash: Mapped[str] = mapped_column(String(64), unique=True)
     public_key: Mapped[str] = mapped_column(String(80), unique=True)
     allowed_origins: Mapped[str] = mapped_column(Text, default='[]')
@@ -299,3 +300,14 @@ class InboxPushSubscription(Base):
     endpoint: Mapped[str] = mapped_column(Text)
     p256dh: Mapped[str] = mapped_column(String(128))
     auth: Mapped[str] = mapped_column(String(64))
+
+
+class Lead(Base):
+    __tablename__ = 'leads'
+    conversation_id: Mapped[str] = mapped_column(ForeignKey('conversations.id', ondelete='CASCADE'), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'), index=True)
+    fields: Mapped[dict] = mapped_column(JSONB, default=dict)
+    status: Mapped[str] = mapped_column(String(20), default='new')
+    owner_id: Mapped[str | None] = mapped_column(ForeignKey('users.id', ondelete='SET NULL'))
+    notes: Mapped[str] = mapped_column(Text, default='')
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)

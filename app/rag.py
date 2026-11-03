@@ -18,6 +18,7 @@ from .ingest import source_label
 from .rate_limits import RateLimiter
 from .services.bot_policy import tenant_instructions
 from .services.events import publish_sync
+from .services.leads import notify_created, save_lead
 
 log = logging.getLogger(__name__)
 
@@ -52,6 +53,7 @@ class Answer:
     text: str
     sources: list[dict]
     search_query: str
+    lead_fields: dict | None = None
 
 
 def keyword_query(text: str):
@@ -126,18 +128,42 @@ def answer(tenant: Tenant, conversation_id: str | None, question: str) -> Answer
     evidence = '\n\n'.join(f'[{i + 1}] {m.label}: {m.content}' for i, m in enumerate(matches))
     platform_prompt = SYSTEM_PROMPT.split('\n\nKNOWLEDGE:', 1)[0].format(name=tenant.name)
     prompt = platform_prompt + tenant_instructions(tenant) + '\n\nKNOWLEDGE:\n' + (evidence or '(none)')
-    text = chat.complete(model, prompt,
-                         [*turns, {'role': 'user', 'content': question}])
+    messages = [*turns, {'role': 'user', 'content': question}]
+    captured = {}
+    if tenant.lead_fields:
+        properties = {key: {'type': 'string', 'minLength': 1, 'maxLength': 500} for key in tenant.lead_fields}
+        required = [key for key, rule in tenant.lead_fields.items() if rule == 'required']
+        schema = {'type': 'object', 'properties': properties, 'additionalProperties': False, 'minProperties': 1}
+
+        def capture(fields):
+            captured.update(fields)
+            return {'accepted': True}
+
+        prompt += (
+            '\n\nIf the customer expresses interest in a follow-up, ask permission to collect lead details. '
+            f'Ask naturally for missing required fields ({", ".join(required) or "none"}), one at a time. '
+            'Use capture_lead only with values the customer has provided and agreed to share. '
+            'Optional fields can be skipped. Never invent values or copy lead details from knowledge.'
+        )
+        tool = llm.Tool('capture_lead', 'Save lead details agreed to by the customer', schema, capture)
+        text = chat.run(model, prompt, messages, [tool]).text
+    else:
+        text = chat.complete(model, prompt, messages)
     sources = [{'number': i + 1, 'filename': m.filename, 'heading': m.heading, 'page': m.page}
                for i, m in enumerate(matches)]
-    return Answer(text=text, sources=sources, search_query=query)
+    return Answer(text=text, sources=sources, search_query=query, lead_fields=captured or None)
 
 
 def save_exchange(conversation: Conversation, *pairs: tuple[str, str], create: bool = False,
-                  channel_message_id: str | None = None, sources: list[dict] | None = None) -> None:
+                  channel_message_id: str | None = None, sources: list[dict] | None = None,
+                  lead_fields: dict | None = None) -> None:
+    lead_created = False
     with Session.begin() as db:
         if create:
             db.add(conversation)
+            db.flush()
+        if lead_fields:
+            lead_created = save_lead(db, conversation, lead_fields)
         timestamp = now()
         for role, content in pairs:
             outbound = role in ('assistant', 'agent', 'note')
@@ -153,6 +179,8 @@ def save_exchange(conversation: Conversation, *pairs: tuple[str, str], create: b
             if any(role == 'user' for role, _ in pairs):
                 if conv.channel != 'whatsapp' or conv.last_inbound_at is None:
                     conv.last_inbound_at = timestamp
+    if lead_created:
+        notify_created(conversation.tenant_id, conversation.id)
     if pairs:
         publish_sync(conversation.tenant_id, 'message.created', {'conversation_id': conversation.id})
         publish_sync(conversation.tenant_id, 'conversation.updated', {'conversation_id': conversation.id})

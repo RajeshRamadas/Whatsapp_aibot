@@ -12,6 +12,7 @@ from . import (
     inbox,
     jobs,
     knowledge,
+    leads,
     onboarding,
     push,
     tenants,
@@ -24,5 +25,5 @@ from .shared import origins as origins
 
 router = APIRouter()
 for module in (auth, audit, api_keys, workspaces, tenants, knowledge, onboarding, bot, jobs, chat, conversations,
-               evals, events, inbox, push, whatsapp, widget):
+               evals, events, inbox, leads, push, whatsapp, widget):
     router.include_router(module.router)
