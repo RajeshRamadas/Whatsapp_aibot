@@ -13,6 +13,7 @@ from typing import Protocol
 from jsonschema import Draft202012Validator
 
 from .config import DEFAULT_CHAT_MODELS, DEFAULT_EMBEDDING_MODELS, settings
+from .services.usage import call
 
 CHAT_PROVIDERS = tuple(DEFAULT_CHAT_MODELS)
 EMBEDDING_PROVIDERS = tuple(DEFAULT_EMBEDDING_MODELS)
@@ -96,7 +97,7 @@ class OpenAIChat:
                              timeout=settings.llm_timeout_seconds, max_retries=2)
 
     def complete(self, model, system, messages):
-        response = self.client.chat.completions.create(
+        response = call('openai', 'chat', self.client.chat.completions.create,
             model=model, messages=[{'role': 'system', 'content': system}, *messages])
         return response.choices[0].message.content or ''
 
@@ -110,7 +111,7 @@ class OpenAIChat:
         }} for t in tools]
 
         def turn(enabled):
-            response = self.client.chat.completions.create(
+            response = call('openai', 'chat', self.client.chat.completions.create,
                 model=model, messages=history, **({'tools': declarations} if enabled else {}))
             message = response.choices[0].message
             requests = message.tool_calls or []
@@ -133,7 +134,7 @@ class AnthropicChat:
                                           timeout=settings.llm_timeout_seconds, max_retries=2)
 
     def complete(self, model, system, messages):
-        response = self.client.beta.messages.create(
+        response = call('anthropic', 'chat', self.client.beta.messages.create,
             model=model,
             max_tokens=4096,
             system=system,
@@ -157,7 +158,7 @@ class AnthropicChat:
 
         def turn(enabled):
             options = {'tools': declarations, 'tool_choice': {'type': 'auto'}} if enabled else {}
-            response = self.client.beta.messages.create(
+            response = call('anthropic', 'chat', self.client.beta.messages.create,
                 model=model, max_tokens=4096, system=system, messages=history,
                 output_config={'effort': 'low'}, betas=['server-side-fallback-2026-07-01'],
                 fallbacks='default', **options,
@@ -188,7 +189,7 @@ class GeminiChat:
         from google.genai import types
         contents = [types.Content(role='model' if m['role'] == 'assistant' else 'user',
                                   parts=[types.Part(text=m['content'])]) for m in messages]
-        response = self.client.models.generate_content(
+        response = call('gemini', 'chat', self.client.models.generate_content,
             model=model, contents=contents,
             config=types.GenerateContentConfig(
                 system_instruction=system,
@@ -207,7 +208,7 @@ class GeminiChat:
             name=t.name, description=t.description, parameters_json_schema=t.parameters) for t in tools]
 
         def turn(enabled):
-            response = self.client.models.generate_content(
+            response = call('gemini', 'chat', self.client.models.generate_content,
                 model=model, contents=history, config=types.GenerateContentConfig(
                     system_instruction=system,
                     tools=[types.Tool(function_declarations=declarations)] if enabled else None,
@@ -240,8 +241,8 @@ class OpenAIEmbedder:
                              timeout=settings.llm_timeout_seconds, max_retries=2)
 
     def embed(self, texts, *, query=False):
-        response = self.client.embeddings.create(model=self.model, input=texts,
-                                                 dimensions=settings.embedding_dimensions)
+        response = call('openai', 'embedding', self.client.embeddings.create,
+                        model=self.model, input=texts, dimensions=settings.embedding_dimensions)
         return [item.embedding for item in response.data]
 
 
@@ -253,7 +254,7 @@ class GeminiEmbedder:
 
     def embed(self, texts, *, query=False):
         from google.genai import types
-        response = self.client.models.embed_content(
+        response = call('gemini', 'embedding', self.client.models.embed_content,
             model=self.model, contents=texts,
             config=types.EmbedContentConfig(
                 task_type='RETRIEVAL_QUERY' if query else 'RETRIEVAL_DOCUMENT',

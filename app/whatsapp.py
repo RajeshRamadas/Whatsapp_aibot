@@ -19,6 +19,7 @@ from .db import Contact, Conversation, InboundEvent, Message, Session, Tenant, n
 from .services.bot_policy import within_hours
 from .services.channels import access_token, find_whatsapp, tenant_for_phone
 from .services.events import publish_sync
+from .services.usage import QUOTA_NOTICE, reserve
 from .services.whatsapp_copy import copy_for, format_reply, handoff_notice, interactive_payload
 
 log = logging.getLogger(__name__)
@@ -227,6 +228,13 @@ def handle(tenant_id: str, message: dict) -> None:
         return
     if not rag.chat_limiter.allow(f'wa:{tenant_id}:{wa_user}'):
         send_text(phone_id, wa_user, copy['rate'], tenant_id=tenant_id)
+        return
+
+    if not reserve(tenant_id, 'whatsapp:' + str(message.get('id') or uid())[:120]):
+        notice = (QUOTA_NOTICE if copy['from'] == 'From: ' else
+                  'स्वचालित सहायक की मासिक सीमा पूरी हो गई है। हमारी टीम आपकी मदद कर सकती है।')
+        message_id = send_text(phone_id, wa_user, notice, tenant_id=tenant_id)
+        rag.save_exchange(conv, incoming, ('assistant', notice), channel_message_id=message_id, waiting=True)
         return
 
     mark_typing(phone_id, parts[-1].get('id'), tenant_id)

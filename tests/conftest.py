@@ -19,7 +19,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 from app import llm, rag, whatsapp  # noqa: E402
 from app.api import knowledge  # noqa: E402
 from app.api import whatsapp as whatsapp_api
-from app.db import Base, InboundEvent, Session, engine  # noqa: E402
+from app.db import Base, InboundEvent, Plan, Session, engine  # noqa: E402
 from app.jobs.worker import ingest_source  # noqa: E402
 from app.main import app  # noqa: E402
 
@@ -86,6 +86,8 @@ def client(chats, tmp_path, monkeypatch):
     monkeypatch.setattr(whatsapp, 'mark_typing', lambda *args: None)
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
+    with Session.begin() as db:
+        db.add(Plan(id='starter', limits={'ai_messages': 1000}))
     config = Config(str(Path(__file__).resolve().parents[1] / 'alembic.ini'))
     config.set_main_option('script_location', str(Path(__file__).resolve().parents[1] / 'migrations'))
     command.stamp(config, 'head')

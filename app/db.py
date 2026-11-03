@@ -1,16 +1,19 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
+from decimal import Decimal
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     BigInteger,
     Boolean,
     Computed,
+    Date,
     DateTime,
     ForeignKey,
     Index,
     Integer,
     LargeBinary,
+    Numeric,
     String,
     Text,
     UniqueConstraint,
@@ -57,6 +60,8 @@ class Tenant(Base):
     bot_rules: Mapped[str] = mapped_column(Text, default='')
     business_hours: Mapped[str] = mapped_column(Text, default='')
     timezone: Mapped[str] = mapped_column(String(64), default='UTC')
+    plan_id: Mapped[str] = mapped_column(ForeignKey('plans.id'), default='starter', server_default='starter')
+    quota_behavior: Mapped[str] = mapped_column(String(16), default='pause', server_default='pause')
     widget_theme: Mapped[dict] = mapped_column(JSONB, default=dict)
     whatsapp_opt_out_keywords: Mapped[list] = mapped_column(JSONB, default=list)
     default_language: Mapped[str] = mapped_column(String(16), default='en')
@@ -367,3 +372,42 @@ class WidgetTurn(Base):
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class Plan(Base):
+    __tablename__ = 'plans'
+    id: Mapped[str] = mapped_column(String(20), primary_key=True)
+    limits: Mapped[dict] = mapped_column(JSONB)
+
+
+class UsageEvent(Base):
+    __tablename__ = 'usage_events'
+    __table_args__ = (
+        UniqueConstraint('tenant_id', 'request_key', name='uq_usage_request'),
+        Index('ix_usage_tenant_kind_created', 'tenant_id', 'kind', 'created_at'),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'))
+    kind: Mapped[str] = mapped_column(String(20))
+    request_key: Mapped[str | None] = mapped_column(String(150))
+    provider: Mapped[str | None] = mapped_column(String(32))
+    model: Mapped[str | None] = mapped_column(String(200))
+    input_tokens: Mapped[int | None] = mapped_column(BigInteger)
+    output_tokens: Mapped[int | None] = mapped_column(BigInteger)
+    cost_usd: Mapped[Decimal | None] = mapped_column(Numeric(20, 10))
+    overage: Mapped[bool] = mapped_column(Boolean, default=False)
+    notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class UsageDaily(Base):
+    __tablename__ = 'usage_daily'
+    tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'), primary_key=True)
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
+    ai_messages: Mapped[int] = mapped_column(BigInteger)
+    overage_messages: Mapped[int] = mapped_column(BigInteger)
+    ai_calls: Mapped[int] = mapped_column(BigInteger)
+    input_tokens: Mapped[int] = mapped_column(BigInteger)
+    output_tokens: Mapped[int] = mapped_column(BigInteger)
+    cost_usd: Mapped[Decimal] = mapped_column(Numeric(20, 10))
+    unpriced_calls: Mapped[int] = mapped_column(BigInteger)

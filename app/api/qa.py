@@ -7,6 +7,7 @@ from sqlalchemy import select
 
 from .. import llm
 from ..db import QAPair, Session, Tenant
+from ..services.usage import meter
 from .principal import tenant_for_role
 
 router = APIRouter(prefix='/api/v1/qa-pairs')
@@ -28,9 +29,10 @@ def scoped_pair(db, tenant_id, pair_id):
     return pair
 
 
-def embed(question):
+def embed(question, tenant_id):
     try:
-        return llm.embedder().embed([question])[0]
+        with meter(tenant_id):
+            return llm.embedder().embed([question])[0]
     except llm.ProviderNotConfigured as exc:
         raise HTTPException(503, 'Embeddings are not configured') from exc
 
@@ -45,7 +47,7 @@ def list_pairs(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0
 
 @router.post('', status_code=201)
 def create_pair(body: PairInput, tenant: Tenant = Depends(tenant_for_role('admin'))):
-    vector = embed(body.question)
+    vector = embed(body.question, tenant.id)
     with Session.begin() as db:
         pair = QAPair(tenant_id=tenant.id, question=body.question, answer=body.answer, embedding=vector)
         db.add(pair)
@@ -63,7 +65,7 @@ def get_pair(pair_id: str, tenant: Tenant = Depends(tenant_for_role('admin'))):
 def update_pair(pair_id: str, body: PairInput, tenant: Tenant = Depends(tenant_for_role('admin'))):
     with Session() as db:
         scoped_pair(db, tenant.id, pair_id)
-    vector = embed(body.question)
+    vector = embed(body.question, tenant.id)
     with Session.begin() as db:
         pair = scoped_pair(db, tenant.id, pair_id)
         pair.question, pair.answer, pair.embedding = body.question, body.answer, vector

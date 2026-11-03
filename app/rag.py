@@ -19,6 +19,7 @@ from .rate_limits import RateLimiter
 from .services.bot_policy import tenant_instructions
 from .services.events import publish_sync
 from .services.leads import notify_created, save_lead
+from .services.usage import meter
 
 log = logging.getLogger(__name__)
 
@@ -123,6 +124,11 @@ def standalone_query(chat, model: str, turns: list[dict], question: str) -> str:
 
 def answer(tenant: Tenant, conversation_id: str | None, question: str, *, whatsapp: bool = False) -> Answer:
     """Generate a reply. Persisting it is up to the caller (see save_exchange)."""
+    with meter(tenant.id):
+        return _answer(tenant, conversation_id, question, whatsapp=whatsapp)
+
+
+def _answer(tenant, conversation_id, question, *, whatsapp):
     provider, model = llm.resolve_chat(tenant.chat_provider, tenant.chat_model)
     chat = llm.chat_provider(provider)
     turns = history(conversation_id) if conversation_id else []
@@ -221,13 +227,15 @@ def save_exchange_rows(db, conversation, pairs, channel_message_id=None, sources
 
 def save_exchange(conversation: Conversation, *pairs: tuple[str, str], create: bool = False,
                   channel_message_id: str | None = None, sources: list[dict] | None = None,
-                  lead_fields: dict | None = None) -> None:
+                  lead_fields: dict | None = None, waiting: bool = False) -> None:
     lead_created = False
     with Session.begin() as db:
         if create:
             db.add(conversation)
             db.flush()
-        current = conversation if create else db.get(Conversation, conversation.id)
+        current = conversation if create else db.get(Conversation, conversation.id, with_for_update=waiting)
+        if waiting and current.status == 'bot':
+            current.status, current.handoff = 'waiting', True
         lead_created = save_exchange_rows(db, current, pairs, channel_message_id, sources, lead_fields)
     if lead_created:
         notify_created(conversation.tenant_id, conversation.id)
