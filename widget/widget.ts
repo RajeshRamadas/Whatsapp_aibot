@@ -109,7 +109,11 @@ type Theme = {
     render();
     input.focus();
   });
-  tools.append(handoff, reset, retry);
+  const quickReplies = [
+    button('Opening hours', () => queue('What are your opening hours?')),
+    button('Services', () => queue('What services do you offer?')),
+  ];
+  tools.append(...quickReplies, handoff, reset, retry);
   const form = element('form');
   const input = element('input');
   input.placeholder = 'Ask a question';
@@ -159,6 +163,7 @@ type Theme = {
     }
     log.scrollTop = log.scrollHeight;
     send.disabled = handoff.disabled = !!state.pending;
+    for (const control of quickReplies) control.disabled = !!state.pending;
     reset.disabled = busy;
   }
   function open() {
