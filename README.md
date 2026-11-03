@@ -505,3 +505,32 @@ base rates. Unavailable token counts or rates are retained as unpriced calls.
 Run the worker for nightly UTC daily rollups and Redis reconciliation. The usage
 ledger is authoritative during Redis outages. Alerts at 80% and 100% use the
 configured email sender. The default sender records a delivery request in logs.
+
+
+### Razorpay subscriptions
+
+Run the database migrations, then set `RAZORPAY_KEY_ID`,
+`RAZORPAY_KEY_SECRET` and `RAZORPAY_WEBHOOK_SECRET` on the API and worker.
+In test mode, provision each monthly plan with
+`python -m scripts.create_razorpay_plan starter` (repeat for `growth` and
+`business`) and enter the resulting provider IDs in `RAZORPAY_PLAN_IDS`
+as a JSON map keyed by the local plan names. The command creates a remote
+plan each time it runs. Reuse the IDs after provisioning.
+
+Configure `/webhooks/razorpay` as the webhook URL. Enable the subscription
+activated, charged, pending, halted and cancelled events and payment.failed.
+Workspace owners can start hosted checkout and manage subscriptions from
+**Billing**. Upgrades request an immediate prorated change from Razorpay.
+Downgrades and active cancellations take effect at the end of the cycle.
+
+When Razorpay is configured, a 14-day trial covers new workspaces. Existing
+workspaces receive a 14-day trial from migration. Failed renewals have a
+seven-day grace period. Expired trials and grace periods route new automated
+turns to the Inbox. The worker reconciles subscriptions and recent settlements
+daily and exposes discrepancies in the Billing screen.
+
+Manual acceptance requires a Razorpay test account. Complete a hosted mandate,
+confirm the signed activation and charge events update the workspace, and
+check a plan change and cancellation. If checkout times out, retry the same
+plan to recover the existing reference. If Razorpay never confirms it, an
+operator must verify the remote account before clearing the local reservation.

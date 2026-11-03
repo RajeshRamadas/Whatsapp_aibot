@@ -12,6 +12,7 @@ from sqlalchemy.dialects.postgresql import insert
 from ..config import settings
 from ..db import Membership, Plan, Session, Tenant, UsageDaily, UsageEvent, User, now
 from . import email
+from .billing import BILLING_NOTICE, entitled
 
 log = logging.getLogger(__name__)
 workspace = ContextVar('metered_workspace', default=None)
@@ -99,6 +100,12 @@ def cache_key(tenant_id, start):
     return f'usage:monthly:{tenant_id}:{start:%Y-%m}'
 
 
+def blocked_notice(tenant_id):
+    with Session() as db:
+        tenant = db.get(Tenant, tenant_id)
+        return QUOTA_NOTICE if entitled(db, tenant, now()) else BILLING_NOTICE
+
+
 def reserve(tenant_id, request_key):
     """Reserve one AI turn and deduplicate retries using the durable ledger."""
     with Session.begin() as db:
@@ -108,6 +115,8 @@ def reserve(tenant_id, request_key):
         )):
             return True
         at = now()
+        if not entitled(db, tenant, at):
+            return False
         start = month_start(at)
         limit = db.get(Plan, tenant.plan_id).limits['ai_messages']
         count = monthly_count(db, tenant_id, start)

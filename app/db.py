@@ -1,5 +1,5 @@
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 from pgvector.sqlalchemy import Vector
@@ -61,6 +61,8 @@ class Tenant(Base):
     business_hours: Mapped[str] = mapped_column(Text, default='')
     timezone: Mapped[str] = mapped_column(String(64), default='UTC')
     plan_id: Mapped[str] = mapped_column(ForeignKey('plans.id'), default='starter', server_default='starter')
+    trial_ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: now() + timedelta(days=14),
+                                                    server_default=text("now() + interval '14 days'"))
     quota_behavior: Mapped[str] = mapped_column(String(16), default='pause', server_default='pause')
     widget_theme: Mapped[dict] = mapped_column(JSONB, default=dict)
     whatsapp_opt_out_keywords: Mapped[list] = mapped_column(JSONB, default=list)
@@ -411,3 +413,29 @@ class UsageDaily(Base):
     output_tokens: Mapped[int] = mapped_column(BigInteger)
     cost_usd: Mapped[Decimal] = mapped_column(Numeric(20, 10))
     unpriced_calls: Mapped[int] = mapped_column(BigInteger)
+
+
+class Subscription(Base):
+    __tablename__ = 'subscriptions'
+    tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'), primary_key=True)
+    provider_id: Mapped[str | None] = mapped_column(String(64), unique=True)
+    checkout_key: Mapped[str] = mapped_column(String(36))
+    checkout_url: Mapped[str | None] = mapped_column(Text)
+    plan_id: Mapped[str] = mapped_column(ForeignKey('plans.id'))
+    status: Mapped[str] = mapped_column(String(24))
+    period_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    grace_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reconcile_issue: Mapped[str | None] = mapped_column(String(200))
+    settlement_issue: Mapped[str | None] = mapped_column(String(200))
+    observed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class BillingEvent(Base):
+    __tablename__ = 'billing_events'
+    id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    event: Mapped[str] = mapped_column(String(40))
+    tenant_id: Mapped[str | None] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'))
+    payment_id: Mapped[str | None] = mapped_column(String(64))
+    amount_paise: Mapped[int | None] = mapped_column(BigInteger)
+    settled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)

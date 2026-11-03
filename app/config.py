@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     gemini_api_key: str | None = None
     chat_provider: str = 'openai'  # openai | anthropic | gemini; tenants can override
     chat_model: str | None = None  # defaults to DEFAULT_CHAT_MODELS[chat_provider]
+    razorpay_key_id: str | None = None
+    razorpay_key_secret: str | None = None
+    razorpay_webhook_secret: str | None = None
+    razorpay_plan_ids: dict[str, str] = Field(default_factory=dict)
     ai_prices_usd: dict[str, tuple[Decimal, Decimal]] = Field(default_factory=dict)
     llm_timeout_seconds: float = 60
     # Embeddings are shared by every tenant: changing provider, model or

@@ -8,7 +8,7 @@ from .. import rag
 from ..db import Conversation, Session, Tenant, WidgetTurn, now
 from .events import publish_sync
 from .leads import notify_created
-from .usage import QUOTA_NOTICE, reserve
+from .usage import blocked_notice, reserve
 
 log = logging.getLogger(__name__)
 HANDOFF = 'Your message is with our team. Keep this chat open to see their reply.'
@@ -34,6 +34,7 @@ def process_turn() -> bool:
     try:
         wants_ai = not (turn.handoff or conversation.handoff or conversation.status == 'closed')
         quota_reached = wants_ai and not reserve(tenant.id, 'widget:' + turn.id)
+        notice = blocked_notice(tenant.id) if quota_reached else HANDOFF
         result = rag.answer(tenant, conversation.id, turn.message) if wants_ai and not quota_reached else None
     except Exception:
         log.warning('Widget answer generation failed')
@@ -51,7 +52,7 @@ def process_turn() -> bool:
         if turn.handoff or result is None or conv.handoff or conv.status == 'closed':
             if conv.status == 'bot':
                 conv.handoff, conv.status = True, 'waiting'
-            current.answer = QUOTA_NOTICE if quota_reached else HANDOFF
+            current.answer = notice
             current.sources, lead_fields = [], None
         else:
             current.answer, current.sources, lead_fields = result.text, result.sources, result.lead_fields
