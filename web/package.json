@@ -8,7 +8,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "gen:api": "openapi-typescript http://localhost:8000/openapi.json -o src/api/schema.d.ts"
+    "gen:api": "openapi-typescript http://localhost:8000/openapi.json -o src/api/schema.d.ts",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "next": "^15.5.0",
@@ -36,6 +37,7 @@
     "@testing-library/jest-dom": "^6.6.0",
     "jsdom": "^26.0.0",
     "openapi-typescript": "^7.9.0",
-    "@eslint/eslintrc": "^3.3.0"
+    "@eslint/eslintrc": "^3.3.0",
+    "@playwright/test": "^1.56.0"
   }
 }
