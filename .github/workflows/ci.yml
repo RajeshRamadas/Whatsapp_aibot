@@ -55,7 +55,8 @@ jobs:
           cd web
           npm install
           npx playwright install --with-deps chromium
-          npm run dev &
+          npm run build
+          npm run start &
           for attempt in {1..60}; do
             if curl -fsS http://localhost:3000/login >/dev/null; then break; fi
             sleep 1
