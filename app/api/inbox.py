@@ -8,6 +8,7 @@ from sqlalchemy import func, or_, select
 from .. import whatsapp
 from ..config import settings
 from ..db import CannedReply, Contact, Conversation, Membership, Message, Session, now, uid
+from ..services.channels import whatsapp_channel
 from ..services.events import publish_sync
 from .principal import Principal, require_role
 
@@ -153,7 +154,9 @@ def reply(conversation_id: str, body: Reply, principal: Principal = Depends(requ
         if not can_reply(conv):
             raise HTTPException(409, {'code': 'whatsapp_window_expired',
                                       'message': 'The 24-hour customer service window has expired'})
-        if not settings.whatsapp_enabled:
+        channel = whatsapp_channel(db, principal.tenant.id)
+        if not settings.whatsapp_enabled or not (settings.whatsapp_access_token or
+                                                  (channel and channel.credentials_enc)):
             raise HTTPException(503, 'WhatsApp is not configured')
         message = Message(conversation_id=conv.id, role='agent', direction='outbound',
                           kind='text', author_user_id=principal.user.id if principal.user else None,

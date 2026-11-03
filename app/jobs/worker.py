@@ -9,6 +9,7 @@ from sqlalchemy import select, text, update
 from .. import ingest, whatsapp
 from ..config import settings
 from ..db import AuditLog, Conversation, InboundEvent, Message, Session, Source, Tenant, now
+from ..services.channels import whatsapp_channel
 from ..services.events import publish_sync
 from ..services.inbox_push import deliver_waiting
 
@@ -89,7 +90,7 @@ async def handle_message(ctx: dict, event_id: str) -> None:
                     row.status = 'failed'
                 try:
                     await asyncio.to_thread(whatsapp.send_text, combined['phone_number_id'],
-                                            contact, whatsapp.ERROR_REPLY)
+                                            contact, whatsapp.ERROR_REPLY, tenant_id=tenant_id)
                 except Exception:
                     pass  # Handoff remains recorded even if Meta is unavailable.
         else:
@@ -114,7 +115,9 @@ def dispatch_agent_reply() -> bool:
             return False
         message, conversation, tenant = row
         message_id, conversation_id, tenant_id = message.id, conversation.id, tenant.id
-        phone, recipient, content = tenant.whatsapp_phone_number_id, conversation.external_user, message.content
+        channel = whatsapp_channel(db, tenant_id)
+        phone = channel.external_id if channel else tenant.whatsapp_phone_number_id
+        recipient, content = conversation.external_user, message.content
         eligible = (conversation.handoff and conversation.status == 'agent' and phone
                     and conversation.last_inbound_at
                     and conversation.last_inbound_at > now() - timedelta(hours=24))
@@ -125,7 +128,7 @@ def dispatch_agent_reply() -> bool:
             message.error = 'Conversation is no longer eligible for a free-form reply'
     if eligible:
         try:
-            provider_id = whatsapp.send_text(phone, recipient, content)
+            provider_id = whatsapp.send_text(phone, recipient, content, tenant_id=tenant_id)
         except Exception:
             provider_id = None
         with Session.begin() as db:

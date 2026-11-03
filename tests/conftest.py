@@ -76,7 +76,7 @@ def chats(monkeypatch):
 @pytest.fixture
 def sent(monkeypatch):
     messages = []
-    monkeypatch.setattr(whatsapp, 'send_text', lambda pid, to, body: messages.append((pid, to, body)))
+    monkeypatch.setattr(whatsapp, 'send_text', lambda pid, to, body, **kwargs: messages.append((pid, to, body)))
     return messages
 
 

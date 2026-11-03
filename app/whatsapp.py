@@ -16,6 +16,7 @@ from . import rag
 from .config import settings
 from .db import Contact, Conversation, InboundEvent, Message, Session, Tenant, now, uid
 from .services.bot_policy import within_hours
+from .services.channels import access_token, find_whatsapp, tenant_for_phone
 
 log = logging.getLogger(__name__)
 
@@ -62,11 +63,14 @@ def parse_messages(payload: dict) -> list[dict]:
 def accept(message: dict) -> str | None:
     """Persist an inbound event once; return its durable ID only on first receipt."""
     with Session() as db:
-        tenant_id = db.scalar(select(Tenant.id).where(Tenant.whatsapp_phone_number_id == message['phone_number_id']))
+        channel = find_whatsapp(db, message['phone_number_id'])
+        tenant_id = tenant_for_phone(db, message['phone_number_id'], channel)
         if not tenant_id:
             log.warning('WhatsApp message for unknown phone_number_id %s', message['phone_number_id'])
             return None
         received_at = now()
+        if channel is not None:
+            channel.last_webhook_at = received_at
         conv = conversation_for(tenant_id, message['from'])
         current = db.get(Conversation, conv.id, with_for_update=True)
         if current.last_inbound_at is None or current.last_inbound_at < received_at:
@@ -85,10 +89,10 @@ def accept(message: dict) -> str | None:
         return event.id
 
 
-def send_text(phone_number_id: str, to: str, body: str) -> str | None:
+def send_text(phone_number_id: str, to: str, body: str, *, tenant_id: str | None = None) -> str | None:
     response = httpx.post(
         f'https://graph.facebook.com/{settings.whatsapp_graph_version}/{phone_number_id}/messages',
-        headers={'Authorization': f'Bearer {settings.whatsapp_access_token}'},
+        headers={'Authorization': f'Bearer {access_token(phone_number_id, tenant_id)}'},
         json={'messaging_product': 'whatsapp', 'recipient_type': 'individual', 'to': to,
               'type': 'text', 'text': {'preview_url': False, 'body': body[:MAX_TEXT]}},
         timeout=20)
@@ -154,14 +158,14 @@ def handle(tenant_id: str, message: dict) -> None:
         if conv.status in ('waiting', 'agent', 'closed') or conv.handoff:
             rag.save_exchange(conv, placeholder)
         else:
-            message_id = send_text(phone_number_id, wa_user, UNSUPPORTED_REPLY)
+            message_id = send_text(phone_number_id, wa_user, UNSUPPORTED_REPLY, tenant_id=tenant_id)
             rag.save_exchange(conv, placeholder, ('assistant', UNSUPPORTED_REPLY), channel_message_id=message_id)
         return
     if conv.handoff:
         rag.save_exchange(conv, ('user', text))
         return
     if text.lower() in settings.handoff_keywords:
-        message_id = send_text(phone_number_id, wa_user, HANDOFF_REPLY)
+        message_id = send_text(phone_number_id, wa_user, HANDOFF_REPLY, tenant_id=tenant_id)
         with Session.begin() as db:
             active = db.get(Conversation, conv.id)
             active.handoff = True
@@ -169,7 +173,7 @@ def handle(tenant_id: str, message: dict) -> None:
         rag.save_exchange(conv, ('user', text), ('assistant', HANDOFF_REPLY), channel_message_id=message_id)
         return
     if not rag.chat_limiter.allow(f'wa:{tenant_id}:{wa_user}'):
-        send_text(phone_number_id, wa_user, RATE_LIMIT_REPLY)
+        send_text(phone_number_id, wa_user, RATE_LIMIT_REPLY, tenant_id=tenant_id)
         return
     answer = rag.answer(tenant, conv.id, text)
     reply = answer.text or ERROR_REPLY
@@ -179,7 +183,7 @@ def handle(tenant_id: str, message: dict) -> None:
     if not can_send:
         rag.save_exchange(conv, ('user', text))
         return
-    message_id = send_text(phone_number_id, wa_user, reply)
+    message_id = send_text(phone_number_id, wa_user, reply, tenant_id=tenant_id)
     rag.save_exchange(conv, ('user', text), ('assistant', reply), channel_message_id=message_id,
                       sources=answer.sources if answer.text else [], lead_fields=answer.lead_fields)
 
@@ -203,8 +207,10 @@ def parse_statuses(payload: dict) -> list[dict]:
 def record_status(status: dict) -> bool:
     """Apply a tenant-verified receipt without regressing a known delivery state."""
     with Session.begin() as db:
-        tenant_id = db.scalar(select(Tenant.id).where(
-            Tenant.whatsapp_phone_number_id == status['phone_number_id']))
+        channel = find_whatsapp(db, status['phone_number_id'])
+        tenant_id = tenant_for_phone(db, status['phone_number_id'], channel)
+        if channel is not None:
+            channel.last_webhook_at = now()
         if not tenant_id:
             return False
         row = db.scalar(select(Message).join(Conversation, Message.conversation_id == Conversation.id)

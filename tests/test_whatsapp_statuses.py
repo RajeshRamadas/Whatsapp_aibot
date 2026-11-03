@@ -17,7 +17,7 @@ def status_payload(state, message_id='wamid.out', phone='PNID1', errors=None):
 def test_status_webhooks_never_regress(client, tenant, monkeypatch):
     client.patch('/api/v1/tenant', headers=tenant['headers'],
                  json={'whatsapp_phone_number_id': 'PNID1'})
-    monkeypatch.setattr(whatsapp, 'send_text', lambda *_: 'wamid.out')
+    monkeypatch.setattr(whatsapp, 'send_text', lambda *_, **kwargs: 'wamid.out')
     raw, headers = signed(wa_payload('hello'))
     assert client.post('/webhooks/whatsapp', content=raw, headers=headers).status_code == 200
     with Session() as db:
@@ -34,7 +34,7 @@ def test_status_webhooks_never_regress(client, tenant, monkeypatch):
 def test_failure_code_and_wrong_tenant_receipt_ignored(client, tenant, monkeypatch):
     client.patch('/api/v1/tenant', headers=tenant['headers'],
                  json={'whatsapp_phone_number_id': 'PNID1'})
-    monkeypatch.setattr(whatsapp, 'send_text', lambda *_: 'wamid.out')
+    monkeypatch.setattr(whatsapp, 'send_text', lambda *_, **kwargs: 'wamid.out')
     raw, headers = signed(wa_payload('hello'))
     client.post('/webhooks/whatsapp', content=raw, headers=headers)
     raw, headers = signed(status_payload('failed', phone='OTHER',

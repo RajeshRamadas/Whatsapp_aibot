@@ -9,11 +9,13 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, Header, HTTPExcep
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, PlainTextResponse
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from .. import evaluate, ingest, llm, rag, whatsapp
 from ..config import settings
 from ..db import ApiKey, Conversation, EvalCase, Message, Session, Source, Tenant, uid
 from ..services.audit import audit
+from ..services.channels import sync_whatsapp
 from .principal import Principal, require_role, tenant_for_role
 from .shared import (
     UPLOADS,
@@ -91,10 +93,19 @@ def update_tenant(body: UpdateTenant, principal: Principal = Depends(require_rol
                 Tenant.whatsapp_phone_number_id == changes['whatsapp_phone_number_id']))
         if owner and owner != tenant.id:
             raise HTTPException(409, 'That WhatsApp number is linked to another tenant')
+    try:
+        return apply_tenant_changes(tenant, changes, principal)
+    except IntegrityError as exc:
+        raise HTTPException(409, 'That WhatsApp number is already linked') from exc
+
+
+def apply_tenant_changes(tenant, changes, principal):
     with Session.begin() as db:
-        t = db.get(Tenant, tenant.id)
+        t = db.get(Tenant, tenant.id, with_for_update=True)
         for field, value in changes.items():
             setattr(t, field, value)
+        if 'whatsapp_phone_number_id' in changes:
+            sync_whatsapp(db, t)
         if changes:
             audit(db, tenant.id, 'workspace.settings_updated', tenant.id,
                   {'fields': sorted(changes)}, principal.user.id if principal.user else None,

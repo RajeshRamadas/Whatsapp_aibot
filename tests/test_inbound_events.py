@@ -61,7 +61,7 @@ def test_provider_failures_handoff_after_five_attempts(client, tenant, monkeypat
         raise RuntimeError('provider unavailable')
 
     monkeypatch.setattr(whatsapp, 'handle', failing_handle)
-    monkeypatch.setattr(whatsapp, 'send_text', lambda *args: None)
+    monkeypatch.setattr(whatsapp, 'send_text', lambda *args, **kwargs: None)
     for attempt in range(1, 5):
         try:
             asyncio.run(worker.handle_message({'job_try': attempt}, event_id))
