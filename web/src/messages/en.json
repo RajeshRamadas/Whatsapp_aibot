@@ -113,52 +113,5 @@
   "pushEnabled": "Notifications enabled for this workspace on this device.",
   "pushDisabled": "Notifications disabled for this workspace on this device.",
   "pushEnable": "Enable notifications",
-  "pushDisable": "Disable notifications",
-  "leadUi": {
-    "stages": {
-      "new": "New",
-      "contacted": "Contacted",
-      "qualified": "Qualified",
-      "won": "Won",
-      "lost": "Lost"
-    },
-    "sources": {
-      "web": "Website",
-      "whatsapp": "WhatsApp"
-    },
-    "fields": {
-      "name": "Name",
-      "phone": "Phone",
-      "need": "Need",
-      "budget": "Budget",
-      "location": "Location",
-      "preferred_time": "Preferred time"
-    },
-    "list": "List",
-    "board": "Board",
-    "export": "Export CSV",
-    "status": "Status",
-    "owner": "Owner",
-    "notes": "Notes",
-    "save": "Save lead",
-    "source": "Source",
-    "allStatuses": "All statuses",
-    "allOwners": "All owners",
-    "allSources": "All sources",
-    "from": "From date (UTC)",
-    "to": "Through date (UTC)",
-    "unnamed": "Unnamed lead",
-    "unassigned": "Unassigned",
-    "formerOwner": "Former workspace member",
-    "call": "Call",
-    "whatsapp": "WhatsApp",
-    "conversation": "Open conversation",
-    "empty": "No leads match these filters.",
-    "previous": "Previous page",
-    "next": "Next page",
-    "loadError": "Could not load leads.",
-    "loadOwnersError": "Could not load lead owners.",
-    "saveError": "Could not save the lead.",
-    "exportError": "Could not export leads."
-  }
+  "pushDisable": "Disable notifications"
 }
