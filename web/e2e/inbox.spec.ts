@@ -8,6 +8,7 @@ test('agent handles an inbound conversation with live transcript updates', async
   await page.goto('/dashboard/inbox');
   await page.getByRole('button', { name: new RegExp(conversation!) }).click();
   await page.getByRole('button', { name: 'Take over' }).click();
+  await expect(page.getByRole('button', { name: 'Send reply' })).toBeDisabled();
   const reply = 'Inbox browser test ' + Date.now();
   await page.getByRole('textbox', { name: 'Reply or internal note' }).fill(reply);
   await page.getByRole('button', { name: 'Send reply' }).click();
@@ -27,7 +28,7 @@ test('agent handles an inbound conversation with live transcript updates', async
   expect(response.ok()).toBeTruthy();
   await expect(page.getByRole('list', { name: 'Messages' }).getByText(note)).toBeVisible();
   await page.getByRole('button', { name: 'Hand back to bot' }).click();
-  await expect(page.getByRole('button', { name: new RegExp(conversation! + '.*bot') })).toBeVisible();
+  await expect(page.getByRole('button', { name: new RegExp(conversation! + '.*bot') })).toHaveCount(1);
   await page.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Reopen' })).toBeVisible();
 });
