@@ -534,3 +534,28 @@ confirm the signed activation and charge events update the workspace, and
 check a plan change and cancellation. If checkout times out, retry the same
 plan to recover the existing reference. If Razorpay never confirms it, an
 operator must verify the remote account before clearing the local reservation.
+
+
+### GST invoice issuance
+
+Set `GST_INVOICE_ISSUER` after an accountant approves the supplier details,
+service accounting code, rate, and PDF layout. The JSON object accepts
+`name`, `address`, `state` (two-digit GST state code), `postal_code`,
+`gstin`, `sac`, and `tax_rate` (percent). The default is disabled.
+The current workflow covers domestic INR subscription charges from a single
+registered supplier.
+
+Owners enter their legal billing name, address and optional GSTIN in **Billing**.
+With invoice issuance enabled, the profile is required before checkout. Future
+captured INR charges issue one immutable invoice per Razorpay payment. The PDF
+shows the supplier and customer snapshot, SAC, place of supply, and the
+applicable central and state/union-territory GST or integrated GST. Sequence
+numbers reset on April 1 in India time. Owners can list and download PDFs from
+Billing. Issued invoices retain the original details when a profile is edited.
+
+The Razorpay plan creation script adds configured GST to the plan's base price.
+Existing provider plans keep their configured charge. Invoices calculate GST
+within the actual captured total, so review and map the intended tax-inclusive
+provider plan IDs before enabling checkout. Historical charges require a
+separate accounting review. Have an accountant confirm any e-invoicing,
+signature, credit note and retention requirements before production use.

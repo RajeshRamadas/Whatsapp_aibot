@@ -2,13 +2,16 @@ import hashlib
 import hmac
 import json
 from datetime import timedelta
+from io import BytesIO
 
 import pytest
+from pypdf import PdfReader
 from sqlalchemy import select
 
 from app.api import billing as api
 from app.config import settings
-from app.db import BillingEvent, Plan, Session, Subscription, Tenant, now
+from app.db import BillingEvent, Invoice, Plan, Session, Subscription, Tenant, now
+from app.invoice_config import InvoiceIssuer
 from app.services import billing, usage
 
 
@@ -141,3 +144,38 @@ def test_expired_trial_pauses_ai_without_charging_quota(client, fake, tenant):
         db.get(Tenant, tenant_id).trial_ends_at = now() - timedelta(days=1)
     assert not usage.reserve(tenant_id, 'trial-expired')
     assert usage.blocked_notice(tenant_id) == billing.BILLING_NOTICE
+
+
+def test_charge_issues_one_invoice_and_preserves_unregistered_billing_snapshot(client, fake, tenant, monkeypatch):
+    issuer = InvoiceIssuer(name='Example Supplier', address='Registered office', state='27', postal_code='400001',
+                           gstin='27ABCDE1234F1Z5', sac='998314', tax_rate=18)
+    monkeypatch.setattr(settings, 'gst_invoice_issuer', issuer)
+    headers = tenant['headers']
+    details = {'name': 'Original buyer', 'address': 'Billing address', 'state': '27', 'postal_code': '400002'}
+    checkout = '/api/v1/billing/checkout'
+    assert client.post(checkout, headers=headers, json={'plan': 'starter'}).status_code == 409
+    profile = '/api/v1/billing/details'
+    assert client.put(profile, headers=headers, json={**details, 'gstin': '29ABCDE1234F1Z5'}).status_code == 422
+    assert client.put(profile, headers=headers, json=details).status_code == 200
+    assert client.post(checkout, headers=headers, json={'plan': 'starter'}).status_code == 200
+    fake.remote.update(status='active', current_end=int((now() + timedelta(days=30)).timestamp()))
+    payment = {'id': 'pay_invoice', 'amount': 118000, 'currency': 'INR', 'status': 'captured'}
+    assert event(client, 'subscription.charged', 'evt-invoice', payment).status_code == 200
+    assert event(client, 'subscription.charged', 'evt-invoice-duplicate', payment).status_code == 200
+    assert client.put(profile, headers=headers, json={**details, 'name': 'Updated buyer'}).status_code == 200
+    with Session() as db:
+        [invoice] = db.scalars(select(Invoice)).all()
+        assert invoice.snapshot['recipient']['gstin'] is None
+        assert invoice.snapshot['cgst_paise'] == 9000
+    listing = '/api/v1/billing/invoices'
+    [listed] = client.get(listing, headers=headers).json()
+    path = listing + '/' + listed['id'] + '/pdf'
+    response = client.get(path, headers=headers)
+    assert response.status_code == 200 and response.headers['content-type'] == 'application/pdf'
+    text = '\n'.join(page.extract_text() for page in PdfReader(BytesIO(response.content)).pages)
+    assert 'Original buyer' in text and 'Updated buyer' not in text
+    assert 'Unregistered recipient' in text and 'CGST' in text and 'SGST' in text
+    other = client.post('/api/v1/tenants', headers={'X-Bootstrap-Token': 'test-bootstrap'},
+                        json={'name': 'Other invoices'}).json()
+    assert client.get(path, headers={'X-Admin-Key': other['admin_key']}).status_code == 404
+    assert client.get(path).status_code == 401

@@ -4,6 +4,8 @@ from decimal import Decimal
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from .invoice_config import InvoiceIssuer
+
 # Used when neither the tenant nor CHAT_MODEL / EMBEDDING_MODEL names a model.
 DEFAULT_CHAT_MODELS = {
     'openai': 'gpt-4.1-mini',
@@ -35,6 +37,7 @@ class Settings(BaseSettings):
     gemini_api_key: str | None = None
     chat_provider: str = 'openai'  # openai | anthropic | gemini; tenants can override
     chat_model: str | None = None  # defaults to DEFAULT_CHAT_MODELS[chat_provider]
+    gst_invoice_issuer: InvoiceIssuer | None = None
     razorpay_key_id: str | None = None
     razorpay_key_secret: str | None = None
     razorpay_webhook_secret: str | None = None
