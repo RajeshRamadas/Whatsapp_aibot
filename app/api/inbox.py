@@ -32,7 +32,7 @@ def view(conv: Conversation) -> dict:
     return {'id': conv.id, 'channel': conv.channel, 'user': conv.external_user, 'handoff': conv.handoff,
             'contact_id': conv.contact_id, 'status': conv.status, 'assignee_user_id': conv.assignee_user_id,
             'labels': conv.labels, 'last_inbound_at': conv.last_inbound_at, 'last_message_at': conv.last_message_at,
-            'created_at': conv.created_at, 'can_reply_freely': can_reply(conv)}
+            'created_at': conv.created_at, 'can_reply_freely': conv.channel == 'web' or can_reply(conv)}
 
 
 class Assign(BaseModel):
@@ -149,18 +149,22 @@ def reply(conversation_id: str, body: Reply, principal: Principal = Depends(requ
                 return {'status': existing.delivery_status, 'message_id': existing.id}
         if conv.status == 'closed':
             raise HTTPException(409, 'Reopen the conversation before replying')
-        if conv.channel != 'whatsapp' or not principal.tenant.whatsapp_phone_number_id:
-            raise HTTPException(409, 'Only WhatsApp conversations support agent replies')
-        if not can_reply(conv):
-            raise HTTPException(409, {'code': 'whatsapp_window_expired',
-                                      'message': 'The 24-hour customer service window has expired'})
-        channel = whatsapp_channel(db, principal.tenant.id)
-        if not settings.whatsapp_enabled or not (settings.whatsapp_access_token or
-                                                  (channel and channel.credentials_enc)):
-            raise HTTPException(503, 'WhatsApp is not configured')
+        if conv.channel == 'whatsapp':
+            if not principal.tenant.whatsapp_phone_number_id:
+                raise HTTPException(409, 'This WhatsApp conversation has no linked channel')
+            if not can_reply(conv):
+                raise HTTPException(409, {'code': 'whatsapp_window_expired',
+                                          'message': 'The 24-hour customer service window has expired'})
+            channel = whatsapp_channel(db, principal.tenant.id)
+            if not settings.whatsapp_enabled or not (settings.whatsapp_access_token or
+                                                      (channel and channel.credentials_enc)):
+                raise HTTPException(503, 'WhatsApp is not configured')
+        elif conv.channel != 'web':
+            raise HTTPException(409, 'This channel does not support agent replies')
+        delivery = 'sent' if conv.channel == 'web' else 'queued'
         message = Message(conversation_id=conv.id, role='agent', direction='outbound',
                           kind='text', author_user_id=principal.user.id if principal.user else None,
-                          content=body.message, delivery_status='queued', reply_key=idempotency_key)
+                          content=body.message, delivery_status=delivery, reply_key=idempotency_key)
         db.add(message)
         conv.handoff, conv.status = True, 'agent'
         conv.last_message_at = now()
@@ -168,7 +172,7 @@ def reply(conversation_id: str, body: Reply, principal: Principal = Depends(requ
         message_id = message.id
     publish_sync(principal.tenant.id, 'message.created', {'conversation_id': conversation_id})
     publish_sync(principal.tenant.id, 'conversation.updated', {'conversation_id': conversation_id})
-    return {'status': 'queued', 'message_id': message_id}
+    return {'status': delivery, 'message_id': message_id}
 
 
 @router.post('/api/v1/inbox/conversations/{conversation_id}/hand-back')
