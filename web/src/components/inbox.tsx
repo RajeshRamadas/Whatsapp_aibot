@@ -7,7 +7,8 @@ type Conversation = {
   id: string; user: string; channel: string; status: string;
   labels: string[]; can_reply_freely: boolean; assignee_user_id: string | null;
 };
-type Message = { role: string; kind: string; content: string; delivery_status: string | null };
+type Citation = { number: number; filename: string; heading?: string; page?: number };
+type Message = { role: string; kind: string; content: string; delivery_status: string | null; sources?: Citation[] };
 type Page = { items: Conversation[]; next_cursor: string | null; counts: Record<string, number> };
 type Canned = { id: string; title: string; body: string };
 const endpoint = 'inbox/conversations';
@@ -180,6 +181,12 @@ export function Inbox() {
             {messages.map((message, index) => <li key={index} className="rounded border border-border p-2">
               <span className="text-sm font-semibold">{message.kind === 'note' ? 'Internal note' : message.role}</span>
               <p className="whitespace-pre-wrap break-words">{message.content}</p>
+              {!!message.sources?.length && <ul aria-label="Sources" className="mt-2 text-sm">
+                {message.sources.map(source => <li key={source.number}>
+                  [{source.number}] {source.filename}{source.heading && ' · ' + source.heading}
+                  {source.page != null && ' · p. ' + source.page}
+                </li>)}
+              </ul>}
               {message.delivery_status && <span className="text-sm">{message.delivery_status}</span>}
             </li>)}
           </ol>
