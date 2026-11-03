@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field, HttpUrl, field_validator
 from sqlalchemy import delete
 from sqlalchemy.dialects.postgresql import insert
 
+from ..config import settings
 from ..db import InboxPushSubscription, Session
 from .principal import Principal, require_role
 from .shared import sha
@@ -57,3 +58,10 @@ def unsubscribe(body: SubscriptionEndpoint, principal: Principal = Depends(requi
             InboxPushSubscription.user_id == principal.user.id,
             InboxPushSubscription.endpoint_hash == sha(str(body.endpoint)),
         ))
+
+
+@router.get('/api/v1/inbox/push-config')
+def push_config(principal: Principal = Depends(require_role('agent'))):
+    if principal.user is None:
+        raise HTTPException(403, 'User session required')
+    return {'public_key': settings.inbox_vapid_public_key}
