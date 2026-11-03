@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useWorkspace } from '@/components/app-shell';
 import { api } from '@/lib/api';
 
 type Conversation = {
@@ -15,6 +16,7 @@ const endpoint = 'inbox/conversations';
 const field = 'min-h-11 rounded border border-border bg-surface p-2';
 
 export function Inbox({ canAct }: { canAct: boolean }) {
+  const workspace = useWorkspace();
   const [page, setPage] = useState<Page>();
   const [selected, select] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -82,6 +84,17 @@ export function Inbox({ canAct }: { canAct: boolean }) {
       .catch((failure: Error) => { if (!controller.signal.aborted) setError(failure.message); });
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    if (!page || !workspace || !('serviceWorker' in navigator)) return;
+    const saveSnapshot = () => navigator.serviceWorker.controller?.postMessage({
+      type: 'INBOX_SNAPSHOT', workspace: workspace.name,
+      conversations: page.items, messages,
+    });
+    saveSnapshot();
+    navigator.serviceWorker.addEventListener('controllerchange', saveSnapshot);
+    return () => navigator.serviceWorker.removeEventListener('controllerchange', saveSnapshot);
+  }, [page, messages, workspace]);
 
   async function action(name: string, payload?: object, key?: string) {
     if (!canAct || busy) return;

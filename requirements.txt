@@ -19,3 +19,4 @@ boto3>=1.35,<2
 cryptography>=43,<47
 arq>=0.26,<1
 redis>=5,<7
+pywebpush>=2,<3
