@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 
 type Conversation = {
@@ -20,6 +20,12 @@ export function Inbox() {
   const [canned, setCanned] = useState<Canned[]>([]);
   const [status, setStatus] = useState('');
   const [channel, setChannel] = useState('');
+  const [assignee, setAssignee] = useState('');
+  const [label, setLabel] = useState('');
+  const [typing, setTyping] = useState('');
+  const composer = useRef<HTMLTextAreaElement>(null);
+  const lastTyping = useRef(0);
+  const pendingReply = useRef<{ conversation: string; text: string; key: string } | null>(null);
   const [search, setSearch] = useState('');
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [error, setError] = useState('');
@@ -34,8 +40,16 @@ export function Inbox() {
     for (const event of ['conversation.updated', 'message.created', 'message.updated']) {
       stream.addEventListener(event, invalidate);
     }
-    return () => stream.close();
-  }, []);
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    stream.addEventListener('typing.updated', (event: MessageEvent<string>) => {
+      const data = JSON.parse(event.data) as { conversation_id: string; user_id?: string };
+      if (data.conversation_id !== selected) return;
+      setTyping(data.user_id ? 'An agent is typing…' : 'Someone is typing…');
+      clearTimeout(timeout);
+      timeout = setTimeout(() => setTyping(''), 5000);
+    });
+    return () => { stream.close(); clearTimeout(timeout); };
+  }, [selected]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -43,11 +57,13 @@ export function Inbox() {
     if (status) query.set('status', status);
     if (channel) query.set('channel', channel);
     if (search) query.set('search', search);
+    if (assignee) query.set('assignee', assignee);
+    if (label) query.set('label', label);
     api<Page>(endpoint + '?' + query, { signal: controller.signal })
       .then(result => { if (!controller.signal.aborted) setPage(result); })
       .catch((failure: Error) => { if (!controller.signal.aborted) setError(failure.message); });
     return () => controller.abort();
-  }, [status, channel, search, revision]);
+  }, [status, channel, search, assignee, label, revision]);
 
   useEffect(() => {
     if (!selected) return;
@@ -75,6 +91,7 @@ export function Inbox() {
         headers: key ? { 'Idempotency-Key': key } : undefined,
         body: payload ? JSON.stringify(payload) : undefined,
       });
+      if (name === 'reply') pendingReply.current = null;
       if (name === 'reply' || name === 'note') setDrafts(old => ({ ...old, [selected]: '' }));
       refresh(value => value + 1);
     } catch (failure) {
@@ -86,7 +103,7 @@ export function Inbox() {
 
   async function loadMore() {
     if (!page?.next_cursor) return;
-    const query = new URLSearchParams({ cursor: page.next_cursor, status, channel, search });
+    const query = new URLSearchParams({ cursor: page.next_cursor, status, channel, search, assignee, label });
     try {
       const next = await api<Page>(endpoint + '?' + query);
       setPage(current => current === page ? { ...next, items: [...page.items, ...next.items] } : current);
@@ -96,11 +113,29 @@ export function Inbox() {
   }
 
   function choose(id: string) {
+    if (id === selected) return;
+    setTyping('');
     setMessages([]);
     select(id);
   }
 
-  return <main className="p-4">
+  return <main className="p-4" onKeyDown={event => {
+    if (event.ctrlKey || event.metaKey || event.altKey || !(event.target instanceof HTMLElement)
+      || event.target.closest('input, textarea, select, [contenteditable]')) return;
+    if (event.key === 'r' || event.key === '/') {
+      if (!active) return;
+      event.preventDefault();
+      if (event.key === '/') setDrafts(old => ({ ...old, [selected]: '/' }));
+      composer.current?.focus();
+    } else if (event.key === 'j' || event.key === 'k') {
+      const rows = page?.items ?? [];
+      const index = rows.findIndex(item => item.id === selected);
+      const next = rows[index < 0 ? 0 : index + (event.key === 'j' ? 1 : -1)];
+      if (next) choose(next.id);
+    } else if (event.key === 'e' && active && active.status !== 'closed' && !busy) {
+      void action('close');
+    }
+  }}>
     <h1 className="mb-4 text-2xl font-semibold">Inbox</h1>
     {error && <p role="alert" className="mb-3">{error}</p>}
     <div className="grid gap-4 lg:grid-cols-[minmax(13rem,1fr)_minmax(0,2fr)_minmax(12rem,1fr)]">
@@ -116,6 +151,10 @@ export function Inbox() {
           <select className={field} aria-label="Channel" value={channel} onChange={event => setChannel(event.target.value)}>
             <option value="">All channels</option><option value="whatsapp">WhatsApp</option><option value="web">Web</option>
           </select>
+          <input className={field} aria-label="Assignee" placeholder="Assignee ID or unassigned"
+            value={assignee} onChange={event => setAssignee(event.target.value)} />
+          <input className={field} aria-label="Label" placeholder="Filter by label"
+            value={label} onChange={event => setLabel(event.target.value)} />
           {!page && <p role="status">Loading conversations…</p>}
           {page?.items.length === 0 && <p>No conversations found.</p>}
           {page?.items.map(item => <button key={item.id} type="button" className={field + ' text-left'}
@@ -147,11 +186,23 @@ export function Inbox() {
           <form className="grid gap-2" onSubmit={event => {
             event.preventDefault();
             if (draft.trim() && active.can_reply_freely && active.status !== 'closed' && !busy) {
-              void action('reply', { message: draft.trim() }, crypto.randomUUID());
+              const text = draft.trim();
+              if (pendingReply.current?.conversation !== selected || pendingReply.current.text !== text) {
+                pendingReply.current = { conversation: selected, text, key: crypto.randomUUID() };
+              }
+              void action('reply', { message: text }, pendingReply.current.key);
             }
           }}>
-            <textarea aria-label="Reply or internal note" className={field} value={draft} maxLength={4000}
-              onChange={event => setDrafts(old => ({ ...old, [selected]: event.target.value }))}
+            {typing && <p role="status">{typing}</p>}
+            <textarea ref={composer} aria-label="Reply or internal note" className={field} value={draft} maxLength={4000}
+              onChange={event => {
+                const text = event.target.value;
+                setDrafts(old => ({ ...old, [selected]: text }));
+                if (Date.now() - lastTyping.current >= 3000) {
+                  lastTyping.current = Date.now();
+                  void api(endpoint + '/' + selected + '/typing', { method: 'POST' }).catch(() => undefined);
+                }
+              }}
               onKeyDown={event => {
                 if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
                   event.preventDefault();
