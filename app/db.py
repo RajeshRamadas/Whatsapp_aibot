@@ -57,6 +57,7 @@ class Tenant(Base):
     bot_rules: Mapped[str] = mapped_column(Text, default='')
     business_hours: Mapped[str] = mapped_column(Text, default='')
     timezone: Mapped[str] = mapped_column(String(64), default='UTC')
+    widget_theme: Mapped[dict] = mapped_column(JSONB, default=dict)
     whatsapp_opt_out_keywords: Mapped[list] = mapped_column(JSONB, default=list)
     default_language: Mapped[str] = mapped_column(String(16), default='en')
     bot_live: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -351,3 +352,18 @@ class Template(Base):
     category: Mapped[str] = mapped_column(String(32))
     status: Mapped[str] = mapped_column(String(32))
     body: Mapped[str | None] = mapped_column(Text)
+
+
+class WidgetTurn(Base):
+    __tablename__ = 'widget_turns'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    conversation_id: Mapped[str] = mapped_column(ForeignKey('conversations.id', ondelete='CASCADE'), index=True)
+    message: Mapped[str] = mapped_column(Text)
+    handoff: Mapped[bool] = mapped_column(Boolean, default=False)
+    state: Mapped[str] = mapped_column(String(16), default='queued')
+    answer: Mapped[str | None] = mapped_column(Text)
+    sources: Mapped[list] = mapped_column(JSONB, default=list)
+    feedback: Mapped[str | None] = mapped_column(String(4))
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)

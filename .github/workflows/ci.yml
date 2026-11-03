@@ -74,6 +74,8 @@ jobs:
         with:
           node-version: '22'
       - run: npm install
+      - run: node ../widget/build.mjs --check
+      - run: npx tsc --noEmit --strict --target ES2022 --lib ES2022,DOM --skipLibCheck ../widget/widget.ts
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test

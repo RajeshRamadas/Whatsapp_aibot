@@ -14,6 +14,7 @@ from ..services.events import publish_sync
 from ..services.inbox_push import deliver_waiting
 from ..services.templates import eligible_contact, render, send_payload, template_for_send
 from ..services.whatsapp_copy import copy_for
+from ..services.widget_turns import process_turn
 
 
 async def sample_job(ctx: dict, tenant_id: str, job_id: str) -> str:
@@ -182,9 +183,14 @@ async def notify_inbox(ctx: dict) -> None:
     await asyncio.to_thread(deliver_waiting)
 
 
+async def dispatch_widget_turn(ctx: dict) -> None:
+    await asyncio.to_thread(process_turn)
+
+
 class WorkerSettings:
     cron_jobs = [cron(dispatch_agent_replies, second={0, 10, 20, 30, 40, 50}),
-                 cron(notify_inbox, second={5, 15, 25, 35, 45, 55})]
+                 cron(notify_inbox, second={5, 15, 25, 35, 45, 55}),
+                 cron(dispatch_widget_turn, second=set(range(0, 60, 2)), timeout=600)]
     functions = [sample_job, ingest_source, handle_message]
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
     max_jobs = 10

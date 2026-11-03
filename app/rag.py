@@ -197,6 +197,28 @@ def answer(tenant: Tenant, conversation_id: str | None, question: str, *, whatsa
                   choices=choices or None, uncertain=uncertain)
 
 
+def save_exchange_rows(db, conversation, pairs, channel_message_id=None, sources=None, lead_fields=None):
+    lead_created = False
+    if lead_fields:
+        lead_created = save_lead(db, conversation, lead_fields)
+    timestamp = now()
+    for role, content in pairs:
+        outbound = role in ('assistant', 'agent', 'note')
+        db.add(Message(conversation_id=conversation.id, role=role, content=content,
+                       direction='outbound' if outbound else 'inbound',
+                       sources=(sources or []) if role == 'assistant' else [],
+                       kind='note' if role == 'note' else 'text',
+                       channel_message_id=channel_message_id if outbound else None,
+                       delivery_status='sent' if outbound and channel_message_id else None))
+    conv = conversation
+    if conv and pairs:
+        conv.last_message_at = timestamp
+        if any(role == 'user' for role, _ in pairs):
+            if conv.channel != 'whatsapp' or conv.last_inbound_at is None:
+                conv.last_inbound_at = timestamp
+    return lead_created
+
+
 def save_exchange(conversation: Conversation, *pairs: tuple[str, str], create: bool = False,
                   channel_message_id: str | None = None, sources: list[dict] | None = None,
                   lead_fields: dict | None = None) -> None:
@@ -205,23 +227,8 @@ def save_exchange(conversation: Conversation, *pairs: tuple[str, str], create: b
         if create:
             db.add(conversation)
             db.flush()
-        if lead_fields:
-            lead_created = save_lead(db, conversation, lead_fields)
-        timestamp = now()
-        for role, content in pairs:
-            outbound = role in ('assistant', 'agent', 'note')
-            db.add(Message(conversation_id=conversation.id, role=role, content=content,
-                           direction='outbound' if outbound else 'inbound',
-                           sources=(sources or []) if role == 'assistant' else [],
-                           kind='note' if role == 'note' else 'text',
-                           channel_message_id=channel_message_id if outbound else None,
-                           delivery_status='sent' if outbound and channel_message_id else None))
-        conv = conversation if create else db.get(Conversation, conversation.id)
-        if conv and pairs:
-            conv.last_message_at = timestamp
-            if any(role == 'user' for role, _ in pairs):
-                if conv.channel != 'whatsapp' or conv.last_inbound_at is None:
-                    conv.last_inbound_at = timestamp
+        current = conversation if create else db.get(Conversation, conversation.id)
+        lead_created = save_exchange_rows(db, current, pairs, channel_message_id, sources, lead_fields)
     if lead_created:
         notify_created(conversation.tenant_id, conversation.id)
     if pairs:

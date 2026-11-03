@@ -465,3 +465,22 @@ The Inbox picker supports approved templates with text bodies and numbered
 variables. Templates with headers, media, buttons or named variables can be
 tracked in the catalog. Sending requires recorded contact opt-in. The worker
 rechecks approval and consent before dispatch.
+
+
+### Website widget v2
+
+Workspace owners and admins can open **Website widget** on the dashboard to
+preview and save its theme, launcher, avatar and greeting. Add the site's
+origin to the workspace allowlist, then paste the dashboard's script tag
+with the public HTTPS API host. Use an asynchronous script tag.
+
+The widget persists the current chat and one pending message in local storage.
+It reconnects and sends that message when the browser returns online. The API
+queues each turn in PostgreSQL and the worker claims it. Replies arrive over
+SSE with a polling fallback. Run the worker alongside the API. Agents can
+respond to web handoffs from the Inbox. **Start a new chat** clears the local
+chat and pending message.
+
+The checked-in script is built from `widget/widget.ts`. Run
+`node widget/build.mjs` on Node 22.13 or newer after edits. CI verifies the
+checked-in bundle, its TypeScript types and its 30 KiB gzip budget.
