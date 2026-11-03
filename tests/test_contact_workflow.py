@@ -44,3 +44,14 @@ def test_handoff_status_tracks_legacy_flag(client, tenant):
     with Session() as db:
         row = db.get(Conversation, conv.id)
         assert row.status == 'bot' and not row.handoff
+
+
+def test_transcript_exposes_persisted_assistant_sources(client, tenant):
+    conv = whatsapp.conversation_for(tenant['tenant_id'], '15559996666')
+    sources = [{'number': 1, 'filename': 'Guide.pdf', 'heading': 'Hours', 'page': 2}]
+    rag.save_exchange(conv, ('user', 'When?'), ('assistant', 'At noon [1]'), sources=sources)
+    response = client.get(f'/api/v1/conversations/{conv.id}/messages', headers=tenant['headers'])
+    assert response.status_code == 200
+    inbound, assistant = response.json()
+    assert inbound['sources'] == []
+    assert assistant['sources'] == sources
