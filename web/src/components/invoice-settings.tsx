@@ -11,7 +11,7 @@ const empty: Details = { name: '', address: '', state: '', postal_code: '', gsti
 const field = 'min-h-11 rounded border border-border bg-surface px-3 py-2';
 const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 
-export function InvoiceSettings({ workspaceId }: { workspaceId: string }) {
+export function InvoiceSettings({ workspaceId, revision = 0 }: { workspaceId: string; revision?: number }) {
   const [profile, setProfile] = useState<Profile>();
   const [details, setDetails] = useState<Details>(empty);
   const [invoices, setInvoices] = useState<Invoice[]>();
@@ -40,7 +40,7 @@ export function InvoiceSettings({ workspaceId }: { workspaceId: string }) {
     }).then(value => { if (!controller.signal.aborted) setInvoices(value); })
       .catch(() => { if (!controller.signal.aborted) setError(copy.loadError); });
     return () => controller.abort();
-  }, [workspaceId, offset]);
+  }, [workspaceId, offset, revision]);
 
   function change(key: keyof Details, value: string) {
     setSaved(false);
