@@ -116,3 +116,7 @@ A Render Blueprint is provided in [`render.yaml`](render.yaml), with managed Pos
 ## Free local test environment
 
 See [free local testing](docs/FREE_LOCAL_TESTING.md). Docker Compose runs the API and pgvector on your own machine with no hosting fees; OpenAI API calls remain billable.
+
+## Render free-tier trial
+
+For a disposable online test, see [`render-free.yaml`](render-free.yaml) and [free-tier deployment instructions](docs/RENDER_FREE_TESTING.md). The existing `render.yaml` provisions **paid** infrastructure; select the free Blueprint explicitly. OpenAI API calls remain billable.
