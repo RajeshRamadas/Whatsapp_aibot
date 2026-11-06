@@ -38,7 +38,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Run authenticated inbox browser test
+      - name: Run browser tests with fake billing
         env:
           AUTH_COOKIE_SECURE: 'false'
           WHATSAPP_VERIFY_TOKEN: fixture
@@ -51,7 +51,7 @@ jobs:
           source /tmp/inbox-push.env
           set +a
           python -m scripts.seed_inbox_e2e
-          uvicorn app.main:app --port 8000 &
+          uvicorn tests.browser_app:app --port 8000 &
           cd web
           npm install
           npx playwright install --with-deps chromium

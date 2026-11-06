@@ -51,9 +51,10 @@ def status(tenant: Tenant = Depends(tenant_for_role('owner'))):
         row = db.get(Subscription, tenant.id)
         plans = db.scalars(select(Plan).order_by(Plan.id)).all()
         return {'enabled': configured(), 'trial_ends_at': tenant.trial_ends_at, 'current_plan': tenant.plan_id,
+                'timezone': tenant.timezone,
                 'tax_rate': str(settings.gst_invoice_issuer.tax_rate) if settings.gst_invoice_issuer else None,
                 'entitled': entitled(db, tenant, now()), 'subscription': public_view(row) if row else None,
-                'plans': [{'id': plan.id, 'price_inr': plan.limits.get('price_inr'),
+                'plans': [{'id': plan.id, 'price_inr': plan.limits.get('price_inr'), 'limits': plan.limits,
                            'available': bool(settings.razorpay_plan_ids.get(plan.id))} for plan in plans]}
 
 

@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
+from sqlalchemy.dialects.postgresql import insert
 
-from app.db import Conversation, Lead, Session, Tenant, now
+from app.db import Conversation, Lead, Plan, Session, Tenant, UsageEvent, now
 from app.main import app
 
 credentials = {'email': 'inbox@example.com', 'password': 'inbox-test-passphrase-392'}
@@ -23,3 +24,13 @@ with Session.begin() as db:
     db.flush()
     db.add(Lead(tenant_id=tenant_id, conversation_id=conversation.id,
                 fields={'name': 'Asha Demo', 'phone': '+15550001235', 'need': 'Pricing'}))
+
+with Session.begin() as db:
+    plans = [
+        {'id': 'starter', 'limits': {'ai_messages': 10, 'price_inr': 1999, 'seats': 2, 'files': 50, 'overage_inr': 1}},
+        {'id': 'growth', 'limits': {'ai_messages': 50, 'price_inr': 5999, 'seats': 5, 'files': 500, 'overage_inr': 1}},
+    ]
+    statement = insert(Plan).values(plans)
+    db.execute(statement.on_conflict_do_update(index_elements=['id'], set_={'limits': statement.excluded.limits}))
+    db.add_all(UsageEvent(tenant_id=tenant_id, kind='answer', request_key=f'billing-fixture:{index}')
+               for index in range(8))
