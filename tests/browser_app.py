@@ -1,11 +1,12 @@
 """ASGI app for browser CI with an isolated Razorpay fake."""
 from datetime import timedelta
 
-from app.api import billing
+from app.api import auth, billing
 from app.config import settings
 from app.db import now
 from app.invoice_config import InvoiceIssuer
 from app.main import app
+from app.rate_limits import RateLimiter
 from tests.test_billing import FakeBilling
 
 __all__ = ['app']
@@ -19,6 +20,7 @@ class BrowserBilling(FakeBilling):
         return snapshot
 
 
+auth._auth_limiter = RateLimiter(30, window_seconds=900, namespace='browser-test-auth')
 graph = BrowserBilling()
 settings.razorpay_key_id = 'browser-test-key'
 settings.razorpay_key_secret = 'browser-test-secret'
