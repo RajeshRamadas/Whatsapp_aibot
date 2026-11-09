@@ -13,6 +13,7 @@ from sqlalchemy.exc import IntegrityError
 
 from .. import rag
 from ..db import Conversation, Message, Session, Tenant, WidgetTurn, uid
+from ..observability import bind
 from .principal import tenant_for_role
 from .shared import origins
 
@@ -50,6 +51,7 @@ def widget_tenant(public_key, request):
         raise HTTPException(403, 'Chatbot unavailable')
     if (origin := request.headers.get('origin')) and origin not in origins(tenant):
         raise HTTPException(403, 'Origin not allowed')
+    bind(tenant_id=tenant.id)
     return tenant
 
 

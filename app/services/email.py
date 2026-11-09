@@ -8,7 +8,7 @@ class EmailSender:
 class ConsoleEmailSender(EmailSender):
     def send(self, recipient: str, subject: str, code: str) -> None:
         import logging
-        logging.getLogger(__name__).info('Email queued for %s (%s)', recipient, subject)
+        logging.getLogger(__name__).info('email.queued')
 
 
 sender: EmailSender = ConsoleEmailSender()

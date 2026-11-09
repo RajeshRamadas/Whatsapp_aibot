@@ -11,6 +11,7 @@ from sqlalchemy.dialects.postgresql import insert
 
 from ..config import settings
 from ..db import Membership, Plan, Session, Tenant, UsageDaily, UsageEvent, User, now
+from ..observability import integration
 from . import email
 from .billing import BILLING_NOTICE, entitled
 
@@ -75,7 +76,8 @@ def record(provider, model, kind, response):
 
 def call(provider, kind, operation, **kwargs):
     try:
-        result = operation(**kwargs)
+        with integration(provider):
+            result = operation(**kwargs)
     except Exception:
         record(provider, kwargs['model'], kind, None)
         raise

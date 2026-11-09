@@ -16,6 +16,7 @@ from sqlalchemy.exc import IntegrityError
 from . import rag
 from .config import settings
 from .db import Contact, Conversation, InboundEvent, Message, Session, Tenant, now, uid
+from .observability import bind, integration
 from .services.bot_policy import within_hours
 from .services.channels import access_token, find_whatsapp, tenant_for_phone
 from .services.events import publish_sync
@@ -95,6 +96,7 @@ def accept(message: dict) -> str | None:
         return event.id
 
 
+@integration('whatsapp')
 def graph_message(phone_number_id, payload, tenant_id, timeout=20):
     response = httpx.post(
         f'https://graph.facebook.com/{settings.whatsapp_graph_version}/{phone_number_id}/messages',
@@ -169,6 +171,7 @@ def handle(tenant_id: str, message: dict) -> None:
     if tenant is None or tenant.suspended:
         return
     conv = conversation_for(tenant_id, wa_user)
+    bind(tenant_id=tenant_id, conversation_id=conv.id)
     copy = copy_for(tenant)
     incoming = ('user', text or f"[{message['type']} message]")
     parts = message.get('parts', [message])

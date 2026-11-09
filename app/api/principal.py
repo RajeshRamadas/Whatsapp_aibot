@@ -5,6 +5,7 @@ from fastapi import Depends, Header, HTTPException, Request, Response
 from sqlalchemy import select
 
 from ..db import ApiKey, Membership, Session, Tenant, User, now
+from ..observability import bind
 from .auth import _csrf, _session
 from .shared import sha
 
@@ -51,6 +52,7 @@ def current_principal(
         if legacy:
             response.headers['Warning'] = '299 - "X-Admin-Key is deprecated; use Authorization: Bearer"'
         role = max(scopes, key=lambda item: LEVELS[item]) if scopes else 'viewer'
+        bind(tenant_id=tenant.id)
         return Principal(user=None, tenant=tenant, role=role, legacy_key=legacy)
     _, user = _session(request)
     if not workspace_id:
@@ -68,6 +70,7 @@ def current_principal(
     if request.method not in ('GET', 'HEAD', 'OPTIONS'):
         row, _ = _session(request)
         _csrf(request, row)
+    bind(tenant_id=tenant.id)
     return Principal(user=user, tenant=tenant, role=membership.role)
 
 

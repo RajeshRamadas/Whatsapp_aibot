@@ -8,6 +8,7 @@ from sqlalchemy import func, or_, select
 from .. import whatsapp
 from ..config import settings
 from ..db import CannedReply, Contact, Conversation, Membership, Message, Session, now, uid
+from ..observability import bind
 from ..services.channels import whatsapp_channel
 from ..services.events import publish_sync
 from .principal import Principal, require_role
@@ -20,6 +21,7 @@ def conversation(db, tenant_id: str, conversation_id: str) -> Conversation:
                                                Conversation.tenant_id == tenant_id))
     if row is None:
         raise HTTPException(404, 'Conversation not found')
+    bind(conversation_id=row.id)
     return row
 
 

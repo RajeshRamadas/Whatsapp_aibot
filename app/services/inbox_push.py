@@ -4,15 +4,22 @@ import logging
 from datetime import timedelta
 from urllib.parse import urlsplit
 
-from pywebpush import WebPushException, webpush
+from pywebpush import WebPushException
+from pywebpush import webpush as raw_webpush
 from requests.exceptions import RequestException
 from sqlalchemy import and_, select
 
 from ..config import settings
 from ..db import Conversation, InboxPushSubscription, Membership, Session, now
+from ..observability import integration
 
 log = logging.getLogger(__name__)
 PUSH_HOSTS = {'fcm.googleapis.com', 'updates.push.services.mozilla.com', 'web.push.apple.com'}
+
+
+@integration('push')
+def webpush(**kwargs):
+    return raw_webpush(**kwargs)
 
 
 def supported_endpoint(endpoint: str) -> bool:

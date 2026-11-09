@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     inbox_vapid_public_key: str | None = None
     auth_cookie_secure: bool = True
     environment: str = 'development'
+    metrics_token: str | None = None
+    sentry_dsn: str | None = None
     master_key: str | None = None
     master_key_version: int = 1
     master_key_previous: dict[str, str] = {}

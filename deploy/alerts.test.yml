@@ -1,0 +1,23 @@
+rule_files: [alerts.yml]
+evaluation_interval: 1m
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'chatbot_queue_oldest_seconds{queue="arq"}'
+        values: '0 70 70'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: ChatbotQueueStuck
+        exp_alerts:
+          - exp_labels: {queue: arq, severity: warning}
+            exp_annotations: {summary: 'Ready work has waited more than 60 seconds'}
+  - interval: 1m
+    input_series:
+      - series: 'chatbot_webhook_last_success_timestamp_seconds{name="whatsapp"}'
+        values: '0+0x20'
+      - series: chatbot_whatsapp_business_hours_active
+        values: '0+0x20'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: WhatsAppWebhookSilent
+        exp_alerts: []

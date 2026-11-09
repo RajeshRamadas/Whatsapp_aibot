@@ -618,6 +618,9 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
   3. Prometheus metrics endpoint.
   4. Alert rules from DESIGN §13 as configuration in `deploy/`.
 - **Done when:** a test asserts that logs contain no message text or phone numbers.
+- **Notes:** Privacy-filtered JSON logs and opt-in Sentry cover API, workers and the web app.
+  `/metrics` requires a separate scrape token. Shared Redis telemetry covers API/worker attempts;
+  Prometheus configuration and alert rules are in `deploy/`. No database migration is required.
 
 #### T8.4 Real email delivery
 - **Delivers:** INTEGRATIONS EM-1 to EM-4
@@ -718,7 +721,7 @@ Tick each task in the PR that completes it.
 | M5 | T5.1 ☐ · T5.2 ☐ · T5.3 ☐ · T5.4 ☐ | |
 | M6 | T6.1 ☐ · T6.2 ☐ · T6.3 ☐ · T6.4 ☐ · T6.5 ☐ | |
 | M7 | T7.1 ☐ · T7.2 ☐ · T7.3 ☐ · T7.4 ☐ · T7.5 ☑ | |
-| M8 | T8.1 ☐ · T8.2 ☑ · T8.3 ☐ · T8.4 ☐ · T8.5 ☐ | |
+| M8 | T8.1 ☐ · T8.2 ☑ · T8.3 ☑ · T8.4 ☐ · T8.5 ☐ | |
 
 ## 7. Human decisions needed before certain tasks
 
