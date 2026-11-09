@@ -2,6 +2,7 @@
 import asyncio
 from datetime import timedelta
 
+import httpx
 from arq import Retry, cron, run_worker
 from arq.connections import RedisSettings
 from sqlalchemy import select, text, update
@@ -9,10 +10,14 @@ from sqlalchemy import select, text, update
 from .. import ingest, whatsapp
 from ..config import settings
 from ..db import AuditLog, Conversation, InboundEvent, Message, Session, Source, Tenant, now
+from ..integrations.ses import Transport, cache_certificate
 from ..observability import bind, configure, observed_job
+from ..rate_limits import RateLimiter
 from ..services.analytics import reconcile as reconcile_analytics_daily
 from ..services.billing import reconcile_settlements, reconcile_subscriptions
 from ..services.channels import whatsapp_channel
+from ..services.email import deliver_one
+from ..services.email import validate_configuration as validate_email
 from ..services.events import publish_sync
 from ..services.inbox_push import deliver_waiting
 from ..services.templates import eligible_contact, render, send_payload, template_for_send
@@ -221,20 +226,46 @@ async def reconcile_analytics(ctx: dict) -> None:
     await asyncio.to_thread(reconcile_analytics_daily)
 
 
+@observed_job
+async def dispatch_email(ctx):
+    if settings.email_backend != 'ses':
+        return
+    limiter = RateLimiter(settings.email_sends_per_second, window_seconds=1, namespace='email-send')
+    for _ in range(20):
+        if not await asyncio.to_thread(limiter.allow, 'all'):
+            break
+        if not await asyncio.to_thread(deliver_one, Transport()):
+            break
+
+
+@observed_job
+async def cache_email_certificate(ctx, url):
+    try:
+        await asyncio.to_thread(cache_certificate, url)
+    except httpx.HTTPError as exc:
+        permanent = (isinstance(exc, httpx.HTTPStatusError) and 400 <= exc.response.status_code < 500
+                     and exc.response.status_code not in (408, 429))
+        if not permanent and ctx.get('job_try', 1) < 5:
+            raise Retry(defer=5 * 2 ** ctx.get('job_try', 1)) from None
+        raise
+
+
 async def startup(ctx):
     configure()
+    validate_email()
 
 
 class WorkerSettings:
     on_startup = startup
     cron_jobs = [cron(dispatch_agent_replies, second={0, 10, 20, 30, 40, 50}),
+                 cron(dispatch_email, second=set(range(60))),
                  cron(notify_inbox, second={5, 15, 25, 35, 45, 55}),
                  cron(dispatch_widget_turn, second=set(range(0, 60, 2)), timeout=600),
                  cron(reconcile_usage, hour=1, minute=0, second=0, timeout=600),
                  cron(reconcile_analytics, hour=1, minute=10, second=0, timeout=600),
                  cron(dispatch_usage_alerts, second=25),
                  cron(reconcile_billing, hour=2, minute=0, second=0, timeout=600)]
-    functions = [sample_job, ingest_source, handle_message]
+    functions = [sample_job, ingest_source, handle_message, cache_email_certificate]
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
     max_jobs = 10
     job_timeout = 60

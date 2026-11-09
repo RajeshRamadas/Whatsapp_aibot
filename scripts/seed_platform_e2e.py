@@ -1,7 +1,7 @@
 """Isolated platform-admin fixtures for the local/CI browser database."""
 import secrets
 
-from app.db import Membership, Session, Source, Tenant, User, now, uid
+from app.db import EmailOutbox, Membership, Session, Source, Tenant, User, WebhookFailure, now, uid
 from app.services.auth import hash_password, hash_token
 
 with Session.begin() as db:
@@ -17,3 +17,5 @@ with Session.begin() as db:
     db.add(Membership(user_id=member.id, tenant_id=tenant.id, role='owner'))
     db.add(Source(tenant_id=tenant.id, filename='private-document.pdf', kind='pdf', file_path='private-path',
                   status='failed', error='Private customer content must never appear in platform administration'))
+    db.add(EmailOutbox(recipient_hash='a' * 64, status='failed', expires_at=now()))
+    db.add(WebhookFailure(provider='ses', http_status=401))

@@ -89,7 +89,8 @@ def invite(body: InviteInput, principal: Principal = Depends(require_role('admin
         db.add(invitation)
         audit(db, principal.tenant.id, 'invitation.created', invitation.id,
               {'role': body.role}, principal.user.id)
-    email.sender.send(address, 'Workspace invitation', raw)
+        deliver = email.sender.stage(db, address, 'Workspace invitation', raw)
+    deliver()
     return {'id': invitation.id, 'email': address, 'role': invitation.role, 'expires_at': invitation.expires_at}
 
 

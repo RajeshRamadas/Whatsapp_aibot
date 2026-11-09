@@ -8,7 +8,19 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, StrictBool
 from sqlalchemy import case, func, literal, select, union_all
 
-from ..db import Conversation, InboundEvent, Session, Source, Tenant, UsageEvent, User, WebhookFailure, WidgetTurn, now
+from ..db import (
+    Conversation,
+    EmailOutbox,
+    InboundEvent,
+    Session,
+    Source,
+    Tenant,
+    UsageEvent,
+    User,
+    WebhookFailure,
+    WidgetTurn,
+    now,
+)
 from ..services.audit import audit
 from ..services.usage import month_start
 from .auth import _csrf, _session
@@ -49,8 +61,8 @@ class PlatformTenants(BaseModel):
 
 class FailedJob(BaseModel):
     id: str
-    tenant_id: str
-    kind: Literal['ingestion', 'whatsapp', 'widget']
+    tenant_id: str | None
+    kind: Literal['ingestion', 'whatsapp', 'widget', 'email']
     received_at: datetime
 
 
@@ -135,6 +147,8 @@ def failed_jobs(limit: int = Query(25, ge=1, le=100), offset: int = Query(0, ge=
         .where(InboundEvent.status == 'failed'),
         select(WidgetTurn.id, Conversation.tenant_id, literal('widget'), WidgetTurn.created_at)
         .join(Conversation, Conversation.id == WidgetTurn.conversation_id).where(WidgetTurn.state == 'failed'),
+        select(EmailOutbox.id, literal(None), literal('email'), EmailOutbox.created_at)
+        .where(EmailOutbox.status == 'failed'),
     ).subquery()
     with Session() as db:
         total = db.scalar(select(func.count()).select_from(failures))

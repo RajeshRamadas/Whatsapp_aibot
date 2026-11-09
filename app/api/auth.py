@@ -132,7 +132,8 @@ def signup(body: Signup):
         code = _issue_code(db, user, 'verify')
         record(db, 'signup_completed', key=f'{user.id}:signup_completed')
         view = _view(user)
-    email.sender.send(address, 'Verify your email', code)
+        deliver = email.sender.stage(db, address, 'Verify your email', code)
+    deliver()
     return view
 
 
@@ -210,8 +211,9 @@ def password_reset_request(body: ResetRequest, request: Request):
     with Session.begin() as db:
         user = db.scalar(select(User).where(User.email == address))
         code = _issue_code(db, user, 'reset') if user else None
-    if code:
-        email.sender.send(address, 'Reset your password', code)
+        deliver = email.sender.stage(db, address, 'Reset your password', code) if code else None
+    if deliver:
+        deliver()
     return {'status': 'accepted'}
 
 
