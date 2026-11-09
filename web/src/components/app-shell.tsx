@@ -5,12 +5,15 @@ import { createContext, useContext, useState } from 'react';
 import { api } from '@/lib/api';
 import { visiblePages, type Role } from '@/lib/navigation';
 import messages from '@/messages/en.json';
+import platformCopy from '@/messages/platform.en.json';
 
 export type Workspace = { id: string; name: string; role: Role };
 const WorkspaceContext = createContext<Workspace | null>(null);
 export const useWorkspace = () => useContext(WorkspaceContext);
 
-export function AppShell({ workspaces, active, children }: { workspaces: Workspace[]; active: Workspace; children: React.ReactNode }) {
+export function AppShell({ workspaces, active, children, platformAdmin = false }: {
+  workspaces: Workspace[]; active: Workspace; children: React.ReactNode; platformAdmin?: boolean;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const [selected, setSelected] = useState(active.id);
@@ -39,6 +42,7 @@ export function AppShell({ workspaces, active, children }: { workspaces: Workspa
         {pages.map(page => <Link key={page.key} href={page.path} aria-current={pathname === page.path ? 'page' : undefined}
           className="rounded-lg px-3 py-3 hover:bg-border aria-[current=page]:bg-border">{messages[page.key]}</Link>)}
       </nav>
+      {platformAdmin && <Link href="/platform" className="mt-4 block py-3 underline">{platformCopy.title}</Link>}
       <button type="button" className="mt-8 underline" onClick={logout}>{messages.logout}</button>
     </aside>
     <div className="min-w-0 pb-24 md:pb-0">
@@ -50,6 +54,7 @@ export function AppShell({ workspaces, active, children }: { workspaces: Workspa
         </select>
       </header>
       <WorkspaceContext.Provider value={active}>{children}</WorkspaceContext.Provider>
+      {platformAdmin && <Link href="/platform" className="block p-4 underline md:hidden">{platformCopy.title}</Link>}
     </div>
     <nav aria-label={messages.navigation} className="fixed inset-x-0 bottom-0 z-10 flex gap-1 overflow-x-auto border-t border-border bg-surface p-2 md:hidden">
       {pages.map(page => <Link key={page.key} href={page.path} aria-current={pathname === page.path ? 'page' : undefined}

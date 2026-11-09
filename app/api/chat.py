@@ -36,6 +36,8 @@ def public_chat(public_key: str, body: ChatInput, request: Request):
         t = db.scalar(select(Tenant).where(Tenant.public_key == public_key))
         if not t:
             raise HTTPException(404, 'Unknown chatbot')
+        if t.suspended:
+            raise HTTPException(403, 'Chatbot unavailable')
         origin = request.headers.get('origin')
         if origin and origin not in origins(t):
             raise HTTPException(403, 'Origin not allowed')

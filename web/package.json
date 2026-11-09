@@ -38,6 +38,7 @@
     "jsdom": "^26.0.0",
     "openapi-typescript": "^7.9.0",
     "@eslint/eslintrc": "^3.3.0",
-    "@playwright/test": "^1.56.0"
+    "@playwright/test": "^1.56.0",
+    "@axe-core/playwright": "^4.14.0"
   }
 }

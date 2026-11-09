@@ -577,6 +577,10 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 - **Steps:**
   1. Platform-admin-only routes and screens: tenants (plan, usage, cost, status), suspend and unsuspend, the dead-letter job list (INT-8), webhook failures.
 - **Done when:** access is limited to platform admins (tests), and suspension stops the bot and logins.
+- **Notes:** `/platform` and `/api/v1/platform/*` require a platform-admin session. Terminal ingestion,
+  WhatsApp and widget failures are read from durable records; HTTP webhook failures store metadata only.
+  Suspension preserves bot configuration and blocks workspace access, keys, public chat and queued replies.
+  Users with another active workspace can still log in there. No impersonation (ADM-2) is included.
 
 ### M8: Pilot launch (DESIGN §17 M8)
 
@@ -710,7 +714,7 @@ Tick each task in the PR that completes it.
 | M4 | T4.1 ☐ · T4.2 ☐ · T4.3 ☐ · T4.4 ☐ | |
 | M5 | T5.1 ☐ · T5.2 ☐ · T5.3 ☐ · T5.4 ☐ | |
 | M6 | T6.1 ☐ · T6.2 ☐ · T6.3 ☐ · T6.4 ☐ · T6.5 ☐ | |
-| M7 | T7.1 ☐ · T7.2 ☐ · T7.3 ☐ · T7.4 ☐ · T7.5 ☐ | |
+| M7 | T7.1 ☐ · T7.2 ☐ · T7.3 ☐ · T7.4 ☐ · T7.5 ☑ | |
 | M8 | T8.1 ☐ · T8.2 ☐ · T8.3 ☐ · T8.4 ☐ · T8.5 ☐ | |
 
 ## 7. Human decisions needed before certain tasks

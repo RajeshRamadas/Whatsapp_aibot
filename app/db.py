@@ -69,6 +69,7 @@ class Tenant(Base):
     whatsapp_opt_out_keywords: Mapped[list] = mapped_column(JSONB, default=list)
     default_language: Mapped[str] = mapped_column(String(16), default='en')
     bot_live: Mapped[bool] = mapped_column(Boolean, default=False)
+    suspended: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text('false'))
 
 
 class Source(Base):
@@ -440,6 +441,15 @@ class BillingEvent(Base):
     amount_paise: Mapped[int | None] = mapped_column(BigInteger)
     settled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class WebhookFailure(Base):
+    """Operational metadata only; never store request bodies or credentials here."""
+    __tablename__ = 'webhook_failures'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    provider: Mapped[str] = mapped_column(String(20))
+    http_status: Mapped[int] = mapped_column(Integer)
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
 
 
 class InvoiceSequence(Base):

@@ -64,7 +64,7 @@ def list_workspaces(user: User = Depends(_user)):
     with Session() as db:
         rows = db.execute(select(Tenant, Membership.role).join(
             Membership, Membership.tenant_id == Tenant.id).where(
-            Membership.user_id == user.id).order_by(Tenant.name)).all()
+            Membership.user_id == user.id, Tenant.suspended.is_(False)).order_by(Tenant.name)).all()
     return [{**tenant_view(tenant), 'role': role} for tenant, role in rows]
 
 

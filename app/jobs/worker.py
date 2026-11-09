@@ -125,14 +125,14 @@ def dispatch_agent_reply() -> bool:
         channel = whatsapp_channel(db, tenant_id)
         phone = channel.external_id if channel else tenant.whatsapp_phone_number_id
         recipient, content = conversation.external_user, message.content
-        eligible = (conversation.handoff and conversation.status == 'agent' and phone
+        eligible = (not tenant.suspended and conversation.handoff and conversation.status == 'agent' and phone
                     and conversation.last_inbound_at
                     and conversation.last_inbound_at > now() - timedelta(hours=24))
         template_payload = None
         if message.template_payload is not None:
             queued = message.template_payload
             template = template_for_send(db, channel.id, queued['template_id']) if channel else None
-            eligible = bool(conversation.channel == 'whatsapp' and conversation.handoff
+            eligible = bool(not tenant.suspended and conversation.channel == 'whatsapp' and conversation.handoff
                             and conversation.status == 'agent' and template and eligible_contact(db, conversation))
             if eligible:
                 try:
