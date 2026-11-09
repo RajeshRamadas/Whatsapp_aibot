@@ -97,6 +97,8 @@ def test_checkout_trial_and_plan_changes(client, fake, tenant):
     assert client.patch(change, headers=headers, json={'plan': 'growth'}).json()['plan'] == 'growth'
     assert client.patch(change, headers=headers, json=body).json()['plan'] == 'growth'
     assert fake.changes == [('plan_growth', True), ('plan_starter', False)]
+    milestones = client.get('/api/v1/analytics', headers=headers).json()['milestones']
+    assert milestones['upgrade_started'] == 2 and milestones['upgrade_completed'] == 2
     assert client.post(change + '/cancel', headers=headers).status_code == 200
     assert client.get('/api/v1/billing').status_code == 401
 

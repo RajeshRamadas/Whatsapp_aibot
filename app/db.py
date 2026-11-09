@@ -18,6 +18,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     create_engine,
+    event,
     text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
@@ -128,6 +129,7 @@ class Conversation(Base):
     external_user: Mapped[str | None] = mapped_column(String(64), nullable=True)
     # True while a human agent owns the conversation; the bot stays silent.
     handoff: Mapped[bool] = mapped_column(Boolean, default=False)
+    analytics_handoff: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text('false'))
     contact_id: Mapped[str | None] = mapped_column(ForeignKey('contacts.id', ondelete='SET NULL'), nullable=True)
     status: Mapped[str] = mapped_column(String(20), default='bot')
     assignee_user_id: Mapped[str | None] = mapped_column(ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
@@ -450,6 +452,40 @@ class WebhookFailure(Base):
     provider: Mapped[str] = mapped_column(String(20))
     http_status: Mapped[int] = mapped_column(Integer)
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
+
+
+class ProductEvent(Base):
+    """Allowlisted event names and opaque deduplication IDs; no arbitrary properties."""
+    __tablename__ = 'product_events'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    tenant_id: Mapped[str | None] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'))
+    name: Mapped[str] = mapped_column(String(64))
+    event_key: Mapped[str] = mapped_column(String(150), unique=True)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    __table_args__ = (Index('ix_product_events_tenant_time', 'tenant_id', 'occurred_at'),)
+
+
+class AnalyticsDaily(Base):
+    __tablename__ = 'analytics_daily'
+    tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'), primary_key=True)
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
+    channel: Mapped[str] = mapped_column(String(20), primary_key=True)
+    conversations: Mapped[int] = mapped_column(BigInteger)
+    messages: Mapped[int] = mapped_column(BigInteger)
+    bot_answered: Mapped[int] = mapped_column(BigInteger)
+    handed_off: Mapped[int] = mapped_column(BigInteger)
+    leads: Mapped[int] = mapped_column(BigInteger)
+    response_ms: Mapped[int] = mapped_column(BigInteger)
+    response_count: Mapped[int] = mapped_column(BigInteger)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+@event.listens_for(Session, 'before_flush')
+def remember_handoff(db, flush_context, instances):
+    for row in db.new.union(db.dirty):
+        if isinstance(row, Conversation) and row.status != 'closed' and (
+                row.handoff or row.status in ('waiting', 'agent')):
+            row.analytics_handoff = True
 
 
 class InvoiceSequence(Base):

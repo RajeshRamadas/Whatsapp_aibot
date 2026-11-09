@@ -60,6 +60,36 @@ Suspension and resumption are audited and preserve the previous bot configuratio
 Already running external calls cannot be cancelled; generated widget and WhatsApp bot replies are
 checked again before saving/sending. Webhook receipt continues, including billing events.
 
+## Analytics overview (T8.2)
+
+Open `/dashboard/analytics` to review conversations, messages, bot share, handoff rate,
+average first response and leads by day/channel. All workspace roles can read the report.
+`GET /api/v1/analytics` accepts inclusive `from_date` / `to_date` (1–90 days; defaults to
+the last 30 UTC days) and an optional `channel=web|whatsapp`. It uses the authenticated
+workspace; the response contains aggregate numbers and milestone counts only.
+
+Run `alembic upgrade head`, then backfill once with `python -m app.services.analytics`.
+The existing arq worker rebuilds reports daily at **01:10 UTC**, in one transaction.
+Re-running the job is safe; it revisits historical cohorts and removes stale rows after deletions.
+The report shows its refresh time; new activity appears after the next rebuild.
+
+- Conversations are grouped by their first persisted customer message's UTC date.
+- Bot share is the share with a delivered bot reply and no agent reply or handoff.
+  Handoff history survives handing a conversation back to the bot. The migration seeds
+  older history from the existing handoff/status fields and agent messages.
+- First response measures the first saved customer message to the first delivered bot/agent
+  reply. The average is weighted by replied conversations. Notes, queued and failed sends
+  are excluded; conversations awaiting replies show no response time. Existing persisted
+  timestamps may omit processing time before the customer message was first saved.
+- Messages and leads use their own stored UTC creation dates, independently of the cohort date.
+- Product events record sign-up attempts/completion, workspace creation, the four onboarding
+  steps, WhatsApp linking, first ready knowledge/test/customer conversation/lead, go-live and
+  upgrades. Names are allowlisted and first milestones are deduplicated transactionally.
+  Sign-up starts mean submitted requests and are anonymous global counts; sign-up completion
+  is attributed to the user's first workspace. Workspace milestones include all channels.
+  There are no arbitrary properties, message text, phone numbers, email addresses or credentials.
+  `campaign_sent` is reserved for T9.2; no campaign events are fabricated before that feature exists.
+
 ## Getting started
 
 1. Copy `.env.example` to `.env`. Set a long random `ADMIN_BOOTSTRAP_TOKEN` and the API key of at least one provider (see [AI providers](#ai-providers)).

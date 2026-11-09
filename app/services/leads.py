@@ -6,6 +6,7 @@ from sqlalchemy.dialects.postgresql import insert
 
 from ..db import Lead, Membership, Session, User
 from . import email
+from .analytics import record
 from .events import publish_sync
 
 log = logging.getLogger(__name__)
@@ -21,6 +22,8 @@ def save_lead(db, conversation, fields: dict) -> bool:
         ).with_for_update())
         if lead is not None:
             lead.fields = {**lead.fields, **fields}
+    if created is not None:
+        record(db, 'first_lead', conversation.tenant_id)
     return created is not None
 
 

@@ -3,6 +3,7 @@ from sqlalchemy import select
 
 from ..config import settings
 from ..db import Channel, Session, Tenant
+from .analytics import milestone
 from .crypto import decrypt
 
 
@@ -43,3 +44,5 @@ def sync_whatsapp(db, tenant: Tenant) -> None:
         channel = None
     if phone_id and channel is None:
         db.add(Channel(tenant_id=tenant.id, kind='whatsapp', external_id=phone_id))
+    if phone_id:
+        milestone(db, 'whatsapp_connected', tenant.id, 'whatsapp')

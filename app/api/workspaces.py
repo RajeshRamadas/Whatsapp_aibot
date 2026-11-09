@@ -6,11 +6,12 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 
-from ..db import Invitation, Membership, Session, Tenant, User, now, uid
+from ..db import Invitation, Membership, ProductEvent, Session, Tenant, User, now, uid
 from ..services import auth as security
 from ..services import email
+from ..services.analytics import record
 from ..services.audit import audit
 from .auth import _csrf, _session
 from .principal import Principal, require_role
@@ -56,6 +57,9 @@ def create_workspace(body: WorkspaceInput, user: User = Depends(_user)):
         db.add(tenant)
         db.flush()
         db.add(Membership(id=uid(), user_id=user.id, tenant_id=tenant.id, role='owner'))
+        record(db, 'workspace_created', tenant.id)
+        db.execute(update(ProductEvent).where(ProductEvent.event_key == f'{user.id}:signup_completed',
+                                              ProductEvent.tenant_id.is_(None)).values(tenant_id=tenant.id))
     return tenant_view(tenant)
 
 

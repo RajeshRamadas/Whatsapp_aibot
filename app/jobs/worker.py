@@ -9,6 +9,7 @@ from sqlalchemy import select, text, update
 from .. import ingest, whatsapp
 from ..config import settings
 from ..db import AuditLog, Conversation, InboundEvent, Message, Session, Source, Tenant, now
+from ..services.analytics import reconcile as reconcile_analytics_daily
 from ..services.billing import reconcile_settlements, reconcile_subscriptions
 from ..services.channels import whatsapp_channel
 from ..services.events import publish_sync
@@ -88,7 +89,8 @@ async def handle_message(ctx: dict, event_id: str) -> None:
             raise_after_commit = event.attempts < 5
             if not raise_after_commit:
                 conv = whatsapp.conversation_for(tenant_id, contact)
-                db.execute(text("UPDATE conversations SET handoff = true, status = 'waiting' WHERE id = :id"),
+                db.execute(text("UPDATE conversations SET handoff = true, analytics_handoff = true, "
+                                "status = 'waiting' WHERE id = :id"),
                            {'id': conv.id})
                 db.add(Message(conversation_id=conv.id, role='agent', kind='note', direction='outbound',
                                content='Internal note: automated WhatsApp reply failed; agent follow-up required.'))
@@ -202,11 +204,16 @@ async def reconcile_billing(ctx: dict) -> None:
     await asyncio.to_thread(reconcile_settlements)
 
 
+async def reconcile_analytics(ctx: dict) -> None:
+    await asyncio.to_thread(reconcile_analytics_daily)
+
+
 class WorkerSettings:
     cron_jobs = [cron(dispatch_agent_replies, second={0, 10, 20, 30, 40, 50}),
                  cron(notify_inbox, second={5, 15, 25, 35, 45, 55}),
                  cron(dispatch_widget_turn, second=set(range(0, 60, 2)), timeout=600),
                  cron(reconcile_usage, hour=1, minute=0, second=0, timeout=600),
+                 cron(reconcile_analytics, hour=1, minute=10, second=0, timeout=600),
                  cron(dispatch_usage_alerts, second=25),
                  cron(reconcile_billing, hour=2, minute=0, second=0, timeout=600)]
     functions = [sample_job, ingest_source, handle_message]

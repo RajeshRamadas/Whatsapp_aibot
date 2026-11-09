@@ -16,6 +16,7 @@ from .config import settings
 from .db import Chunk, Conversation, Message, QAPair, Session, Source, Tenant, now
 from .ingest import source_label
 from .rate_limits import RateLimiter
+from .services.analytics import record
 from .services.bot_policy import tenant_instructions
 from .services.events import publish_sync
 from .services.leads import notify_created, save_lead
@@ -204,6 +205,8 @@ def _answer(tenant, conversation_id, question, *, whatsapp):
 
 
 def save_exchange_rows(db, conversation, pairs, channel_message_id=None, sources=None, lead_fields=None):
+    if any(role == 'user' for role, _ in pairs):
+        record(db, 'first_customer_conversation', conversation.tenant_id)
     lead_created = False
     if lead_fields:
         lead_created = save_lead(db, conversation, lead_fields)
