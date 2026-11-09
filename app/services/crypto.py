@@ -4,6 +4,7 @@ Ciphertexts are authenticated against tenant ID and key version; neither a
 ciphertext nor an encrypted data key can be moved to another tenant.
 """
 import base64
+import json
 import os
 import struct
 
@@ -14,6 +15,21 @@ from ..config import settings
 from ..db import Session, TenantDataKey
 
 MAGIC = b'TSE1'
+
+
+def encrypt_system(purpose: str, resource_id: str, plaintext: bytes) -> bytes:
+    """Encrypt pre-workspace secrets, bound to purpose, row identity and master-key version."""
+    version, nonce = settings.master_key_version, os.urandom(12)
+    aad = json.dumps(['system', purpose, resource_id, version]).encode()
+    return b'SYS1' + struct.pack('>I', version) + nonce + AESGCM(_master(version)).encrypt(nonce, plaintext, aad)
+
+
+def decrypt_system(purpose: str, resource_id: str, ciphertext: bytes) -> bytes:
+    if not ciphertext or len(ciphertext) < 36 or not ciphertext.startswith(b'SYS1'):
+        raise ValueError('Invalid system secret format')
+    version = struct.unpack('>I', ciphertext[4:8])[0]
+    aad = json.dumps(['system', purpose, resource_id, version]).encode()
+    return AESGCM(_master(version)).decrypt(ciphertext[8:20], ciphertext[20:], aad)
 
 
 def _master(version: int) -> bytes:

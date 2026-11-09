@@ -90,11 +90,11 @@ export function PlatformConsole() {
     </>} />
     <Records title={copy.jobs} help={copy.jobHelp} load={platform.failedJobs} render={job => <>
       <h3 className="font-semibold">{copy[job.kind]}</h3>
-      <p>{copy.workspaceId}: {job.tenant_id}</p><p>{copy.recordId}: {job.id}</p>
+      <p>{job.tenant_id ? `${copy.workspaceId}: ${job.tenant_id}` : copy.accountEmail}</p><p>{copy.recordId}: {job.id}</p>
       <p>{copy.time}: {date.format(new Date(job.received_at))}</p>
     </>} />
     <Records title={copy.webhooks} help={copy.webhookHelp} load={platform.webhookFailures} render={failure => <>
-      <h3 className="font-semibold">{failure.provider === 'whatsapp' ? copy.whatsapp : copy.razorpay}</h3>
+      <h3 className="font-semibold">{failure.provider === 'whatsapp' ? copy.whatsapp : failure.provider === 'ses' ? copy.email : copy.razorpay}</h3>
       <p>{copy.httpStatus}: {failure.http_status}</p><p>{copy.time}: {date.format(new Date(failure.received_at))}</p>
     </>} />
   </div>;

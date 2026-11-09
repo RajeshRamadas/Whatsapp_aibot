@@ -454,6 +454,33 @@ class WebhookFailure(Base):
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
 
 
+class EmailOutbox(Base):
+    __tablename__ = 'email_outbox'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    recipient_hash: Mapped[str] = mapped_column(String(64))
+    payload_enc: Mapped[bytes | None] = mapped_column(LargeBinary)
+    status: Mapped[str] = mapped_column(String(16), default='queued')
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    next_attempt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    provider_id: Mapped[str | None] = mapped_column(String(128))
+
+
+class EmailSuppression(Base):
+    __tablename__ = 'email_suppressions'
+    recipient_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    reason: Mapped[str] = mapped_column(String(16))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class EmailFeedbackEvent(Base):
+    __tablename__ = 'email_feedback_events'
+    id: Mapped[str] = mapped_column(String(150), primary_key=True)
+    kind: Mapped[str] = mapped_column(String(32))
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
 class ProductEvent(Base):
     """Allowlisted event names and opaque deduplication IDs; no arbitrary properties."""
     __tablename__ = 'product_events'

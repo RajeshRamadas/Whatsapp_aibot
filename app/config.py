@@ -1,5 +1,6 @@
 import re
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -29,6 +30,13 @@ class Settings(BaseSettings):
     environment: str = 'development'
     metrics_token: str | None = None
     sentry_dsn: str | None = None
+    email_backend: Literal['console', 'ses'] = 'console'
+    email_from: str | None = None
+    email_region: str = 'ap-south-1'
+    email_sns_topic_arn: str | None = None
+    email_configuration_set: str | None = None
+    email_sends_per_second: int = Field(1, ge=1, le=1000)
+    public_app_url: str = 'http://localhost:3000'
     master_key: str | None = None
     master_key_version: int = 1
     master_key_previous: dict[str, str] = {}

@@ -90,6 +90,17 @@ The report shows its refresh time; new activity appears after the next rebuild.
   There are no arbitrary properties, message text, phone numbers, email addresses or credentials.
   `campaign_sent` is reserved for T9.2; no campaign events are fabricated before that feature exists.
 
+## Transactional email (T8.4)
+
+`EMAIL_BACKEND=ses` queues encrypted transactional emails for the existing arq worker,
+using Amazon SES in Mumbai and `notifications@marketingadda.com` as the launch sender.
+The default `console` backend only logs a delivery request. Both API and worker need
+the email settings and the same `MASTER_KEY`; run migration `0026_email_delivery` first.
+Emails include English HTML and plain text. Signed SNS bounce/complaint feedback at
+`POST /webhooks/email` suppresses future deliveries. Failed emails appear in the private
+platform console and metrics. See [email setup and staging verification](docs/EMAIL_DELIVERY.md)
+for SES, sender DNS, permissions, retries and the outstanding live-delivery check.
+
 ## Observability (T8.3)
 
 API and worker logs are JSON with request, tenant, conversation and job IDs. Requests return

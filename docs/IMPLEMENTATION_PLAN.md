@@ -632,6 +632,11 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
   3. HTML and plain-text templates.
   4. Document SPF, DKIM and DMARC setup.
 - **Done when:** sending is tested against a fake and verified manually in staging.
+- **Notes:** SES Mumbai implementation and fake-provider tests are ready; launch sender is
+  `notifications@marketingadda.com`. Encrypted outbox, signed SNS feedback, suppression,
+  dual-format templates and DNS/runbook instructions are included. Live staging delivery
+  and DNS verification remain pending; leave this task unchecked until recorded in
+  [EMAIL_DELIVERY.md](EMAIL_DELIVERY.md).
 
 #### T8.5 Production deployment
 - **Delivers:** DESIGN §14, NFR-2, NFR-7
@@ -721,7 +726,7 @@ Tick each task in the PR that completes it.
 | M5 | T5.1 ☐ · T5.2 ☐ · T5.3 ☐ · T5.4 ☐ | |
 | M6 | T6.1 ☐ · T6.2 ☐ · T6.3 ☐ · T6.4 ☐ · T6.5 ☐ | |
 | M7 | T7.1 ☐ · T7.2 ☐ · T7.3 ☐ · T7.4 ☐ · T7.5 ☑ | |
-| M8 | T8.1 ☐ · T8.2 ☑ · T8.3 ☑ · T8.4 ☐ · T8.5 ☐ | |
+| M8 | T8.1 ☐ · T8.2 ☑ · T8.3 ☑ · T8.4 ☐ · T8.5 ☐ | T8.4 code ready; live SES/DNS staging check pending. |
 
 ## 7. Human decisions needed before certain tasks
 
@@ -731,6 +736,6 @@ Tick each task in the PR that completes it.
 | T6.2 | Meta Tech Provider application or BSP partner; Meta app with Embedded Signup | REQUIREMENTS §10.3, DESIGN D11 |
 | T7.2 | Razorpay account; validated prices | REQUIREMENTS §7, §10.2 |
 | T7.3 | Accountant review of the invoice format and SAC code | DESIGN §9 |
-| T8.4 | Email provider and sending domain | INTEGRATIONS EM-1 |
+| T8.4 | SES Mumbai; notifications@marketingadda.com. Staging/DNS verification pending. | INTEGRATIONS EM-1 |
 | T8.5 | Hosting provider and region | REQUIREMENTS §10.6 |
 | T9.4 | Transcription provider (after measuring on real voice notes) | INTEGRATIONS STT-1 |

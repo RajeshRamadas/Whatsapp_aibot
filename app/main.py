@@ -16,6 +16,7 @@ from .jobs.queue import close_pool
 from .observability import configure, correlation, identifier
 from .services.analytics import signup_started
 from .services.crypto import validate_configuration
+from .services.email import validate_configuration as validate_email
 from .telemetry import record as telemetry_record
 
 configure()
@@ -25,6 +26,7 @@ configure()
 async def lifespan(app):
     UPLOADS.mkdir(exist_ok=True)
     validate_configuration()
+    validate_email()
     init_db()
     yield
     await close_pool()
@@ -80,7 +82,8 @@ async def request_observability(request: Request, call_next):
             method = (request.method if request.method in ('GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS')
                       else 'OTHER')
             await run_in_threadpool(telemetry_record, 'http', method + ' ' + route, str(status), elapsed)
-            provider = {'/webhooks/whatsapp': 'whatsapp', '/webhooks/razorpay': 'razorpay'}.get(route)
+            provider = {'/webhooks/whatsapp': 'whatsapp', '/webhooks/razorpay': 'razorpay',
+                        '/webhooks/email': 'ses'}.get(route)
             if provider:
                 await run_in_threadpool(telemetry_record, 'webhook', provider,
                                         'error' if status >= 400 else 'success', elapsed)
@@ -107,7 +110,7 @@ def record_webhook_failure(provider, status):
 
 @app.middleware('http')
 async def webhook_failure_history(request: Request, call_next):
-    providers = {'/webhooks/whatsapp': 'whatsapp', '/webhooks/razorpay': 'razorpay'}
+    providers = {'/webhooks/whatsapp': 'whatsapp', '/webhooks/razorpay': 'razorpay', '/webhooks/email': 'ses'}
     provider = providers.get(request.url.path)
     if provider is None or request.method != 'POST':
         return await call_next(request)

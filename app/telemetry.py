@@ -10,7 +10,7 @@ from redis.exceptions import RedisError
 from sqlalchemy import func, select
 
 from .config import settings
-from .db import Conversation, InboundEvent, Message, Session, Source, Tenant, UsageEvent, WidgetTurn, now
+from .db import Conversation, EmailOutbox, InboundEvent, Message, Session, Source, Tenant, UsageEvent, WidgetTurn, now
 from .services.bot_policy import within_hours
 
 KEY = 'chatbot:telemetry:v1'
@@ -91,10 +91,15 @@ class Collector:
                                         .where(WidgetTurn.state == 'queued')).one()
             depth.add_metric(['widget'], queued)
             age.add_metric(['widget'], max(0, (stamp - oldest).total_seconds()) if oldest else 0)
+            queued, oldest = db.execute(select(func.count(), func.min(EmailOutbox.created_at)).where(
+                EmailOutbox.status.in_(('queued', 'sending')), EmailOutbox.next_attempt_at <= stamp)).one()
+            depth.add_metric(['email'], queued)
+            age.add_metric(['email'], max(0, (stamp - oldest).total_seconds()) if oldest else 0)
             failed = GaugeMetricFamily('chatbot_failed_jobs', 'Durable terminal failures', labels=['kind'])
             for model, field, kind in ((Source, Source.status, 'ingestion'),
                                        (InboundEvent, InboundEvent.status, 'whatsapp'),
-                                       (WidgetTurn, WidgetTurn.state, 'widget')):
+                                       (WidgetTurn, WidgetTurn.state, 'widget'),
+                                       (EmailOutbox, EmailOutbox.status, 'email')):
                 failed.add_metric([kind], db.scalar(select(func.count()).select_from(model).where(field == 'failed')))
             active = any(within_hours(tenant, stamp) for tenant in db.scalars(select(Tenant).where(
                 Tenant.bot_live.is_(True), Tenant.suspended.is_(False), Tenant.whatsapp_phone_number_id.is_not(None))))

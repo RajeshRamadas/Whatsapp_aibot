@@ -9,6 +9,7 @@ from app.config import settings
 from app.db import (
     AuditLog,
     Conversation,
+    EmailOutbox,
     InboundEvent,
     Membership,
     Session,
@@ -84,12 +85,14 @@ def test_failure_lists_omit_customer_data_and_record_webhook_rejections(client, 
             InboundEvent(tenant_id=tenant['tenant_id'], channel_message_id='secret-provider-id', status='failed',
                          payload={'text': 'private text', 'from': '15551234567'}, last_error='secret'),
             WidgetTurn(id=uid(), conversation_id=conversation.id, message='private text', state='failed'),
+            EmailOutbox(recipient_hash='a' * 64, status='failed', expires_at=now()),
             InboundEvent(tenant_id=tenant['tenant_id'], channel_message_id='queued', status='queued'),
         ])
     response = client.get(BASE + '/failed-jobs')
     assert response.status_code == 200
-    assert {row['kind'] for row in response.json()['items']} == {'ingestion', 'whatsapp', 'widget'}
-    assert response.json()['total'] == 3
+    assert {row['kind'] for row in response.json()['items']} == {'ingestion', 'whatsapp', 'widget', 'email'}
+    assert response.json()['total'] == 4
+    assert next(row for row in response.json()['items'] if row['kind'] == 'email')['tenant_id'] is None
     assert client.get(BASE + '/failed-jobs?limit=2&offset=2').json()['items'] == response.json()['items'][2:]
     for private in ('private', 'secret', '15551234567', 'payload', 'last_error'):
         assert private not in response.text

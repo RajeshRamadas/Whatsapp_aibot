@@ -10,6 +10,9 @@ test('platform administrator reviews failures and suspends and resumes a workspa
   const tenant = page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'Platform Suspension Fixture' }) });
   await expect(tenant.getByText('Active', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Document ingestion', exact: true })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Dead-letter jobs', exact: true })
+    .getByRole('heading', { name: 'Email delivery', exact: true })).toBeVisible();
+  await expect(page.getByText('Account or notification email', { exact: true })).toBeVisible();
   await expect(page.getByText('private-document.pdf')).toHaveCount(0);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 
@@ -32,7 +35,7 @@ test('platform administrator reviews failures and suspends and resumes a workspa
   await page.setViewportSize({ width: 320, height: 900 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
   await page.setViewportSize({ width: 1280, height: 1000 });
-  await page.screenshot({ path: '../docs/screenshots/t7-5-platform-admin.png', fullPage: true });
+  await page.screenshot({ path: '../docs/screenshots/t8-4-email-operations.png', fullPage: true });
   const allowed = await page.request.post('/api/backend/auth/login', {
     data: { email: 'platform-member@example.com', password: 'platform-member-passphrase' },
   });
