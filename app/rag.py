@@ -15,6 +15,7 @@ from . import llm
 from .config import settings
 from .db import Chunk, Conversation, Message, QAPair, Session, Source, Tenant, now
 from .ingest import source_label
+from .observability import bind
 from .rate_limits import RateLimiter
 from .services.analytics import record
 from .services.bot_policy import tenant_instructions
@@ -125,6 +126,7 @@ def standalone_query(chat, model: str, turns: list[dict], question: str) -> str:
 
 def answer(tenant: Tenant, conversation_id: str | None, question: str, *, whatsapp: bool = False) -> Answer:
     """Generate a reply. Persisting it is up to the caller (see save_exchange)."""
+    bind(tenant_id=tenant.id, conversation_id=conversation_id)
     with meter(tenant.id):
         return _answer(tenant, conversation_id, question, whatsapp=whatsapp)
 

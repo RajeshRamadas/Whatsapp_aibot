@@ -1,0 +1,43 @@
+groups:
+  - name: chatbot
+    rules:
+      - alert: ChatbotUnavailable
+        expr: up{job="chatbot"} == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations: {summary: 'Chatbot scrape or API unavailable'}
+      - alert: TelemetryRedisUnavailable
+        expr: chatbot_redis_up == 0
+        for: 1m
+        labels: {severity: critical}
+        annotations: {summary: 'Queue and shared telemetry Redis unavailable'}
+      - alert: ChatbotQueueStuck
+        expr: chatbot_queue_oldest_seconds > 60
+        for: 1m
+        labels: {severity: warning}
+        annotations: {summary: 'Ready work has waited more than 60 seconds'}
+      - alert: WhatsAppWebhookSilent
+        expr: (time() - chatbot_webhook_last_success_timestamp_seconds{name="whatsapp"} > 900) and on() (chatbot_whatsapp_business_hours_active == 1)
+        for: 1m
+        labels: {severity: warning}
+        annotations: {summary: 'No successful WhatsApp webhook during business hours'}
+      - alert: WhatsAppApiErrors
+        expr: sum(rate(chatbot_integration_calls_total{name="whatsapp",outcome="error"}[5m])) / clamp_min(sum(rate(chatbot_integration_calls_total{name="whatsapp"}[5m])), 0.001) > 0.02
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: 'WhatsApp API failure rate is above 2 percent'}
+      - alert: WebhookErrors
+        expr: sum by (name) (rate(chatbot_webhook_calls_total{outcome="error"}[5m])) > 0
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: 'Inbound webhook requests are failing'}
+      - alert: AiProviderErrors
+        expr: sum by (name) (rate(chatbot_integration_calls_total{name=~"openai|anthropic|gemini",outcome="error"}[5m])) / clamp_min(sum by (name) (rate(chatbot_integration_calls_total{name=~"openai|anthropic|gemini"}[5m])), 0.001) > 0.1
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: 'AI provider error rate is above 10 percent'}
+      - alert: WebhookLatencyHigh
+        expr: histogram_quantile(0.95, sum by (le, name) (rate(chatbot_webhook_duration_seconds_bucket[5m]))) > 1
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: 'Webhook p95 handling latency exceeds one second'}

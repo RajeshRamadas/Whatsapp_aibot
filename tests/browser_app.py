@@ -1,6 +1,8 @@
 """ASGI app for browser CI with an isolated Razorpay fake."""
 from datetime import timedelta
 
+from fastapi.responses import JSONResponse
+
 from app.api import auth, billing
 from app.config import settings
 from app.db import now
@@ -31,3 +33,10 @@ settings.gst_invoice_issuer = InvoiceIssuer(
     gstin='27ABCDE1234F1Z5', sac='998314', tax_rate=18,
 )
 billing.provider = lambda: graph
+
+
+@app.middleware('http')
+async def error_boundary_fixture(request, call_next):
+    if request.url.path == '/api/v1/workspaces' and request.cookies.get('error_boundary_fixture'):
+        return JSONResponse(None)  # Exercise a real Next.js server-render failure without production test routes.
+    return await call_next(request)

@@ -3,6 +3,7 @@ from arq import create_pool
 from arq.connections import RedisSettings
 
 from ..config import settings
+from ..observability import bind
 
 _pool = None
 
@@ -17,6 +18,7 @@ async def enqueue(name: str, **kwargs) -> str:
     job = await _pool.enqueue_job(name, **kwargs)
     if job is None:
         raise RuntimeError('Job was not accepted by Redis')
+    bind(job_id=job.job_id)
     return job.job_id
 
 

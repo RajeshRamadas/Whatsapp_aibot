@@ -5,6 +5,7 @@ from urllib.parse import urlencode
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from ..config import settings
+from ..observability import integration
 
 
 class MetaSignupError(RuntimeError):
@@ -19,6 +20,7 @@ class NoRedirects(HTTPRedirectHandler):
 class MetaSignup:
     opener = build_opener(NoRedirects())
 
+    @integration('meta_signup')
     def request(self, path, *, params=None, token=None, payload=None):
         url = f'https://graph.facebook.com/{settings.whatsapp_graph_version}/{path}'
         if params:

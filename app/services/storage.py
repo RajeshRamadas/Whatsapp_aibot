@@ -4,6 +4,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from ..config import settings
+from ..observability import integration
 
 
 class Storage(ABC):
@@ -61,12 +62,15 @@ class S3Storage(Storage):
         self.client = boto3.client('s3', endpoint_url=settings.storage_endpoint_url,
                                    region_name=settings.storage_region)
 
+    @integration('storage')
     def put(self, key: str, data: bytes) -> None:
         self.client.put_object(Bucket=self.bucket, Key=key, Body=data)
 
+    @integration('storage')
     def get(self, key: str) -> bytes:
         return self.client.get_object(Bucket=self.bucket, Key=key)['Body'].read()
 
+    @integration('storage')
     def delete(self, key: str) -> None:
         self.client.delete_object(Bucket=self.bucket, Key=key)
 

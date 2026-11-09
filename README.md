@@ -90,6 +90,36 @@ The report shows its refresh time; new activity appears after the next rebuild.
   There are no arbitrary properties, message text, phone numbers, email addresses or credentials.
   `campaign_sent` is reserved for T9.2; no campaign events are fabricated before that feature exists.
 
+## Observability (T8.3)
+
+API and worker logs are JSON with request, tenant, conversation and job IDs. Requests return
+`X-Request-Id`; only UUID-shaped incoming IDs are accepted. Logs retain event codes and source
+locations, excluding formatted messages, exception values, URLs, request bodies and trace locals.
+Opaque job IDs correlate API enqueue logs with worker attempts; cron IDs are converted to UUIDs.
+
+Set `SENTRY_DSN` for API, workers and the Next.js server, and `NEXT_PUBLIC_SENTRY_DSN` at web
+build time for browser errors. Empty DSNs disable reporting. Error reports retain code locations
+and correlation IDs where available, while removing user data, bodies, headers, cookies, query
+strings, breadcrumbs, arbitrary extras and attachments. Tracing, SDK logs and SDK metrics are disabled.
+The browser DSN is a public routing key; never put a private Sentry auth token in a public variable.
+
+Set a long random `METRICS_TOKEN` to enable `GET /metrics`. Scrapes use
+`Authorization: Bearer <METRICS_TOKEN>`; workspace sessions and API keys cannot authorize them.
+The private endpoint exposes global operational data, including opaque tenant IDs for daily costs
+and message counts. Keep the token with the monitoring operator and restrict network access.
+
+`deploy/prometheus.yml` reads its token from `/run/secrets/metrics_token` and loads
+`deploy/alerts.yml`; mount these files into your Prometheus deployment and configure Alertmanager
+delivery there. The rules cover scrape/Redis outages, queue age, missing WhatsApp webhooks during
+business hours, WhatsApp/API-provider error rates, webhook errors and webhook p95 latency.
+No monitoring service or alert destination is deployed automatically by this change.
+
+HTTP, integration and job attempt counters/histograms are shared through Redis across API and
+worker processes; last-success times are included. Ready arq/widget queue depth and age, terminal
+failures, current UTC daily messages and known AI costs come from Redis/PostgreSQL. Unpriced AI
+calls are reported separately. Redis failures preserve request/job outcomes and set the scrape's
+`chatbot_redis_up` gauge to zero; process-local counters do not hide worker activity.
+
 ## Getting started
 
 1. Copy `.env.example` to `.env`. Set a long random `ADMIN_BOOTSTRAP_TOKEN` and the API key of at least one provider (see [AI providers](#ai-providers)).

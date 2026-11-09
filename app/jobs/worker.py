@@ -9,6 +9,7 @@ from sqlalchemy import select, text, update
 from .. import ingest, whatsapp
 from ..config import settings
 from ..db import AuditLog, Conversation, InboundEvent, Message, Session, Source, Tenant, now
+from ..observability import bind, configure, observed_job
 from ..services.analytics import reconcile as reconcile_analytics_daily
 from ..services.billing import reconcile_settlements, reconcile_subscriptions
 from ..services.channels import whatsapp_channel
@@ -20,6 +21,7 @@ from ..services.whatsapp_copy import copy_for
 from ..services.widget_turns import process_turn
 
 
+@observed_job
 async def sample_job(ctx: dict, tenant_id: str, job_id: str) -> str:
     """Persist a tenant-scoped audit event to prove a queued job actually ran."""
     with Session.begin() as db:
@@ -30,6 +32,7 @@ async def sample_job(ctx: dict, tenant_id: str, job_id: str) -> str:
     return job_id
 
 
+@observed_job
 async def ingest_source(ctx: dict, source_id: str, tenant_id: str) -> None:
     """Process an uploaded source; retry transient failures, fail on final attempt."""
     with Session() as db:
@@ -54,6 +57,7 @@ async def ingest_source(ctx: dict, source_id: str, tenant_id: str) -> None:
             raise
 
 
+@observed_job
 async def handle_message(ctx: dict, event_id: str) -> None:
     """Debounce one contact and serialize its turn with a PostgreSQL advisory lock."""
     await asyncio.sleep(2)
@@ -64,6 +68,7 @@ async def handle_message(ctx: dict, event_id: str) -> None:
         payload = event.payload
         contact = payload['from']
         tenant_id = event.tenant_id
+        bind(tenant_id=tenant_id)
         db.execute(text('SELECT pg_advisory_xact_lock(hashtext(:key))'),
                    {'key': f'{tenant_id}:whatsapp:{contact}'})
         db.refresh(event)
@@ -124,6 +129,7 @@ def dispatch_agent_reply() -> bool:
             return False
         message, conversation, tenant = row
         message_id, conversation_id, tenant_id = message.id, conversation.id, tenant.id
+        bind(tenant_id=tenant_id, conversation_id=conversation_id)
         channel = whatsapp_channel(db, tenant_id)
         phone = channel.external_id if channel else tenant.whatsapp_phone_number_id
         recipient, content = conversation.external_user, message.content
@@ -172,6 +178,7 @@ def dispatch_agent_reply() -> bool:
     return True
 
 
+@observed_job
 async def dispatch_agent_replies(ctx: dict) -> None:
     with Session.begin() as db:
         db.execute(update(Message).where(
@@ -183,32 +190,43 @@ async def dispatch_agent_replies(ctx: dict) -> None:
             break
 
 
+@observed_job
 async def notify_inbox(ctx: dict) -> None:
     await asyncio.to_thread(deliver_waiting)
 
 
+@observed_job
 async def dispatch_widget_turn(ctx: dict) -> None:
     await asyncio.to_thread(process_turn)
 
 
+@observed_job
 async def reconcile_usage(ctx: dict) -> None:
     await asyncio.to_thread(reconcile)
 
 
+@observed_job
 async def dispatch_usage_alerts(ctx: dict) -> None:
     await asyncio.to_thread(send_alerts)
 
 
+@observed_job
 async def reconcile_billing(ctx: dict) -> None:
     await asyncio.to_thread(reconcile_subscriptions)
     await asyncio.to_thread(reconcile_settlements)
 
 
+@observed_job
 async def reconcile_analytics(ctx: dict) -> None:
     await asyncio.to_thread(reconcile_analytics_daily)
 
 
+async def startup(ctx):
+    configure()
+
+
 class WorkerSettings:
+    on_startup = startup
     cron_jobs = [cron(dispatch_agent_replies, second={0, 10, 20, 30, 40, 50}),
                  cron(notify_inbox, second={5, 15, 25, 35, 45, 55}),
                  cron(dispatch_widget_turn, second=set(range(0, 60, 2)), timeout=600),

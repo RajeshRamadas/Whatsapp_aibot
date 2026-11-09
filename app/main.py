@@ -1,6 +1,8 @@
 import logging
 from contextlib import asynccontextmanager
+from time import perf_counter
 
+import sentry_sdk
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.exceptions import RequestValidationError
@@ -9,12 +11,14 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
 from .api.routes import UPLOADS, origins, router
-from .db import Session, Tenant, WebhookFailure, init_db
+from .db import Session, Tenant, WebhookFailure, init_db, uid
 from .jobs.queue import close_pool
+from .observability import configure, correlation, identifier
 from .services.analytics import signup_started
 from .services.crypto import validate_configuration
+from .telemetry import record as telemetry_record
 
-logging.basicConfig(level=logging.INFO)
+configure()
 
 
 @asynccontextmanager
@@ -60,6 +64,30 @@ app.include_router(router)
 
 
 @app.middleware('http')
+async def request_observability(request: Request, call_next):
+    request_id = identifier(request.headers.get('X-Request-Id')) or uid()
+    request.state.request_id = request_id
+    with correlation(request_id=request_id):
+        start, status = perf_counter(), 500
+        try:
+            response = await call_next(request)
+            response.headers['X-Request-Id'] = request_id
+            status = response.status_code
+            return response
+        finally:
+            route = getattr(request.scope.get('route'), 'path', 'unmatched')
+            elapsed = perf_counter() - start
+            method = (request.method if request.method in ('GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS')
+                      else 'OTHER')
+            await run_in_threadpool(telemetry_record, 'http', method + ' ' + route, str(status), elapsed)
+            provider = {'/webhooks/whatsapp': 'whatsapp', '/webhooks/razorpay': 'razorpay'}.get(route)
+            if provider:
+                await run_in_threadpool(telemetry_record, 'webhook', provider,
+                                        'error' if status >= 400 else 'success', elapsed)
+            logging.getLogger(__name__).info('http.request')
+
+
+@app.middleware('http')
 async def signup_attempt(request: Request, call_next):
     if request.method == 'POST' and request.url.path == '/api/v1/auth/signup':
         try:
@@ -91,6 +119,16 @@ async def webhook_failure_history(request: Request, call_next):
     finally:
         if status >= 400:
             await run_in_threadpool(record_webhook_failure, provider, status)
+
+
+@app.exception_handler(Exception)
+async def unexpected_error(request: Request, exc: Exception):
+    request_id = getattr(request.state, 'request_id', uid())
+    with correlation(request_id=request_id):
+        sentry_sdk.capture_exception(exc)
+    return JSONResponse(status_code=500, headers={'X-Request-Id': request_id},
+                        content={'error': {'code': 'internal_error', 'message': 'Something went wrong. Try again.',
+                                           'details': None}})
 
 
 @app.exception_handler(HTTPException)

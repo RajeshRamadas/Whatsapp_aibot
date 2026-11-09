@@ -6,6 +6,7 @@ from urllib.parse import urlencode
 import httpx
 
 from ..config import settings
+from ..observability import integration
 
 
 class BillingError(RuntimeError):
@@ -24,6 +25,7 @@ class BillingProvider(Protocol):
 
 
 class Razorpay:
+    @integration('razorpay')
     def request(self, method, path, payload=None):
         try:
             response = httpx.request(method, 'https://api.razorpay.com/v1/' + path, json=payload,
