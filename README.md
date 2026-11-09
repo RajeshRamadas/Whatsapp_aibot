@@ -28,6 +28,38 @@ alembic check
 
 For Docker Compose, migrations run automatically before Uvicorn. **Existing databases created before Alembic** already have tables: back up the database, verify its schema matches the baseline, and run `alembic stamp 0001_baseline` once instead of replaying the initial migration. Never stamp an unknown schema without checking it first. To generate later migrations use `alembic revision --autogenerate -m "description"` and review the generated operations before applying.
 
+## Platform administration (T7.5)
+
+After `alembic upgrade head`, sign in with a platform-admin user and open `/platform`.
+The console lists workspaces, their plans, current-month AI messages, tokens and known costs in USD.
+Unpriced calls are shown separately so incomplete cost totals are visible. Each list is paginated.
+It also shows terminal ingestion, WhatsApp and widget jobs, and HTTP webhook failures.
+Failure history excludes message bodies, phone numbers, filenames, credentials and raw exception text.
+
+Provision the first administrator through a trusted database operator after creating a normal user:
+
+```sql
+UPDATE users SET is_platform_admin = true WHERE email = 'admin@your-domain.example';
+```
+
+Signup, the bootstrap token and workspace API keys cannot grant platform access. Admin API routes:
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/v1/platform/me` | Check platform-admin session access |
+| `GET /api/v1/platform/tenants` | Workspace plans, status and current-month usage/cost |
+| `PUT /api/v1/platform/tenants/{id}/suspension` | Set `{"suspended": true}` or `false`; session CSRF required |
+| `GET /api/v1/platform/failed-jobs` | Durable terminal failures from the three message/ingestion pipelines |
+| `GET /api/v1/platform/webhook-failures` | Provider, HTTP status and time for failed webhook requests |
+
+Lists accept `limit` (1–100) and `offset`; the tenant list also accepts a literal `search` string.
+Suspension blocks existing workspace sessions, API keys, public chats and queued bot/agent replies.
+It blocks login when all of the user's workspaces are suspended; users with another active workspace
+retain access there. Platform administrators can still sign in to resume a workspace.
+Suspension and resumption are audited and preserve the previous bot configuration.
+Already running external calls cannot be cancelled; generated widget and WhatsApp bot replies are
+checked again before saving/sending. Webhook receipt continues, including billing events.
+
 ## Getting started
 
 1. Copy `.env.example` to `.env`. Set a long random `ADMIN_BOOTSTRAP_TOKEN` and the API key of at least one provider (see [AI providers](#ai-providers)).

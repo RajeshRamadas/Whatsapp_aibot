@@ -6,7 +6,7 @@ from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import delete, select
 
 from ..config import settings
-from ..db import AuthCode, Membership, Session, User, UserSession, now, uid
+from ..db import AuthCode, Membership, Session, Tenant, User, UserSession, now, uid
 from ..rate_limits import RateLimiter
 from ..services import auth as security
 from ..services import email
@@ -48,7 +48,16 @@ def _email(value: str) -> str:
 
 def _view(user: User) -> dict:
     return {'id': user.id, 'email': user.email, 'name': user.name,
-            'email_verified': user.email_verified_at is not None}
+            'email_verified': user.email_verified_at is not None, 'is_platform_admin': user.is_platform_admin}
+
+
+def _active_account(db, user):
+    if user.is_platform_admin:
+        return
+    states = db.scalars(select(Tenant.suspended).join(Membership, Membership.tenant_id == Tenant.id)
+                        .where(Membership.user_id == user.id)).all()
+    if states and all(states):
+        raise HTTPException(403, 'Your workspaces are suspended. Contact support.')
 
 
 def _issue_code(db, user: User, purpose: str):
@@ -59,7 +68,7 @@ def _issue_code(db, user: User, purpose: str):
     return code
 
 
-def _session(request: Request) -> tuple[UserSession, User]:
+def _session(request: Request, *, allow_suspended=False) -> tuple[UserSession, User]:
     raw = request.cookies.get(COOKIE)
     if not raw:
         raise HTTPException(401, 'Authentication required')
@@ -70,6 +79,8 @@ def _session(request: Request) -> tuple[UserSession, User]:
         user = db.get(User, row.user_id)
         if not user:
             raise HTTPException(401, 'Authentication required')
+        if not allow_suspended:
+            _active_account(db, user)
         row.expires_at = security.session_expiry()
         db.flush()
         db.expunge(row)
@@ -136,6 +147,7 @@ def login(body: Credentials, request: Request, response: Response):
                     audit(db, tenant_id, 'auth.login_failed', actor_user_id=user.id)
                 db.commit()
             raise HTTPException(401, 'Invalid credentials')
+        _active_account(db, user)
         raw, csrf = security.new_token(), security.new_token()
         db.add(UserSession(id_hash=security.hash_token(raw), user_id=user.id,
                            csrf_hash=security.hash_token(csrf), expires_at=security.session_expiry(),
@@ -161,7 +173,7 @@ def me(request: Request, response: Response):
 
 @router.post('/logout', status_code=204)
 def logout(request: Request, response: Response):
-    row, _ = _session(request)
+    row, _ = _session(request, allow_suspended=True)
     _csrf(request, row)
     with Session.begin() as db:
         db.execute(delete(UserSession).where(UserSession.id_hash == row.id_hash))

@@ -2,12 +2,14 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 
 from .api.routes import UPLOADS, origins, router
-from .db import Session, Tenant, init_db
+from .db import Session, Tenant, WebhookFailure, init_db
 from .jobs.queue import close_pool
 from .services.crypto import validate_configuration
 
@@ -54,6 +56,30 @@ async def tenant_cors(request: Request, call_next):
 
 
 app.include_router(router)
+
+
+def record_webhook_failure(provider, status):
+    try:
+        with Session.begin() as db:
+            db.add(WebhookFailure(provider=provider, http_status=status))
+    except SQLAlchemyError:
+        logging.getLogger(__name__).warning('Webhook failure history unavailable')
+
+
+@app.middleware('http')
+async def webhook_failure_history(request: Request, call_next):
+    providers = {'/webhooks/whatsapp': 'whatsapp', '/webhooks/razorpay': 'razorpay'}
+    provider = providers.get(request.url.path)
+    if provider is None or request.method != 'POST':
+        return await call_next(request)
+    status = 500
+    try:
+        response = await call_next(request)
+        status = response.status_code
+        return response
+    finally:
+        if status >= 400:
+            await run_in_threadpool(record_webhook_failure, provider, status)
 
 
 @app.exception_handler(HTTPException)

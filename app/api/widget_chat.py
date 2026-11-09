@@ -46,6 +46,8 @@ def widget_tenant(public_key, request):
         tenant = db.scalar(select(Tenant).where(Tenant.public_key == public_key))
     if tenant is None:
         raise HTTPException(404, 'Unknown chatbot')
+    if tenant.suspended:
+        raise HTTPException(403, 'Chatbot unavailable')
     if (origin := request.headers.get('origin')) and origin not in origins(tenant):
         raise HTTPException(403, 'Origin not allowed')
     return tenant

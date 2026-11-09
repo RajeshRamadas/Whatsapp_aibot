@@ -110,6 +110,8 @@ def reserve(tenant_id, request_key):
     """Reserve one AI turn and deduplicate retries using the durable ledger."""
     with Session.begin() as db:
         tenant = db.get(Tenant, tenant_id, with_for_update=True)
+        if tenant is None or tenant.suspended:
+            return False
         if db.scalar(select(UsageEvent.id).where(
             UsageEvent.tenant_id == tenant_id, UsageEvent.request_key == request_key,
         )):

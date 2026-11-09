@@ -29,6 +29,9 @@ def process_turn() -> bool:
         turn.attempts += 1
         conversation = db.get(Conversation, turn.conversation_id)
         tenant = db.get(Tenant, conversation.tenant_id)
+        if tenant.suspended:
+            turn.state = 'failed'
+            return True
         attempt = turn.attempts
 
     try:
@@ -47,6 +50,9 @@ def process_turn() -> bool:
     with Session.begin() as db:
         current = db.get(WidgetTurn, turn.id, with_for_update=True)
         if current is None or current.state != 'processing' or current.attempts != attempt:
+            return True
+        if db.get(Tenant, tenant.id).suspended:
+            current.state = 'failed'
             return True
         conv = db.get(Conversation, conversation.id, with_for_update=True)
         if turn.handoff or result is None or conv.handoff or conv.status == 'closed':

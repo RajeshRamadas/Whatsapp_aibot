@@ -44,6 +44,8 @@ def current_principal(
             tenant = db.get(Tenant, key.tenant_id)
             if not tenant or (workspace_id and workspace_id != tenant.id):
                 raise HTTPException(404, 'Workspace not found')
+            if tenant.suspended:
+                raise HTTPException(403, 'Workspace suspended. Contact support.')
             key.last_used_at = now()
             scopes = key.scopes
         if legacy:
@@ -61,6 +63,8 @@ def current_principal(
         tenant = db.get(Tenant, workspace_id)
         if not tenant:
             raise HTTPException(404, 'Workspace not found')
+        if tenant.suspended:
+            raise HTTPException(403, 'Workspace suspended. Contact support.')
     if request.method not in ('GET', 'HEAD', 'OPTIONS'):
         row, _ = _session(request)
         _csrf(request, row)

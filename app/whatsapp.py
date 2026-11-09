@@ -166,7 +166,7 @@ def handle(tenant_id: str, message: dict) -> None:
     phone_id, wa_user, text = message['phone_number_id'], message['from'], message['text']
     with Session() as db:
         tenant = db.get(Tenant, tenant_id)
-    if tenant is None:
+    if tenant is None or tenant.suspended:
         return
     conv = conversation_for(tenant_id, wa_user)
     copy = copy_for(tenant)
@@ -242,7 +242,8 @@ def handle(tenant_id: str, message: dict) -> None:
     answer = rag.answer(tenant, conv.id, text, whatsapp=True)
     with Session() as db:
         current = db.get(Conversation, conv.id)
-        can_send = current is not None and not current.handoff and current.status == 'bot'
+        can_send = (current is not None and not current.handoff and current.status == 'bot'
+                    and not db.get(Tenant, tenant_id).suspended)
         has_history = db.scalar(select(Message.id).where(
             Message.conversation_id == conv.id, Message.role == 'user').limit(1)) is not None
     if not can_send:
