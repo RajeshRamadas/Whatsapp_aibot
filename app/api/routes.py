@@ -9,6 +9,7 @@ from . import (
     bot,
     channels,
     chat,
+    contacts,
     conversations,
     email_feedback,
     evals,
@@ -38,5 +39,5 @@ from .shared import origins as origins
 router = APIRouter()
 for module in (auth, audit, api_keys, workspaces, tenants, billing, channels, knowledge, onboarding, bot, jobs,
                chat, conversations, evals, events, inbox, invoices, leads, meta_signup, push, qa, templates, usage,
-               whatsapp, widget, widget_chat, platform, analytics, metrics, email_feedback):
+               whatsapp, widget, widget_chat, platform, analytics, metrics, email_feedback, contacts):
     router.include_router(module.router)

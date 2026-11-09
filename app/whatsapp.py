@@ -19,6 +19,7 @@ from .db import Contact, Conversation, InboundEvent, Message, Session, Tenant, n
 from .observability import bind, integration
 from .services.bot_policy import within_hours
 from .services.channels import access_token, find_whatsapp, tenant_for_phone
+from .services.contacts import record_consent
 from .services.events import publish_sync
 from .services.usage import QUOTA_NOTICE, blocked_notice, reserve
 from .services.whatsapp_copy import copy_for, format_reply, handoff_notice, interactive_payload
@@ -191,11 +192,11 @@ def handle(tenant_id: str, message: dict) -> None:
 
     if consent is not None:
         with Session.begin() as db:
-            contact = db.get(Contact, conv.contact_id, with_for_update=True)
+            contact = db.scalar(select(Contact).where(Contact.id == conv.contact_id, Contact.tenant_id == tenant_id)
+                                .with_for_update())
             if consent == 'start':
-                contact.opt_in_at, contact.opt_out_at = timestamp, None
-            else:
-                contact.opt_out_at = timestamp
+                contact.opt_out_at = None
+            record_consent(db, contact, consent == 'start', timestamp, 'whatsapp', origin='whatsapp')
         reply(copy['start' if consent == 'start' else 'stop'])
         return
 

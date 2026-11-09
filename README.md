@@ -90,6 +90,16 @@ The report shows its refresh time; new activity appears after the next rebuild.
   There are no arbitrary properties, message text, phone numbers, email addresses or credentials.
   `campaign_sent` is reserved for T9.2; no campaign events are fabricated before that feature exists.
 
+## Contacts and segments (T9.1)
+
+Agents can read `/api/v1/contacts` and `/api/v1/segments`; owners/admins can import
+contact CSV files, record consent and manage saved dynamic segments. Apply migration
+`0027_contacts_segments` first. CSV imports require international phone numbers and
+never infer consent or reverse a recorded STOP. Default upload limits are 1 MiB and
+1,000 rows (`CONTACT_IMPORT_MAX_BYTES` / `CONTACT_IMPORT_MAX_ROWS`).
+See [the contact API and CSV format](docs/CONTACTS.md) for examples and consent rules.
+Campaign sending and its UI are separate tasks T9.2 and T9.3.
+
 ## Transactional email (T8.4)
 
 `EMAIL_BACKEND=ses` queues encrypted transactional emails for the existing arq worker,

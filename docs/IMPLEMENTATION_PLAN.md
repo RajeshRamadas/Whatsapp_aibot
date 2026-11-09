@@ -649,9 +649,24 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 
 ### R2 and R3 tasks (expand each into the full format above before starting)
 
+#### T9.1 Campaign contacts, segments and opt-in tracking
+- **Delivers:** CMP-2, INTEGRATIONS WA-8
+- **Depends on:** T6.4 (merged)
+- **Size:** M
+- **Steps:**
+  1. Tenant-scoped contact list and atomic CSV import with bounded file/row sizes,
+     international-number normalization, duplicate validation and explicit consent evidence.
+  2. Saved dynamic segments with allowlisted channel, language, attribute and eligibility filters.
+  3. Admin-only consent recording; audit CSV/operator/WhatsApp consent changes. Re-imports
+     preserve STOP opt-outs. Existing template sends check current eligibility at dispatch.
+  4. Permission, isolation, validation, privacy and queued-send opt-out tests; API/CSV documentation.
+- **Done when:** imports are atomic and repeatable, foreign IDs return 404, saved segments
+  reflect consent/profile changes immediately, and STOP prevents a queued template send.
+- **Notes:** API-only groundwork for T9.2 sending and T9.3 UI. Migration `0027_contacts_segments`
+  adds consent provenance and saved filters; no imported file is retained. See [CONTACTS.md](CONTACTS.md).
+
 | ID | Task | Delivers | Depends on |
 |---|---|---|---|
-| T9.1 | Campaigns: contacts import, segments, opt-in tracking | CMP-2, WA-8 | T6.4 |
 | T9.2 | Campaign sending with throttling and results | CMP-3, CMP-4, WA-9 | T9.1 |
 | T9.3 | Campaigns UI | UX_DESIGN §4.7 | T9.2 |
 | T9.4 | Media in and out; voice-note transcription | CH-5, WA-4, WA-11, STT-1, STT-2 | T6.1, T1.7 |
@@ -727,6 +742,7 @@ Tick each task in the PR that completes it.
 | M6 | T6.1 ☐ · T6.2 ☐ · T6.3 ☐ · T6.4 ☐ · T6.5 ☐ | |
 | M7 | T7.1 ☐ · T7.2 ☐ · T7.3 ☐ · T7.4 ☐ · T7.5 ☑ | |
 | M8 | T8.1 ☐ · T8.2 ☑ · T8.3 ☑ · T8.4 ☐ · T8.5 ☐ | T8.4 code ready; live SES/DNS staging check pending. |
+| M9 | T9.1 ☑ | Contact import, segments and consent APIs; sending/UI remain T9.2/T9.3. |
 
 ## 7. Human decisions needed before certain tasks
 
