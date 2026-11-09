@@ -11,6 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from .api.routes import UPLOADS, origins, router
 from .db import Session, Tenant, WebhookFailure, init_db
 from .jobs.queue import close_pool
+from .services.analytics import signup_started
 from .services.crypto import validate_configuration
 
 logging.basicConfig(level=logging.INFO)
@@ -56,6 +57,16 @@ async def tenant_cors(request: Request, call_next):
 
 
 app.include_router(router)
+
+
+@app.middleware('http')
+async def signup_attempt(request: Request, call_next):
+    if request.method == 'POST' and request.url.path == '/api/v1/auth/signup':
+        try:
+            await run_in_threadpool(signup_started)
+        except SQLAlchemyError:
+            logging.getLogger(__name__).warning('Product analytics unavailable')
+    return await call_next(request)
 
 
 def record_webhook_failure(provider, status):

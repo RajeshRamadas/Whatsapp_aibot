@@ -10,6 +10,7 @@ from ..db import AuthCode, Membership, Session, Tenant, User, UserSession, now, 
 from ..rate_limits import RateLimiter
 from ..services import auth as security
 from ..services import email
+from ..services.analytics import record
 from ..services.audit import audit
 
 router = APIRouter(prefix='/api/v1/auth', tags=['auth'])
@@ -129,6 +130,7 @@ def signup(body: Signup):
         db.add(user)
         db.flush()
         code = _issue_code(db, user, 'verify')
+        record(db, 'signup_completed', key=f'{user.id}:signup_completed')
         view = _view(user)
     email.sender.send(address, 'Verify your email', code)
     return view

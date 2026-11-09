@@ -6,7 +6,8 @@ from urllib.parse import urlsplit
 from sqlalchemy import select
 
 from ..config import settings
-from ..db import BillingEvent, Session, Subscription, Tenant, now
+from ..db import BillingEvent, Plan, Session, Subscription, Tenant, now
+from .analytics import record
 from .billing_provider import BillingError, provider
 
 log = logging.getLogger(__name__)
@@ -37,7 +38,7 @@ def entitled(db, tenant, at):
     return at < tenant.trial_ends_at
 
 
-def apply_snapshot(tenant, subscription, remote, event=None, at=None):
+def apply_snapshot(tenant, subscription, remote, event=None, at=None, db=None):
     at = at or now()
     if subscription.observed_at and at < subscription.observed_at:
         return
@@ -53,6 +54,7 @@ def apply_snapshot(tenant, subscription, remote, event=None, at=None):
     end = timestamp(remote.get('current_end'))
     if event == 'payment.failed' and state == 'active' and (end is None or end <= at):
         state = 'pending'
+    previous = (subscription.status, tenant.plan_id)
     subscription.observed_at = at
     subscription.provider_id = remote['id']
     subscription.plan_id = local_plan
@@ -65,6 +67,11 @@ def apply_snapshot(tenant, subscription, remote, event=None, at=None):
     elif state == 'active':
         subscription.grace_until = None
         tenant.plan_id = local_plan
+        upgraded = db is not None and (previous[0] != 'active' or (
+            db.get(Plan, local_plan).limits.get('price_inr', 0)
+            > db.get(Plan, previous[1]).limits.get('price_inr', 0)))
+        if upgraded and previous != (state, local_plan):
+            record(db, 'upgrade_completed', tenant.id, key=f'{tenant.id}:paid:{remote["id"]}:{local_plan}')
     if isinstance(remote.get('short_url'), str):
         url = urlsplit(remote['short_url'])
         if url.scheme == 'https' and url.hostname in {'rzp.io', 'razorpay.com', 'rzp.in'}:
@@ -78,7 +85,7 @@ def save_snapshot(tenant_id, reference, remote, event=None, at=None, reconciled=
         if row is None or row.checkout_key != reference:
             raise BillingError('The checkout session changed')
         previous = (row.status, row.plan_id, row.period_end)
-        apply_snapshot(tenant, row, remote, event, at)
+        apply_snapshot(tenant, row, remote, event, at, db=db)
         if reconciled and previous != (row.status, row.plan_id, row.period_end):
             row.reconcile_issue = 'Subscription state differed from Razorpay and was repaired'
         elif not reconciled:

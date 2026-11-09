@@ -20,6 +20,7 @@ from sqlalchemy import delete
 
 from . import llm
 from .db import Chunk, Session, Source
+from .services.analytics import milestone
 from .services.storage import storage
 from .services.usage import meter
 
@@ -234,6 +235,7 @@ def ingest(source_id: str) -> None:
             db.execute(delete(Chunk).where(Chunk.source_id == source_id))
             db.add_all(rows)
             src.status, src.error = 'ready', None
+            milestone(db, 'first_knowledge_ready', src.tenant_id, 'knowledge')
             db.commit()
         except Exception:
             db.rollback()

@@ -604,6 +604,9 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
   3. Analytics screen (UI-1 states; colour is never the only signal, VDS-2).
   4. Product analytics events from UX_DESIGN §14, with no message content.
 - **Done when:** aggregate tests on seeded data pass and the screen renders the four UI-1 states.
+- **Notes:** Daily UTC cohorts, weighted first-response times and durable handoff history are exposed at
+  `/api/v1/analytics` and `/dashboard/analytics`. Milestone events have allowlisted names and no content
+  properties. Existing product flows emit them; campaign emission belongs to T9.2 when sending is built.
 
 #### T8.3 Observability
 - **Delivers:** NFR-9, INTEGRATIONS MON-1, MON-2
@@ -715,7 +718,7 @@ Tick each task in the PR that completes it.
 | M5 | T5.1 ☐ · T5.2 ☐ · T5.3 ☐ · T5.4 ☐ | |
 | M6 | T6.1 ☐ · T6.2 ☐ · T6.3 ☐ · T6.4 ☐ · T6.5 ☐ | |
 | M7 | T7.1 ☐ · T7.2 ☐ · T7.3 ☐ · T7.4 ☐ · T7.5 ☑ | |
-| M8 | T8.1 ☐ · T8.2 ☐ · T8.3 ☐ · T8.4 ☐ · T8.5 ☐ | |
+| M8 | T8.1 ☐ · T8.2 ☑ · T8.3 ☐ · T8.4 ☐ · T8.5 ☐ | |
 
 ## 7. Human decisions needed before certain tasks
 

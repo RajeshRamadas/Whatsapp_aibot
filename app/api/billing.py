@@ -12,6 +12,7 @@ from sqlalchemy.dialects.postgresql import insert
 
 from ..config import settings
 from ..db import BillingEvent, Plan, Session, Subscription, Tenant, now, uid
+from ..services.analytics import record
 from ..services.billing import TERMINAL, apply_snapshot, configured, entitled, save_snapshot
 from ..services.billing_provider import BillingError, provider
 from ..services.invoices import issue
@@ -80,6 +81,7 @@ def checkout(body: PlanChoice, tenant: Tenant = Depends(tenant_for_role('owner')
                 row.checkout_key, row.plan_id, row.status = reference, body.plan, 'creating'
                 row.provider_id = row.checkout_url = row.period_end = row.grace_until = row.reconcile_issue = None
                 row.observed_at = None
+            record(db, 'upgrade_started', tenant.id, key=f'{tenant.id}:checkout:{reference}')
         else:
             if row.status not in ('creating', 'created', 'authenticated') or row.plan_id != body.plan:
                 raise HTTPException(409, 'Manage the existing subscription before starting another checkout')
@@ -116,6 +118,9 @@ def change_plan(body: PlanChoice, tenant: Tenant = Depends(tenant_for_role('owne
         if target.id == current.id:
             return public_view(row)
         immediate = target.limits['price_inr'] > current.limits['price_inr']
+    if immediate:
+        with Session.begin() as db:
+            record(db, 'upgrade_started', tenant.id, key=f'{tenant.id}:upgrade:{row.checkout_key}:{body.plan}')
     try:
         at = now()
         remote = graph.change(row.provider_id, remote_plan, immediate)
@@ -171,7 +176,7 @@ def process_event(event_id, name, payload):
         tenant = db.get(Tenant, target.tenant_id, with_for_update=True)
         row = db.get(Subscription, target.tenant_id, with_for_update=True, populate_existing=True)
         if row and (row.provider_id == provider_id or (row.provider_id is None and row.checkout_key == reference)):
-            apply_snapshot(tenant, row, remote, name, at)
+            apply_snapshot(tenant, row, remote, name, at, db=db)
             payment = entity(payload, 'payment')
             if name == 'subscription.charged' and payment.get('id') and isinstance(payment.get('amount'), int):
                 stored = db.get(BillingEvent, event_id)

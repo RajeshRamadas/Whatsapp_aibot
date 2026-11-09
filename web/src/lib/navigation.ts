@@ -4,7 +4,7 @@ export const pages = [
   { key: 'knowledge', path: '/dashboard/knowledge', roles: ['owner', 'admin', 'agent', 'viewer'] },
   { key: 'botSettings', path: '/dashboard/bot', roles: ['owner', 'admin'] },
   { key: 'leads', path: '/dashboard/leads', roles: ['owner', 'admin', 'agent', 'viewer'] },
-  { key: 'analytics', path: '/dashboard/analytics', roles: ['owner', 'admin', 'viewer'] },
+  { key: 'analytics', path: '/dashboard/analytics', roles: ['owner', 'admin', 'agent', 'viewer'] },
   { key: 'team', path: '/dashboard/team', roles: ['owner', 'admin'] },
   { key: 'billing', path: '/dashboard/billing', roles: ['owner'] },
 ] as const;
