@@ -15,6 +15,7 @@ from .db import Session, Tenant, WebhookFailure, init_db, uid
 from .jobs.queue import close_pool
 from .observability import configure, correlation, identifier
 from .services.analytics import signup_started
+from .services.campaigns import CampaignError
 from .services.crypto import validate_configuration
 from .services.email import validate_configuration as validate_email
 from .telemetry import record as telemetry_record
@@ -132,6 +133,11 @@ async def unexpected_error(request: Request, exc: Exception):
     return JSONResponse(status_code=500, headers={'X-Request-Id': request_id},
                         content={'error': {'code': 'internal_error', 'message': 'Something went wrong. Try again.',
                                            'details': None}})
+
+
+@app.exception_handler(CampaignError)
+async def campaign_error(request: Request, exc: CampaignError):
+    return await http_error(request, HTTPException(exc.status, str(exc)))
 
 
 @app.exception_handler(HTTPException)

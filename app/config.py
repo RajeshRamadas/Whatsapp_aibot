@@ -39,6 +39,9 @@ class Settings(BaseSettings):
     public_app_url: str = 'http://localhost:3000'
     contact_import_max_bytes: int = Field(1048576, ge=1024, le=10485760)
     contact_import_max_rows: int = Field(1000, ge=1, le=10000)
+    campaign_max_recipients: int = Field(1000, ge=1, le=10000)
+    campaign_sends_per_second: int = Field(1, ge=1, le=80)
+    campaign_daily_limit: int = Field(250, ge=1, le=100000)
     master_key: str | None = None
     master_key_version: int = 1
     master_key_previous: dict[str, str] = {}

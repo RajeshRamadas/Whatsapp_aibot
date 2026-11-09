@@ -665,9 +665,25 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 - **Notes:** API-only groundwork for T9.2 sending and T9.3 UI. Migration `0027_contacts_segments`
   adds consent provenance and saved filters; no imported file is retained. See [CONTACTS.md](CONTACTS.md).
 
+#### T9.2 Campaign sending with throttling and results
+- **Delivers:** CMP-3, CMP-4, INTEGRATIONS WA-9; UX_DESIGN §4.7 safeguards
+- **Depends on:** T9.1 (merged in #53)
+- **Size:** L; split into two stacked PRs under §3.5.
+- **T9.2a Preparation:** scoped campaign APIs, immutable audience/variable previews,
+  excluded counts, unit-price estimates, own-number test jobs, explicit confirmation,
+  scheduling, cancellation and report contracts.
+- **T9.2b Delivery:** per-recipient jobs, per-phone rate/rolling quota, current consent
+  and template checks, verified Meta quality/tier refresh, quality-drop pause/alerts,
+  bounded safe retries, signed receipt/reply/opt-out results and analytics.
+- **Done when:** fake-provider tests cover confirmation, scheduling, throttling,
+  STOP, quality pause, isolated ordered receipts, attribution and estimates. No
+  provider call holds a DB session or runs in an API handler. Screens are T9.3.
+- **Notes:** Both parts must be deployed for sending. Meta pricing receipts contain
+  no monetary charge; estimates stay separate from actual Meta billing. See
+  [CAMPAIGNS.md](CAMPAIGNS.md).
+
 | ID | Task | Delivers | Depends on |
 |---|---|---|---|
-| T9.2 | Campaign sending with throttling and results | CMP-3, CMP-4, WA-9 | T9.1 |
 | T9.3 | Campaigns UI | UX_DESIGN §4.7 | T9.2 |
 | T9.4 | Media in and out; voice-note transcription | CH-5, WA-4, WA-11, STT-1, STT-2 | T6.1, T1.7 |
 | T9.5 | OCR for scanned PDFs and images | KN-4, OCR-1 | T2.2 |
@@ -742,7 +758,7 @@ Tick each task in the PR that completes it.
 | M6 | T6.1 ☐ · T6.2 ☐ · T6.3 ☐ · T6.4 ☐ · T6.5 ☐ | |
 | M7 | T7.1 ☐ · T7.2 ☐ · T7.3 ☐ · T7.4 ☐ · T7.5 ☑ | |
 | M8 | T8.1 ☐ · T8.2 ☑ · T8.3 ☑ · T8.4 ☐ · T8.5 ☐ | T8.4 code ready; live SES/DNS staging check pending. |
-| M9 | T9.1 ☑ | Contact import, segments and consent APIs; sending/UI remain T9.2/T9.3. |
+| M9 | T9.1 ☑ · T9.2a ☑ · T9.2b ☐ | Campaign preparation ready; delivery/UI remain T9.2b/T9.3. |
 
 ## 7. Human decisions needed before certain tasks
 

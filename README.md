@@ -92,6 +92,11 @@ The report shows its refresh time; new activity appears after the next rebuild.
 
 ## Contacts and segments (T9.1)
 
+Campaign preparation APIs (T9.2a) support immutable previews, own-number test jobs,
+confirmation, schedules and reports. Apply `0028_campaigns`. The paired T9.2b
+worker is required for sending. See [campaign API and delivery rules](docs/CAMPAIGNS.md).
+Campaign screens remain T9.3.
+
 Agents can read `/api/v1/contacts` and `/api/v1/segments`; owners/admins can import
 contact CSV files, record consent and manage saved dynamic segments. Apply migration
 `0027_contacts_segments` first. CSV imports require international phone numbers and

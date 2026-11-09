@@ -1716,6 +1716,109 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/campaigns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listing */
+        get: operations["listing_api_v1_campaigns_get"];
+        put?: never;
+        /** Create */
+        post: operations["create_api_v1_campaigns_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/{campaign_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Details */
+        get: operations["details_api_v1_campaigns__campaign_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/{campaign_id}/recipients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Recipients */
+        get: operations["recipients_api_v1_campaigns__campaign_id__recipients_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/{campaign_id}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Test */
+        post: operations["test_api_v1_campaigns__campaign_id__test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/{campaign_id}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start */
+        post: operations["start_api_v1_campaigns__campaign_id__start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/{campaign_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel */
+        post: operations["cancel_api_v1_campaigns__campaign_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1770,11 +1873,6 @@ export interface components {
             /** Gstin */
             gstin?: string | null;
         };
-        /** Binding */
-        Binding: {
-            /** Waba Id */
-            waba_id: string;
-        };
         /** Body_import_csv_api_v1_contacts_import_post */
         Body_import_csv_api_v1_contacts_import_post: {
             /** File */
@@ -1784,6 +1882,31 @@ export interface components {
         Body_upload_api_v1_sources_post: {
             /** File */
             file: string;
+        };
+        /** CampaignInput */
+        CampaignInput: {
+            /** Name */
+            name: string;
+            /**
+             * Template Id
+             * Format: uuid
+             */
+            template_id: string;
+            /**
+             * Segment Id
+             * Format: uuid
+             */
+            segment_id: string;
+            /** Variables */
+            variables?: components["schemas"]["app__api__campaigns__Binding"][];
+            /** Unit Price */
+            unit_price?: number | string | null;
+            /**
+             * Currency
+             * @default INR
+             * @enum {string}
+             */
+            currency: "INR" | "USD";
         };
         /** CannedInput */
         CannedInput: {
@@ -2137,10 +2260,68 @@ export interface components {
              */
             behavior: "pause" | "overage";
         };
+        /** RecipientResult */
+        RecipientResult: {
+            /** Id */
+            id: string;
+            /** Contact Id */
+            contact_id: string;
+            /** Is Test */
+            is_test: boolean;
+            /** State */
+            state: string;
+            /** Attempts */
+            attempts: number;
+            /** Error Code */
+            error_code: string | null;
+            /** Provider Id */
+            provider_id: string | null;
+            /** Replied At */
+            replied_at: string | null;
+            /** Opted Out At */
+            opted_out_at: string | null;
+            /** Billable */
+            billable: boolean | null;
+        };
         /** Reply */
         Reply: {
             /** Message */
             message: string;
+        };
+        /** Report */
+        Report: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** State */
+            state: string;
+            /** Reason */
+            reason: string | null;
+            /** Scheduled At */
+            scheduled_at: string | null;
+            /** Recipients */
+            recipients: number;
+            /** Excluded */
+            excluded: number;
+            /** Currency */
+            currency: string;
+            /** Estimated Max Cost */
+            estimated_max_cost: string | null;
+            /** Estimated Billable Cost */
+            estimated_billable_cost: string | null;
+            /** Pricing Unconfirmed */
+            pricing_unconfirmed: number;
+            /** Test Accepted */
+            test_accepted: boolean;
+            /** Results */
+            results: {
+                [key: string]: number;
+            };
+            /** Preview */
+            preview: {
+                [key: string]: string;
+            }[];
         };
         /** ResetConfirm */
         ResetConfirm: {
@@ -2251,6 +2432,16 @@ export interface components {
             /** Pin */
             pin: string;
         };
+        /** StartInput */
+        StartInput: {
+            /**
+             * Confirm
+             * @constant
+             */
+            confirm: true;
+            /** Scheduled At */
+            scheduled_at?: string | null;
+        };
         /** Subscription */
         Subscription: {
             /**
@@ -2302,11 +2493,6 @@ export interface components {
             template_id: string;
             /** Values */
             values?: string[];
-        };
-        /** TestInput */
-        TestInput: {
-            /** Recipient */
-            recipient: string;
         };
         /** TestMessage */
         TestMessage: {
@@ -2442,6 +2628,39 @@ export interface components {
             name: string;
             /** Allowed Origins */
             allowed_origins?: string[];
+        };
+        /** Binding */
+        app__api__campaigns__Binding: {
+            /**
+             * Field
+             * @enum {string}
+             */
+            field: "name" | "external_user" | "attribute" | "literal";
+            /** Value */
+            value?: string | null;
+        };
+        /** TestInput */
+        app__api__campaigns__TestInput: {
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /**
+             * Own Number
+             * @constant
+             */
+            own_number: true;
+        };
+        /** TestInput */
+        app__api__meta_signup__TestInput: {
+            /** Recipient */
+            recipient: string;
+        };
+        /** Binding */
+        app__api__templates__Binding: {
+            /** Waba Id */
+            waba_id: string;
         };
     };
     responses: never;
@@ -5142,7 +5361,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["TestInput"];
+                "application/json": components["schemas"]["app__api__meta_signup__TestInput"];
             };
         };
         responses: {
@@ -5487,7 +5706,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Binding"];
+                "application/json": components["schemas"]["app__api__templates__Binding"];
             };
         };
         responses: {
@@ -6534,6 +6753,258 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listing_api_v1_campaigns_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Report"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_api_v1_campaigns_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CampaignInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Report"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    details_api_v1_campaigns__campaign_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                campaign_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Report"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    recipients_api_v1_campaigns__campaign_id__recipients_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                campaign_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipientResult"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    test_api_v1_campaigns__campaign_id__test_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                campaign_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["app__api__campaigns__TestInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_api_v1_campaigns__campaign_id__start_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                campaign_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Report"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_api_v1_campaigns__campaign_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                campaign_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Report"];
+                };
             };
             /** @description Validation Error */
             422: {
