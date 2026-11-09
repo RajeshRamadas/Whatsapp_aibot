@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 
 from ..db import Channel, Contact, Session, Template
+from .contacts import marketing_eligible
 from .meta_signup import MetaSignup, MetaSignupError
 
 VARIABLE = re.compile(r'\{\{([1-9][0-9]*)\}\}')
@@ -60,9 +61,9 @@ def upsert(db, channel_id, row):
 
 
 def eligible_contact(db, conversation):
-    contact = db.get(Contact, conversation.contact_id) if conversation.contact_id else None
-    return bool(contact and contact.tenant_id == conversation.tenant_id and contact.opt_in_at
-                and (contact.opt_out_at is None or contact.opt_in_at > contact.opt_out_at))
+    contact = db.scalar(select(Contact).where(Contact.id == conversation.contact_id,
+        Contact.tenant_id == conversation.tenant_id)) if conversation.contact_id else None
+    return bool(contact and contact.tenant_id == conversation.tenant_id and marketing_eligible(contact))
 
 
 def template_for_send(db, channel_id, template_id):

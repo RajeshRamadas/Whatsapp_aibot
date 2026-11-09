@@ -116,8 +116,20 @@ class Contact(Base):
     language: Mapped[str | None] = mapped_column(String(20), nullable=True)
     opt_in_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     opt_out_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    consent_source: Mapped[str | None] = mapped_column(String(120))
     attributes: Mapped[dict] = mapped_column(JSONB, default=dict)
     __table_args__ = (UniqueConstraint('tenant_id', 'channel', 'external_user'),)
+
+
+class ContactSegment(Base):
+    __tablename__ = 'contact_segments'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'), index=True)
+    name: Mapped[str] = mapped_column(String(100))
+    filters: Mapped[dict] = mapped_column(JSONB, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
+    __table_args__ = (UniqueConstraint('tenant_id', 'name'),)
 
 
 class Conversation(Base):
