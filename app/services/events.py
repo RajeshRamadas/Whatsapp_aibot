@@ -18,7 +18,7 @@ STREAM_MAX = 100
 STREAM_TTL = 600
 VALID_ID = re.compile(r'^[0-9]+-[0-9]+$')
 EVENT_TYPES = {'conversation.updated', 'message.created', 'message.updated',
-               'source.updated', 'lead.created', 'typing.updated'}
+               'source.updated', 'lead.created', 'typing.updated', 'campaign.updated'}
 
 
 def stream_key(tenant_id: str) -> str:

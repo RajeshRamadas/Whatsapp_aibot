@@ -21,6 +21,9 @@ def view(channel):
     configured = settings.whatsapp_enabled and (has_token or bool(settings.whatsapp_access_token))
     return {'id': channel.id, 'kind': channel.kind, 'external_id': channel.external_id,
             'display_name': channel.display_name, 'last_webhook_at': channel.last_webhook_at,
+            'campaign_quality': channel.campaign_quality, 'campaign_verified_limit': channel.campaign_limit,
+            'campaign_checked_at': channel.campaign_checked_at,
+            'campaign_portfolio': channel.campaign_portfolio,
             'status': 'configured' if configured else 'unconfigured', 'has_channel_token': has_token}
 
 

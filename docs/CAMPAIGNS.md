@@ -1,7 +1,8 @@
 # Campaign API and delivery
 
-T9.2a prepares durable jobs; the paired T9.2b worker is required for sending.
-Apply migration `0028_campaigns`. Routes require workspace admin/owner credentials
+T9.2a prepares durable jobs; T9.2b provides the recipient worker and feedback.
+Deploy both and apply `0028_campaigns` plus `0029_campaign_portfolio`.
+Routes require workspace admin/owner credentials
 and use the principal's tenant. Foreign IDs return 404. Screens belong to T9.3.
 
 1. `POST /api/v1/campaigns` with `name`, `segment_id`, approved `template_id`,
@@ -33,3 +34,47 @@ price in the chosen currency, considering country/category differences.
 includes only receipts explicitly marked billable. Null means no price was supplied.
 `pricing_unconfirmed` counts accepted messages with an unknown billing flag.
 Test jobs are excluded. Meta bills the business directly; reconcile charges there.
+
+## Worker safeguards and results
+
+The arq scheduler dispatches individual durable recipient jobs. No Meta HTTP call
+runs in an API handler or across a DB session. Pending jobs recover after Redis
+outages. The worker rechecks suspension, opt-in and the exact approved template
+before each send; changes can suppress or pause recipients after confirmation.
+
+Every five minutes as needed, workers verify phone quality and the current
+`whatsapp_business_manager_messaging_limit`, plus the WABA's `owner_business_info`.
+Configure a supported Graph version and token with business-management access.
+Unknown fields, tier or portfolio identity block sending. See
+[Meta's current messaging limits](https://developers.facebook.com/documentation/business-messaging/whatsapp/messaging-limits).
+The deprecated `messaging_limit_tier` field is not used.
+
+`CAMPAIGN_SENDS_PER_SECOND` (default 1) is shared per phone across workers. A DB
+advisory lock serializes rolling 24-hour portfolio reservations across phones and
+workspaces; the cap is the smaller of verified tier and `CAMPAIGN_DAILY_LIMIT`
+(default 250). Repeated sends to the same customer consume one unique-recipient
+slot. Tests and failed/ambiguous attempts reserve capacity conservatively.
+Other tools or manual sends outside this platform can also consume Meta's budget;
+Meta remains authoritative and rate/limit rejections back off. Configure a lower
+local budget when sharing a portfolio with other senders.
+
+Signed quality/capability downgrade callbacks pause campaigns and publish
+`campaign.updated` on the tenant's authenticated event stream; the report and
+audit log retain the reason. Recovery never silently resumes a paused campaign:
+confirm `/start` again after resolving the cause. Channels expose cached quality,
+tier and verified portfolio identity. Template changes also pause campaigns.
+
+Acknowledged transient HTTP/rate errors retry up to five attempts with backoff,
+jitter and numeric Retry-After. Permanent errors fail immediately. Lost responses,
+malformed success responses and expired two-minute sending leases become `unknown`
+and are not automatically retried. Inspect these in recipient results. Meta does
+not provide an idempotency guarantee for sends; in-flight sends cannot be recalled.
+
+Signed receipts use phone/tenant identity and opaque recipient IDs, tolerate early
+callbacks, deduplicate and retain the highest known delivery state. Results include
+sent/delivered/read, failed, suppressed, unknown, replied and opt-outs. Replies use
+explicit message context when supplied, otherwise the latest accepted campaign
+to that contact within seven days. Inbound STOP also records an attributed opt-out.
+Product milestone `campaign_sent` is recorded once per campaign after acceptance.
+Reports aggregate counters in SQL and fetch only three previews per campaign.
+No raw provider error text, message bodies or recipient numbers enter logs/events.

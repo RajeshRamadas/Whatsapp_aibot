@@ -64,7 +64,8 @@ def parse_messages(payload: dict) -> list[dict]:
                 else:
                     text = ''
                 found.append({'phone_number_id': phone_number_id, 'from': msg['from'], 'id': msg['id'],
-                              'type': kind, 'text': text.strip(), 'choice': choice})
+                              'type': kind, 'text': text.strip(), 'choice': choice,
+                              'context_id': (msg.get('context') or {}).get('id')})
     return found
 
 
@@ -179,6 +180,10 @@ def handle(tenant_id: str, message: dict) -> None:
     keywords = {'stop', 'बंद', *tenant.whatsapp_opt_out_keywords}
     consent = next((value for part in reversed(parts)
                     if (value := part.get('text', '').strip().casefold()) in keywords | {'start'}), None)
+    from .services.campaign_delivery import response as campaign_response
+    for part in parts:
+        campaign_response(tenant_id, conv.contact_id, part.get('context_id'),
+                          part.get('text', '').strip().casefold() in keywords)
     choices = {part.get('choice') for part in parts}
     wants_handoff = 'handoff' in choices or any(
         part.get('text', '').strip().lower() in settings.handoff_keywords for part in parts)
@@ -278,12 +283,14 @@ def parse_statuses(payload: dict) -> list[dict]:
             phone_id = (value.get('metadata') or {}).get('phone_number_id')
             for status in value.get('statuses') or []:
                 if phone_id and status.get('id') and status.get('status') in (*DELIVERY_RANK, 'failed'):
-                    found.append({'phone_number_id': phone_id, **status})
+                    found.append({**status, 'phone_number_id': phone_id})
     return found
 
 
 def record_status(status: dict) -> bool:
     """Apply a tenant-verified receipt without regressing a known delivery state."""
+    from .services.campaign_delivery import receipt
+    receipt(status)
     with Session.begin() as db:
         channel = find_whatsapp(db, status['phone_number_id'])
         tenant_id = tenant_for_phone(db, status['phone_number_id'], channel)
