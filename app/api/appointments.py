@@ -80,6 +80,8 @@ class BookingView(Hold):
     ends_at: datetime
     expires_at: datetime
     state: str
+    calendar_state: str
+    calendar_error: str | None
     reminder_state: str
     reminder_error: str | None
     reminder_message_id: int | None

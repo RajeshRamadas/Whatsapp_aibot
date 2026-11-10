@@ -1,6 +1,8 @@
 """Google Calendar v3 transport; fixed origins, bounded responses and safe failures."""
 import base64
 import hashlib
+import time
+from contextvars import ContextVar
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from urllib.parse import quote, urlencode, urlsplit
@@ -10,6 +12,8 @@ import httpx
 from ...config import settings
 from ...observability import integration
 from ...rate_limits import RateLimiter
+
+deadline = ContextVar('calendar_deadline', default=None)
 
 ROOT = 'https://www.googleapis.com/calendar/v3/'
 TOKEN = 'https://oauth2.googleapis.com/token'
@@ -51,9 +55,14 @@ class Client:
             raise CalendarError('rate_limited', retry=True, wait=15)
         url = path if path in (TOKEN, 'https://oauth2.googleapis.com/revoke') else ROOT + path
         request_headers = {**(headers or {}), **({'Authorization': 'Bearer ' + token} if token else {})}
+        remaining = max(0, deadline.get() - time.monotonic()) if deadline.get() else 30
+        if remaining <= 0:
+            raise CalendarError('work_pending', retry=True, wait=1)
         try:
             response = httpx.request(method, url, headers=request_headers, data=data, json=payload,
-                                    params=params, timeout=httpx.Timeout(30, connect=10), follow_redirects=False)
+                                    params=params,
+                                    timeout=httpx.Timeout(min(30, remaining), connect=min(10, remaining)),
+                                    follow_redirects=False)
         except httpx.HTTPError:
             raise CalendarError('provider_unavailable', retry=True) from None
         if missing and response.status_code in (404, 410):
@@ -66,7 +75,8 @@ class Client:
             except (TypeError, ValueError, OverflowError):
                 wait = 0
             status = response.status_code
-            raise CalendarError('authorization_required' if status == 401 else 'provider_rejected',
+            raise CalendarError('authorization_required' if status == 401 else 'event_conflict' if status == 409
+                                else 'provider_rejected',
                                 retry=status in (408, 429) or status >= 500, wait=wait)
         if len(response.content) > 4 * 1024 * 1024:
             raise CalendarError('response_too_large')

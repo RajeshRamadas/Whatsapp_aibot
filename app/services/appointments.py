@@ -30,7 +30,8 @@ def fields(value, names):
 
 
 def active_booking():
-    return or_(Booking.state == 'confirmed', and_(Booking.state == 'held', Booking.expires_at > now()))
+    return or_(Booking.state.in_(['confirming', 'confirmed']),
+               and_(Booking.state == 'held', Booking.expires_at > now()))
 
 
 def catalog(tenant_id):
@@ -131,7 +132,7 @@ def booking_view(db, booking):
     staff = row(db, Staff, booking.tenant_id, slot.staff_id)
     state = 'expired' if booking.state == 'held' and booking.expires_at <= now() else booking.state
     return {**fields(booking, 'id slot_id conversation_id customer_name customer_phone language expires_at replaces_id '
-                    'reminder_opt_in reminder_state reminder_error reminder_message_id'),
+                    'reminder_opt_in reminder_state reminder_error reminder_message_id calendar_state calendar_error'),
             **fields(slot, 'starts_at ends_at'), 'service': service.name, 'staff': staff.name, 'state': state}
 
 
@@ -188,6 +189,10 @@ def hold(tenant_id, slot_id, conversation_id, customer_name, customer_phone=None
             replaces_id=replaces_id)
         db.add(value)
         db.flush()
+        value.calendar_targets = [{'connection_id': b.connection_id, 'calendar_id': b.calendar_id,
+            'event_id': 'b' + value.id.replace('-', ''),
+            'timezone': next((v['timezone'] for v in c.calendars if v['id'] == b.calendar_id), 'UTC')}
+            for b, c in pairs]
         audit(db, tenant_id, 'appointments.held', value.id, actor_type=actor[0], actor_user_id=actor[1])
         return booking_view(db, value)
 
@@ -208,6 +213,8 @@ def transition(tenant_id, identity, action, conversation_id=None, actor=('system
         value = row(db, Booking, tenant_id, identity, lock=True)
         slot = row(db, Slot, tenant_id, value.slot_id)
         if action == 'confirm':
+            if value.state == 'confirming':
+                return booking_view(db, value)
             if value.state == 'confirmed':
                 if reminder_opt_in and not value.reminder_opt_in and slot.starts_at > now():
                     value.reminder_opt_in, value.reminder_state = True, 'pending'
@@ -224,13 +231,24 @@ def transition(tenant_id, identity, action, conversation_id=None, actor=('system
                 if (previous.state != 'confirmed' or previous.conversation_id != value.conversation_id
                         or row(db, Slot, tenant_id, previous.slot_id).starts_at <= now()):
                     raise AppointmentError('The original booking changed; create a new hold')
-                previous.state, previous.reminder_state = 'cancelled', 'cancelled'
+                if not value.calendar_targets:
+                    previous.state, previous.reminder_state = 'cancelled', 'cancelled'
+                    if previous.calendar_targets:
+                        from .calendar_sync import queue
+                        queue(db, previous, 'calendar_cancel')
             if reminder_opt_in is not None:
                 value.reminder_opt_in = reminder_opt_in
             value.state = 'confirmed'
+            if value.calendar_targets:
+                from .calendar_sync import queue
+                value.state = 'confirming'
+                queue(db, value)
             value.reminder_state = 'pending' if value.reminder_opt_in else 'skipped'
         elif action == 'cancel':
             value.state, value.reminder_state = 'cancelled', 'cancelled'
+            if value.calendar_targets:
+                from .calendar_sync import queue
+                queue(db, value, 'calendar_cancel')
         else:
             if value.state != 'confirmed' or value.reminder_state != 'blocked' or slot.starts_at <= now():
                 raise AppointmentError('Only blocked future reminders can be retried')

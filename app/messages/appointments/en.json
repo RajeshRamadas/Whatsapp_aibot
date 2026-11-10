@@ -5,5 +5,6 @@
   "reminder": "Reminder: {service} with {staff} at {time}. Reference: {id}.",
   "error": "This appointment could not be changed. The hold may have expired. Ask our team to check it.",
   "reminderOn": "Reminder requested. Delivery depends on your channel permissions.",
-  "reminderOff": "No reminder requested."
+  "reminderOff": "No reminder requested.",
+  "confirming": "Checking the calendar for {service}, {staff}, {time}. Please wait for confirmation."
 }
