@@ -49,7 +49,8 @@ test('Google Calendar: authorize, link with consent, confirm a booking and disco
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.setViewportSize({ width: 320, height: 900 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.screenshot({ path: '../docs/screenshots/t9-9-google-calendar.png', fullPage: true });
+  await page.setViewportSize({ width: 1280, height: 1100 });
+  await page.screenshot({ path: '../docs/screenshots/t9-9-google-calendar.png' });
   page.once('dialog', dialog => dialog.accept());
   await page.getByRole('button', { name: 'Disconnect account', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Appointment team · Disconnected', exact: true })).toBeVisible();

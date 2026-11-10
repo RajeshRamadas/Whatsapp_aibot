@@ -70,8 +70,10 @@ def in_hours(tenant, start, end):
     if not hours:
         return True
     window = hours.get(str(first.weekday()))
-    return bool(window and first.date() == last.date()
-                and window[0] <= first.strftime('%H:%M') and last.strftime('%H:%M') <= window[1])
+    if not window or first.date() != last.date():
+        return False
+    opening, closing = (datetime.combine(first.date(), time.fromisoformat(v), zone) for v in window)
+    return opening <= first and last <= closing
 
 
 def signature(tenant, service, pairs):

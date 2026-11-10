@@ -102,3 +102,5 @@ def test_legacy_indian_timezone_hours():
     tenant = SimpleNamespace(timezone='Asia/Calcutta', business_hours='{"0":["09:00","10:00"]}')
     assert calendar.in_hours(tenant, datetime(2026, 11, 16, 3, 30, tzinfo=timezone.utc),
                              datetime(2026, 11, 16, 4, 0, tzinfo=timezone.utc))
+    assert not calendar.in_hours(tenant, datetime(2026, 11, 16, 3, 30, tzinfo=timezone.utc),
+                                 datetime(2026, 11, 16, 4, 30, 1, tzinfo=timezone.utc))

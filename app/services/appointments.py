@@ -214,6 +214,8 @@ def transition(tenant_id, identity, action, conversation_id=None, actor=('system
         slot = row(db, Slot, tenant_id, value.slot_id)
         if action == 'confirm':
             if value.state == 'confirming':
+                if reminder_opt_in is True:
+                    value.reminder_opt_in = True
                 return booking_view(db, value)
             if value.state == 'confirmed':
                 if reminder_opt_in and not value.reminder_opt_in and slot.starts_at > now():

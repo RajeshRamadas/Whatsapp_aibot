@@ -61,6 +61,7 @@ def refresh_cache(tenant_id, identity):
 def test_confirmation_reschedule_cancel_idempotency(client, tenant, setup, calendar):
     headers, events, busy, connection_id = calendar
     identity = hold_confirm(client, setup, headers)
+    appointments.transition(tenant['tenant_id'], identity, 'confirm', reminder_opt_in=True)
     assert not events and calendar_sync.process_one()
     assert len(events) == 1
     event = next(iter(events.values()))
