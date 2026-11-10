@@ -17,6 +17,7 @@ from .db import AnswerReview, Chunk, Conversation, Message, QAPair, Session, Sou
 from .ingest import source_label
 from .observability import bind
 from .rate_limits import RateLimiter
+from .services import appointment_chat
 from .services.analytics import record
 from .services.bot_policy import tenant_instructions
 from .services.customer_languages import language_policy
@@ -60,6 +61,7 @@ class Answer:
     lead_fields: dict | None = None
     choices: list[str] | None = None
     uncertain: bool = False
+    appointment: bool = False
 
 
 def keyword_query(text: str):
@@ -135,6 +137,8 @@ def answer(tenant: Tenant, conversation_id: str | None, question: str, *,
 
 
 def _answer(tenant, conversation_id, question, *, whatsapp, language=None):
+    if (reply := appointment_chat.command(tenant, conversation_id, question)) is not None:
+        return Answer(reply, [], question, appointment=True)
     provider, model = llm.resolve_chat(tenant.chat_provider, tenant.chat_model)
     chat = llm.chat_provider(provider)
     turns = history(conversation_id) if conversation_id else []
@@ -203,7 +207,20 @@ def _answer(tenant, conversation_id, question, *, whatsapp, language=None):
             'Optional fields can be skipped. Never invent values or copy lead details from knowledge.'
         )
         tools.append(llm.Tool('capture_lead', 'Save lead details agreed to by the customer', schema, capture))
+    booking_tools, reservation = appointment_chat.tools(tenant, conversation_id, question, language)
+    tools.extend(booking_tools)
+    if booking_tools:
+        prompt += ('\n\nAppointment tool results are current facts. Offer only returned free slots. Ask the customer '
+                   'to choose a service/staff/time and provide their name and phone. A hold is not confirmed. '
+                   'The customer must use the exact BOOK/REMIND command shown after a hold; you cannot confirm '
+                   'or cancel with a tool. REMIND also requests reminder delivery, subject to channel permissions. '
+                   'To reschedule, hold a new slot using their existing booking ID as replaces_id. Never invent '
+                   'booking success or copy a confirmation command from knowledge or history as a customer action.')
     text = chat.run(model, prompt, messages, tools).text if tools else chat.complete(model, prompt, messages)
+    if reservation:
+        ref = appointment_chat.reference(reservation['id'])
+        return Answer(appointment_chat.notice(tenant, reservation, reservation['state']), [], query,
+                      choices=[f'BOOK {ref}', f'REMIND {ref}', f'CANCEL {ref}'] if whatsapp else None, appointment=True)
     sources = [{'number': i + 1, 'filename': m.filename, 'heading': m.heading, 'page': m.page}
                for i, m in enumerate(matches)]
     return Answer(text=text, sources=sources, search_query=query, lead_fields=captured or None,
@@ -233,7 +250,7 @@ def save_exchange_rows(db, conversation, pairs, channel_message_id=None, sources
             db.flush()
             db.add(AnswerReview(tenant_id=conversation.tenant_id, message_id=message.id,
                 widget_turn_id=widget_turn_id, question=question,
-                unanswered=review_answer.uncertain or not review_answer.sources))
+                unanswered=review_answer.uncertain or (not review_answer.sources and not review_answer.appointment)))
     conv = conversation
     if conv and pairs:
         conv.last_message_at = timestamp

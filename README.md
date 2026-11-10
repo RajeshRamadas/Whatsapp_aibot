@@ -942,3 +942,27 @@ request principal's workspace. Audits/events exclude customer names and phone nu
 Reminder settings are stored now; worker delivery and chat tools follow in T9.9b,
 with English/Hindi administration in T9.9c. Google Calendar OAuth and free/busy
 integration remain the separately ordered T9.9d follow-up. No new credentials.
+
+### Appointment chat and reminders (T9.9b)
+
+The bot can list live availability, hold one slot per turn, and list only the
+current customer's bookings. Holds return a short reference and explicit actions:
+`BOOK <reference>` confirms; `REMIND <reference>` confirms and opts into a reminder;
+`CANCEL <reference>` cancels. These commands are handled directly from the customer's
+message, never from model arguments or retrieved knowledge. WhatsApp shows reply
+buttons; web customers can send the same commands. Commands and reminder copy
+preserve the booking's customer language across all BOT-2 languages and Hinglish.
+Bot previews never receive booking tools. A replacement hold leaves the original
+booking intact until confirmation. Provider fakes verify contracts, not model accuracy.
+
+The worker checks due reminders every 15 seconds. Web reminders appear through the
+widget's existing team-reply polling while it is open. WhatsApp sends text within
+its 24-hour window; outside it, an existing opt-in and an approved UTILITY template
+in the booking's language are required. Configure exactly three variables: service,
+staff and local appointment time. No marketing consent is created by booking.
+Missing permission/configuration is recorded as `blocked` and can be explicitly
+retried after correction. `sent` means accepted by the provider (or saved for web),
+not proof of delivery. Uncertain sends and stale claims become `unknown` and are
+never retried automatically. Cancellation suppresses pending reminders; messages
+already in flight cannot be recalled. Suspended workspaces and opted-out contacts
+receive no reminders. Native-speaker script review remains required before pilot.

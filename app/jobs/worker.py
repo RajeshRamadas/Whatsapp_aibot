@@ -15,6 +15,7 @@ from ..observability import bind, configure, observed_job
 from ..rate_limits import RateLimiter
 from ..services import media
 from ..services.analytics import reconcile as reconcile_analytics_daily
+from ..services.appointment_reminders import process_one as process_appointment_reminder
 from ..services.billing import reconcile_settlements, reconcile_subscriptions
 from ..services.campaign_delivery import deliver as deliver_campaign
 from ..services.campaign_delivery import maintain as maintain_campaigns
@@ -330,9 +331,17 @@ async def publish_improvement(ctx):
     await asyncio.to_thread(process_improvement)
 
 
+@observed_job
+async def dispatch_appointment_reminders(ctx):
+    for _ in range(10):
+        if not await asyncio.to_thread(process_appointment_reminder):
+            break
+
+
 class WorkerSettings:
     on_startup = startup
-    cron_jobs = [cron(publish_improvement, second=set(range(0, 60, 5)), timeout=600),
+    cron_jobs = [cron(dispatch_appointment_reminders, second={0, 15, 30, 45}),
+                 cron(publish_improvement, second=set(range(0, 60, 5)), timeout=600),
                  cron(dispatch_websites, second={0, 10, 20, 30, 40, 50}),
                  cron(dispatch_agent_replies, second={0, 10, 20, 30, 40, 50}),
                  cron(dispatch_campaigns, second=set(range(60))),

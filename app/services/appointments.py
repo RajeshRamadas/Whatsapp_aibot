@@ -179,7 +179,7 @@ def hold(tenant_id, slot_id, conversation_id, customer_name, customer_phone=None
         return booking_view(db, value)
 
 
-def transition(tenant_id, identity, action, conversation_id=None, actor=('system', None)):
+def transition(tenant_id, identity, action, conversation_id=None, actor=('system', None), reminder_opt_in=None):
     if action not in ('confirm', 'cancel', 'retry-reminder'):
         raise AppointmentError('Unknown appointment action', 422)
     with Session.begin() as db:
@@ -195,6 +195,10 @@ def transition(tenant_id, identity, action, conversation_id=None, actor=('system
         slot = row(db, Slot, tenant_id, value.slot_id)
         if action == 'confirm':
             if value.state == 'confirmed':
+                if reminder_opt_in and not value.reminder_opt_in and slot.starts_at > now():
+                    value.reminder_opt_in, value.reminder_state = True, 'pending'
+                    audit(db, tenant_id, 'appointments.reminder_opted_in', identity,
+                          actor_type=actor[0], actor_user_id=actor[1])
                 return booking_view(db, value)
             if value.state != 'held' or value.expires_at <= now() or slot.starts_at <= now():
                 raise AppointmentError('The hold expired or is no longer available')
@@ -207,7 +211,10 @@ def transition(tenant_id, identity, action, conversation_id=None, actor=('system
                         or row(db, Slot, tenant_id, previous.slot_id).starts_at <= now()):
                     raise AppointmentError('The original booking changed; create a new hold')
                 previous.state, previous.reminder_state = 'cancelled', 'cancelled'
+            if reminder_opt_in is not None:
+                value.reminder_opt_in = reminder_opt_in
             value.state = 'confirmed'
+            value.reminder_state = 'pending' if value.reminder_opt_in else 'skipped'
         elif action == 'cancel':
             value.state, value.reminder_state = 'cancelled', 'cancelled'
         else:

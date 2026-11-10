@@ -1,0 +1,9 @@
+{
+  "held": "Held for 5 minutes: {service}, {staff}, {time}.Reply BOOK {id} to confirm, REMIND {id} to confirm and request a reminder, or CANCEL {id} to cancel the hold.",
+  "confirmed": "Confirmed: {service}, {staff}, {time}. To cancel, reply CANCEL {id}.",
+  "cancelled": "Cancelled: {service}, {staff}, {time}. Reference: {id}.",
+  "reminder": "Reminder: {service} with {staff} at {time}. Reference: {id}.",
+  "error": "This appointment could not be changed. The hold may have expired. Ask our team to check it.",
+  "reminderOn": "Reminder requested. Delivery depends on your channel permissions.",
+  "reminderOff": "No reminder requested."
+}
