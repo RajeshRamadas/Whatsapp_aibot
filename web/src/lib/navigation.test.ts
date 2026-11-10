@@ -7,8 +7,10 @@ describe('role-filtered navigation', () => {
     expect(paths).not.toContain('/dashboard/billing');
     expect(paths).not.toContain('/dashboard/bot');
     expect(paths).not.toContain('/dashboard/campaigns');
+    expect(paths).not.toContain('/dashboard/appointments');
   });
   it('shows billing to owners', () => expect(visiblePages('owner').some(page => page.key === 'billing')).toBe(true));
+  it('allows agents to manage appointments', () => expect(visiblePages('agent').some(p => p.key === 'appointments')).toBe(true));
   it('limits campaigns to owners and admins', () => {
     expect(visiblePages('admin').some(page => page.key === 'campaigns')).toBe(true);
     expect(visiblePages('agent').some(page => page.key === 'campaigns')).toBe(false);
