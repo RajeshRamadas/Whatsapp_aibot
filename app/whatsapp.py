@@ -282,7 +282,8 @@ def handle(tenant_id: str, message: dict) -> None:
     if not can_send:
         save(incoming)
         return
-    greeting = '' if has_history else copy['greeting'].format(bot=tenant.bot_name, business=tenant.name)
+    greeting = '' if has_history or answer.appointment else copy['greeting'].format(
+        bot=tenant.bot_name, business=tenant.name)
     sources = answer.sources if answer.text and not answer.uncertain else []
     if answer.uncertain:
         options = [('handoff', copy['yes']), ('handoff-decline', copy['no'])]

@@ -1,0 +1,9 @@
+{
+  "held": "5 minute ke liye samay roka hai: {service}, {staff}, {time}.Pushti ke liye BOOK {id}, pushti aur reminder ki anumati ke liye REMIND {id}, ya chhodne ke liye CANCEL {id} likhein.",
+  "confirmed": "Pushti hui: {service}, {staff}, {time}. Radd karne ke liye CANCEL {id} likhein.",
+  "cancelled": "Radd hua: {service}, {staff}, {time}. Sandarbh: {id}.",
+  "reminder": "Reminder: {staff} ke saath {service}, samay {time}. Sandarbh: {id}.",
+  "error": "Yeh appointment badla nahin ja saka. Hold ki avadhi khatm ho sakti hai. Hamari team se jaanch karne ko kahein.",
+  "reminderOn": "Reminder ka anurodh darj hua. Delivery aapke channel ki anumatiyon par nirbhar hai.",
+  "reminderOff": "Reminder ka anurodh nahin kiya gaya."
+}
