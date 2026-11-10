@@ -293,7 +293,8 @@ def handle(tenant_id: str, message: dict) -> None:
         if len(options) < 3:
             options.append(('handoff', copy['team']))
         body = answer.text or copy['error']
-    reply(format_reply(body, sources, copy, greeting), options, sources, answer.lead_fields, answer)
+    reply(body if answer.appointment else format_reply(body, sources, copy, greeting),
+          options, sources, answer.lead_fields, answer)
 
 
 DELIVERY_RANK = {'sent': 1, 'delivered': 2, 'read': 3}

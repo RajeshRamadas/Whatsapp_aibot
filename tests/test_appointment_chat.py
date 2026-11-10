@@ -176,3 +176,18 @@ def test_reminders_respect_current_state_and_recover_stale_claims(client, tenant
     with Session() as db:
         assert db.get(Booking, booking['id']).reminder_state == expected
         assert db.scalar(select(func.count()).select_from(Message)) == 0
+
+
+def test_whatsapp_booking_notice_preserves_service_identifiers(client, tenant, setup, chats, sent):
+    from tests.conftest import wa_payload
+    from tests.test_whatsapp import link_number, post
+    link_number(client, tenant)
+    with Session.begin() as db:
+        db.get(Tenant, tenant['tenant_id']).bot_live = True
+        db.get(Service, setup[1]['id']).name = 'Consultation [1]'
+    chats['openai'].tool_turns = [
+        lambda results, enabled: ('', [('hold_appointment', {'slot_id': setup[4]['id'], 'customer_name': 'Demo'})]),
+        lambda results, enabled: ('Ignored model wording', []),
+    ]
+    assert post(client, wa_payload('Book a consultation')).status_code == 200
+    assert sent and 'Consultation [1]' in sent[-1][2] and 'BOOK ' in sent[-1][2]
