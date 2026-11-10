@@ -1,9 +1,10 @@
 'use client';
+import { useCopy } from '@/i18n/provider';
 
 import Script from 'next/script';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
-import copy from '@/messages/whatsapp-signup.en.json';
+
 
 type Channel = { external_id: string; display_name: string | null; status: string };
 type Config = { enabled: boolean; app_id: string; config_id: string; version: string; channel: Channel | null };
@@ -19,6 +20,7 @@ const path = 'whatsapp/signup';
 const field = 'min-h-11 rounded border border-border bg-surface px-3 py-2';
 
 export function WhatsAppSignup({ workspaceId, onConnected }: { workspaceId: string; onConnected: () => void }) {
+  const copy = useCopy('signup');
   const [config, setConfig] = useState<Config>();
   const [sdkReady, setSdkReady] = useState(false);
   const [pin, setPin] = useState('');
@@ -42,7 +44,7 @@ export function WhatsAppSignup({ workspaceId, onConnected }: { workspaceId: stri
       clearTimeout(timer.current);
       attempt.current = null;
     };
-  }, [workspaceId]);
+  }, [copy.loadError, workspaceId]);
 
   const finish = useCallback(() => {
     const pending = attempt.current;
@@ -60,7 +62,7 @@ export function WhatsAppSignup({ workspaceId, onConnected }: { workspaceId: stri
     }).catch(failure => {
       if (mounted.current) setError(failure instanceof Error ? failure.message : copy.metaError);
     }).finally(() => { if (mounted.current) setBusy(false); });
-  }, [workspaceId, onConnected]);
+  }, [workspaceId, copy.connected, copy.metaError, onConnected]);
 
   useEffect(() => {
     function receive(event: MessageEvent) {
@@ -86,7 +88,7 @@ export function WhatsAppSignup({ workspaceId, onConnected }: { workspaceId: stri
 
     window.addEventListener('message', receive);
     return () => window.removeEventListener('message', receive);
-  }, [finish]);
+  }, [copy.cancelled, copy.metaError, finish]);
 
   function start() {
     const fb = sdk();

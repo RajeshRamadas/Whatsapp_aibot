@@ -1,16 +1,19 @@
 'use client';
+import { useCopy } from '@/i18n/provider';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { client, type Campaign, type Client, type Contact, type Draft, type Recipient } from '@/api/campaigns';
 import type { components } from '@/api/schema';
 import { Badge, Card } from '@/components/ui/primitives';
 import { Contacts, Templates } from './campaign-resources';
-import { button, control, Field, label, money, Pager, reason, Records, useRecords } from './campaign-ui';
-import copy from '@/messages/campaigns.en.json';
+import { button, control, Field, Pager, Records, useCampaignText, useRecords } from './campaign-ui';
+
 type Schema = components['schemas'];
 type Catalog = Awaited<ReturnType<Client['catalog']>>;
 
 export function Campaigns({ workspaceId }: { workspaceId: string }) {
+  const copy = useCopy('campaigns');
+
   const api = useMemo(() => client(workspaceId), [workspaceId]);
   const [tab, setTab] = useState<'campaigns' | 'contacts' | 'templates'>('campaigns');
   return <><nav aria-label={copy.title} className="flex flex-wrap gap-2">{(['campaigns', 'contacts', 'templates'] as const).map(key =>
@@ -19,6 +22,8 @@ export function Campaigns({ workspaceId }: { workspaceId: string }) {
 }
 
 function CampaignList({ api }: { api: Client }) {
+  const copy = useCopy('campaigns');
+  const { label, money } = useCampaignText();
   const [revision, refresh] = useState(0); const [page, setPage] = useState(0); const [selected, select] = useState<string>();
   const [compose, setCompose] = useState(false); const [online, setOnline] = useState(false);
   const state = useRecords(signal => api.get<Campaign[]>(`campaigns?limit=20&offset=${page * 20}`, { signal }), [api, page, revision]);
@@ -37,6 +42,8 @@ function CampaignList({ api }: { api: Client }) {
 }
 
 function Composer({ api, created }: { api: Client; created: (row: Campaign) => void }) {
+  const copy = useCopy('campaigns');
+  const { label } = useCampaignText();
   const state = useRecords(api.catalog, [api]); const [draft, setDraft] = useState<Draft>({ name: '', template_id: '', segment_id: '', variables: [], currency: 'INR' });
   const [price, setPrice] = useState(''); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
   const selected = state.data?.templates.find(row => row.id === draft.template_id);
@@ -64,6 +71,8 @@ function Composer({ api, created }: { api: Client; created: (row: Campaign) => v
 }
 
 function CampaignDetail({ api, id, revision, changed }: { api: Client; id: string; revision: number; changed: () => void }) {
+  const copy = useCopy('campaigns');
+  const { label, reason, money } = useCampaignText();
   const [page, setPage] = useState(0); const [outcome, setOutcome] = useState(''); const [phone, setPhone] = useState(''); const [own, setOwn] = useState(false); const [reviewed, setReviewed] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null); const reviewButton = useRef<HTMLButtonElement>(null);
   const scheduleInput = useRef<HTMLInputElement>(null); const [when, setWhen] = useState(''); const [confirmation, setConfirmation] = useState<{ time: string | null }>();

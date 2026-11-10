@@ -1,0 +1,31 @@
+import base from '@/messages/en.json';
+import websites from '@/messages/websites.en.json';
+import campaigns from '@/messages/campaigns.en.json';
+import platform from '@/messages/platform.en.json';
+import invoices from '@/messages/invoices.en.json';
+import analytics from '@/messages/analytics.en.json';
+import billing from '@/messages/billing.en.json';
+import errors from '@/messages/errors.en.json';
+import templates from '@/messages/templates.en.json';
+import improvements from '@/messages/improvements.en.json';
+import faq from '@/messages/faq.en.json';
+import media from '@/messages/media.en.json';
+import leads from '@/messages/leads.en.json';
+import signup from '@/messages/whatsapp-signup.en.json';
+import baseHi from '@/messages/hi.json';
+import faqHi from '@/messages/faq.hi.json';
+import errorsHi from '@/messages/errors.hi.json';
+
+export const english = { base, websites, campaigns, platform, invoices, analytics, billing, errors, templates, improvements, faq, media, leads, signup };
+export const hindi: typeof english = { ...english, base: baseHi, faq: faqHi, errors: errorsHi };
+export type Locale = 'en' | 'hi';
+export type Catalog = typeof english;
+export const translatedNamespaces: (keyof Catalog)[] = ['base', 'faq', 'errors'];
+export const normalizeLocale = (value?: string): Locale => value === 'hi' ? 'hi' : 'en';
+export const catalogFor = (locale: Locale): Catalog => locale === 'hi' ? hindi : english;
+export function browserLocale(): Locale {
+  if (typeof document === 'undefined') return 'en';
+  const entry = document.cookie.split(';').map(part => part.trim()).find(part => part.startsWith('chatbot_locale='));
+  try { return normalizeLocale(decodeURIComponent(entry?.slice('chatbot_locale='.length) || '')); }
+  catch { return 'en'; }
+}

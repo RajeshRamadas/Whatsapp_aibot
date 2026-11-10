@@ -1,14 +1,17 @@
 'use client';
+import { useCopy } from '@/i18n/provider';
 import { useState } from 'react';
 import type { Client, Contact, Segment } from '@/api/campaigns';
 import type { components } from '@/api/schema';
 import { Badge, Card } from '@/components/ui/primitives';
-import { button, control, Field, label, Pager, Records, useRecords } from './campaign-ui';
-import copy from '@/messages/campaigns.en.json';
+import { button, control, Field, Pager, Records, useCampaignText, useRecords } from './campaign-ui';
+
 type Catalog = Awaited<ReturnType<Client['catalog']>>;
 type Schema = components['schemas'];
 
 export function Templates({ api }: { api: Client }) {
+  const copy = useCopy('campaigns');
+  const { label } = useCampaignText();
   const [revision, refresh] = useState(0); const state = useRecords(api.catalog, [api, revision]);
   const [draft, setDraft] = useState<Schema['TemplateInput']>({ name: '', language: 'en_US', category: 'MARKETING', body: '', examples: [] });
   const [busy, setBusy] = useState(false); const [error, setError] = useState('');
@@ -35,6 +38,8 @@ export function Templates({ api }: { api: Client }) {
 }
 
 function Consent({ contact, api, changed }: { contact: Contact; api: Client; changed: () => void }) {
+  const copy = useCopy('campaigns');
+
   const [source, setSource] = useState(''); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
   return <form className="mt-3 grid gap-2" onSubmit={async e => { e.preventDefault(); if (!window.confirm(copy.consentConfirm + '\n' + (contact.name ?? '') + ' ' + contact.external_user)) return;
     setBusy(true); setError(''); try { await api.consent(contact.id, { opted_in: !contact.marketing_eligible, source }); setSource(''); changed(); }
@@ -45,6 +50,8 @@ function Consent({ contact, api, changed }: { contact: Contact; api: Client; cha
 }
 
 export function Contacts({ api }: { api: Client }) {
+  const copy = useCopy('campaigns');
+
   const [revision, refresh] = useState(0); const [page, setPage] = useState(0); const [search, setSearch] = useState('');
   const [query, setQuery] = useState(''); const [permission, setPermission] = useState(''); const [file, setFile] = useState<File>();
   const [notice, setNotice] = useState(''); const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
@@ -66,6 +73,7 @@ export function Contacts({ api }: { api: Client }) {
 }
 
 function Segments({ api }: { api: Client }) {
+  const copy = useCopy('campaigns');
   const [revision, refresh] = useState(0); const [editing, setEditing] = useState<Segment>();
   const [name, setName] = useState(''); const [language, setLanguage] = useState(''); const [eligible, setEligible] = useState(true);
   const [pairs, setPairs] = useState<[string, string][]>([]); const [busy, setBusy] = useState(false); const [error, setError] = useState('');

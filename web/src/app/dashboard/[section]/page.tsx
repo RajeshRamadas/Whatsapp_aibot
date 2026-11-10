@@ -1,7 +1,9 @@
+import { getCopy } from '@/i18n/server';
 import { notFound } from 'next/navigation';
 import { pages } from '@/lib/navigation';
-import messages from '@/messages/en.json';
+
 export default async function Section({ params }: { params: Promise<{ section: string }> }) {
+  const messages = await getCopy('base');
   const { section } = await params;
   const page = pages.find(item => item.path === '/dashboard/' + section);
   if (!page) notFound();

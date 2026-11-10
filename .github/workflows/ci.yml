@@ -75,6 +75,7 @@ jobs:
           python -m scripts.seed_ocr_e2e
           python -m scripts.seed_websites_e2e
           python -m scripts.seed_improvements_e2e
+          python -m scripts.seed_locales_e2e
           uvicorn tests.browser_app:app --port 8000 &
           cd web
           npm install

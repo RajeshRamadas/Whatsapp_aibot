@@ -1,12 +1,14 @@
 'use client';
+import { useCopy } from '@/i18n/provider';
 import { useEffect, useState, type FormEvent } from 'react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
-import messages from '@/messages/en.json';
+
 
 type Settings = { tenant_id: string; name: string; chat_provider: string; chat_model: string; bot_name: string; bot_persona: string; bot_tone: string; bot_rules: string; business_hours: string; timezone: string; default_language: string; bot_live: boolean };
 type Preview = { answer: string; sources: { number: number; filename: string; heading: string | null; page: number | null }[] };
 export function BotSettings({ workspaceId }: { workspaceId: string }) {
+  const messages = useCopy('base');
   const [settings, setSettings] = useState<Settings | null>(null);
   const [provider, setProvider] = useState('');
   const [model, setModel] = useState('');
@@ -21,6 +23,7 @@ export function BotSettings({ workspaceId }: { workspaceId: string }) {
   const [question, setQuestion] = useState('');
   const [preview, setPreview] = useState<Preview | null>(null);
   const [error, setError] = useState('');
+  const [loadError, setLoadError] = useState(false);
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const headers = { 'X-Workspace-Id': workspaceId };
@@ -28,11 +31,11 @@ export function BotSettings({ workspaceId }: { workspaceId: string }) {
     let mounted = true;
     api<Settings>('tenant', { headers: { 'X-Workspace-Id': workspaceId } })
       .then(data => { if (mounted) { setSettings(data); setProvider(data.chat_provider); setModel(data.chat_model); setBotName(data.bot_name); setPersona(data.bot_persona); setTone(data.bot_tone); setRules(data.bot_rules); setHours(data.business_hours); setTimezone(data.timezone); setLanguage(data.default_language); } })
-      .catch(() => { if (mounted) setError(messages.genericError); });
+      .catch(() => { if (mounted) setLoadError(true); });
     return () => { mounted = false; };
   }, [workspaceId]);
   async function save(event: FormEvent) {
-    event.preventDefault(); setBusy(true); setError(''); setNotice('');
+    event.preventDefault(); setBusy(true); setError(''); setLoadError(false); setNotice('');
     try {
       const result = await api<Settings>('tenant', {
         method: 'PATCH', headers, body: JSON.stringify({ chat_provider: provider || null, chat_model: model || null, bot_name: botName, bot_persona: persona, bot_tone: tone, bot_rules: rules, business_hours: hours, timezone, default_language: language }),
@@ -42,7 +45,7 @@ export function BotSettings({ workspaceId }: { workspaceId: string }) {
     finally { setBusy(false); }
   }
   async function changeLive(live: boolean) {
-    setBusy(true); setError(''); setNotice('');
+    setBusy(true); setError(''); setLoadError(false); setNotice('');
     try {
       const result = await api<{ bot_live: boolean }>('bot/live', {
         method: 'POST', headers, body: JSON.stringify({ live, confirm: true }),
@@ -54,7 +57,7 @@ export function BotSettings({ workspaceId }: { workspaceId: string }) {
     finally { setBusy(false); }
   }
   async function test(event: FormEvent) {
-    event.preventDefault(); setBusy(true); setError(''); setPreview(null);
+    event.preventDefault(); setBusy(true); setError(''); setLoadError(false); setPreview(null);
     try {
       const result = await api<Preview>('bot/test', { method: 'POST', headers, body: JSON.stringify({ message: question }) });
       setPreview(result);
@@ -68,7 +71,7 @@ export function BotSettings({ workspaceId }: { workspaceId: string }) {
       {settings && <form onSubmit={save} className="mt-5 grid gap-4">
         <label className="block">{messages.botName}<input required maxLength={100} className="mt-1 block w-full rounded-lg border border-border bg-surface p-3" value={botName} onChange={e => setBotName(e.target.value)} /></label>
         <label className="block">{messages.botPersona}<textarea maxLength={2000} className="mt-1 block w-full rounded-lg border border-border bg-surface p-3" value={persona} onChange={e => setPersona(e.target.value)} /></label>
-        <label className="block">{messages.botTone}<select className="mt-1 block w-full rounded-lg border border-border bg-surface p-3" value={tone} onChange={e => setTone(e.target.value)}><option value="neutral">Neutral</option><option value="friendly">Friendly</option><option value="formal">Formal</option></select></label>
+        <label className="block">{messages.botTone}<select className="mt-1 block w-full rounded-lg border border-border bg-surface p-3" value={tone} onChange={e => setTone(e.target.value)}><option value="neutral">{messages.toneNeutral}</option><option value="friendly">{messages.toneFriendly}</option><option value="formal">{messages.toneFormal}</option></select></label>
         <label className="block">{messages.botRules}<textarea maxLength={4000} className="mt-1 block w-full rounded-lg border border-border bg-surface p-3" value={rules} onChange={e => setRules(e.target.value)} /></label>
         <label className="block">{messages.businessHours}<textarea maxLength={3000} className="mt-1 block w-full rounded-lg border border-border bg-surface p-3 font-mono text-sm" value={hours} onChange={e => setHours(e.target.value)} placeholder='{"0":["09:00","17:00"]}' /><span className="text-xs text-muted">{messages.businessHoursHelp}</span></label>
         <label className="block">{messages.timezone}<input required maxLength={64} className="mt-1 block w-full rounded-lg border border-border bg-surface p-3" value={timezone} onChange={e => setTimezone(e.target.value)} /></label>
@@ -106,6 +109,6 @@ export function BotSettings({ workspaceId }: { workspaceId: string }) {
         </details>}
       </div>}
     </section>
-    {(error || notice) && <p role="status" className="lg:col-span-2">{error || notice}</p>}
+    {(error || notice || loadError) && <p role="status" className="lg:col-span-2">{loadError ? messages.genericError : error || notice}</p>}
   </div>;
 }

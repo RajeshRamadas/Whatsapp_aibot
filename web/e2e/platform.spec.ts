@@ -9,7 +9,7 @@ test('platform administrator reviews failures and suspends and resumes a workspa
   await expect(page.getByRole('heading', { name: 'Platform administration', exact: true })).toBeVisible();
   const tenant = page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'Platform Suspension Fixture' }) });
   await expect(tenant.getByText('Active', { exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Document ingestion', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Document ingestion', exact: true }).first()).toBeVisible();
   await expect(page.getByRole('region', { name: 'Dead-letter jobs', exact: true })
     .getByRole('heading', { name: 'Email delivery', exact: true })).toBeVisible();
   await expect(page.getByText('Account or notification email', { exact: true })).toBeVisible();

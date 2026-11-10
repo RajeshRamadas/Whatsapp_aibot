@@ -1,21 +1,23 @@
 'use client';
+import { useCopy, useDisplayLocale } from '@/i18n/provider';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import * as platform from '@/api/platform';
 import { Badge, Card } from '@/components/ui/primitives';
-import copy from '@/messages/platform.en.json';
+
 
 const button = 'min-h-11 rounded-lg border border-border px-3 py-2 disabled:opacity-50';
-const number = new Intl.NumberFormat('en-IN');
-const usd = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'USD', maximumFractionDigits: 6 });
-const date = new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' });
+
+
+
 type Page<T> = { items: T[]; total: number; limit: number; offset: number };
 
 function Records<T extends { id: string }>({ title, help, load, render, revision = 0 }: {
   title: string; help?: string; load: (offset: number, signal: AbortSignal) => Promise<Page<T>>;
   render: (item: T) => React.ReactNode; revision?: number;
 }) {
+  const copy = useCopy('platform');
   const [data, setData] = useState<Page<T>>();
   const [offset, setOffset] = useState(0);
   const [retry, setRetry] = useState(0);
@@ -51,6 +53,11 @@ function Records<T extends { id: string }>({ title, help, load, render, revision
 }
 
 export function PlatformConsole() {
+  const displayLocale = useDisplayLocale();
+  const number = new Intl.NumberFormat(displayLocale);
+  const usd = new Intl.NumberFormat(displayLocale, { style: 'currency', currency: 'USD', maximumFractionDigits: 6 });
+  const date = new Intl.DateTimeFormat(displayLocale, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' });
+  const copy = useCopy('platform');
   const router = useRouter();
   const [revision, setRevision] = useState(0);
   const [busy, setBusy] = useState<string>();

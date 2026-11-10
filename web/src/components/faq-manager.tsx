@@ -1,8 +1,9 @@
 'use client';
+import { useCopy } from '@/i18n/provider';
 
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import copy from '@/messages/faq.en.json';
+
 
 type Pair = { id: string; question: string; answer: string };
 const endpoint = 'qa-pairs';
@@ -10,6 +11,7 @@ const pageSize = 25;
 const field = 'min-h-11 rounded border border-border bg-surface px-3 py-2';
 
 export function FaqManager({ workspaceId }: { workspaceId: string }) {
+  const copy = useCopy('faq');
   const [rows, setRows] = useState<Pair[]>();
   const [draft, setDraft] = useState<Pair>({ id: '', question: '', answer: '' });
   const [offset, setOffset] = useState(0);
@@ -25,7 +27,7 @@ export function FaqManager({ workspaceId }: { workspaceId: string }) {
     }).then(result => { if (!controller.signal.aborted) setRows(result); })
       .catch(() => { if (!controller.signal.aborted) setError(copy.loadError); });
     return () => controller.abort();
-  }, [workspaceId, offset, version]);
+  }, [workspaceId, offset, version, copy.loadError]);
 
   function clearDraft() {
     setDraft({ id: '', question: '', answer: '' });

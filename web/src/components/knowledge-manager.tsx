@@ -1,12 +1,14 @@
 'use client';
+import { useCopy } from '@/i18n/provider';
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import { api } from '@/lib/api';
 import { failureAdvice, isPending, sha256, statusTone, type Source, type UploadIntent } from '@/lib/knowledge';
 import { Badge } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/button';
-import messages from '@/messages/en.json';
+
 
 export function KnowledgeManager({ workspaceId, canEdit }: { workspaceId: string; canEdit: boolean }) {
+  const messages = useCopy('base');
   const [sources, setSources] = useState<Source[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -22,7 +24,7 @@ export function KnowledgeManager({ workspaceId, canEdit }: { workspaceId: string
       setError('');
     } catch (cause) { setError(cause instanceof Error ? cause.message : messages.genericError); }
     finally { setLoading(false); }
-  }, [workspaceId]);
+  }, [messages.genericError, workspaceId]);
   useEffect(() => { void refresh(); }, [refresh]);
   const pending = sources.some(source => isPending(source.status));
   useEffect(() => {

@@ -2,8 +2,12 @@
 :root { color-scheme: light; --background: #fafbfc; --foreground: #17212b; --surface: #ffffff; --border: #d4dce4; --accent: #155e75; --accent-foreground: #ffffff; --muted: #536474; --radius: 12px; }
 [data-theme="dark"] { color-scheme: dark; --background: #111b24; --foreground: #edf3f7; --surface: #1b2b38; --border: #435767; --accent: #67d2e6; --accent-foreground: #08242c; --muted: #b2c4d0; }
 @theme inline { --color-background: var(--background); --color-foreground: var(--foreground); --color-surface: var(--surface); --color-border: var(--border); --color-accent: var(--accent); --color-accent-foreground: var(--accent-foreground); --color-muted: var(--muted); --radius-lg: var(--radius); }
-html { background: var(--background); color: var(--foreground); font-family: Inter, "Noto Sans", system-ui, sans-serif; }
+html { background: var(--background); color: var(--foreground); font-family: Inter, "Noto Sans Devanagari", "Noto Sans", system-ui, sans-serif; }
 body { margin: 0; font-size: 16px; line-height: 1.5; }
 button, input, select { min-height: 44px; }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+@font-face { font-family: "Noto Sans Devanagari"; font-style: normal; font-weight: 100 900; font-display: swap; src: url("/fonts/noto-sans-devanagari.woff2") format("woff2"); unicode-range: U+0900-097F, U+1CD0-1CF4, U+1CF7-1CF9, U+200C-200D, U+20A8, U+20B9, U+20F0, U+25CC, U+A830-A839, U+A8E0-A8FF, U+11B00-11B0A; }
+html:lang(hi) { font-family: "Noto Sans Devanagari", "Nirmala UI", "Kohinoor Devanagari", system-ui, sans-serif; }
+html:lang(hi) body { line-height: 1.8; }
+html:lang(hi) button, html:lang(hi) input, html:lang(hi) select, html:lang(hi) textarea { line-height: 1.75; }

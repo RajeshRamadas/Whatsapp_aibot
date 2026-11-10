@@ -1,17 +1,22 @@
 'use client';
+import { useCopy } from '@/i18n/provider';
 
 import { useState } from 'react';
 import { useWorkspace, type Workspace } from '@/components/app-shell';
 import { FaqManager } from '@/components/faq-manager';
 import { WebsiteSources } from '@/components/website-sources';
-import websites from '@/messages/websites.en.json';
+
 import { ImproveAnswers } from '@/components/improve-answers';
-import improvements from '@/messages/improvements.en.json';
+
 import { KnowledgeManager } from '@/components/knowledge-manager';
-import messages from '@/messages/en.json';
-import faq from '@/messages/faq.en.json';
+
+
 
 function WorkspaceKnowledge({ workspace, initialView }: { workspace: Workspace; initialView: string }) {
+  const websites = useCopy('websites');
+  const improvements = useCopy('improvements');
+  const messages = useCopy('base');
+  const faq = useCopy('faq');
   const [tab, setTab] = useState(initialView === 'improve' ? 'improve' : 'documents');
   const canEdit = workspace.role === 'admin' || workspace.role === 'owner';
   return <main id="main" className="mx-auto max-w-5xl p-4 sm:p-8">

@@ -881,9 +881,20 @@ Greeting templates retain `{bot}` and `{business}`; closed-hours templates retai
 `{opening}`. Unknown placeholders, attribute access, conversions, formatting specs
 and oversized/empty values return 422. Audits store only the language code.
 
-The English/Hindi admin interface follows in T9.8b/c, independently of the
-workspace's customer-facing default language. No new credentials or settings.
+The English/Hindi admin interface is independent of the workspace's
+customer-facing default language. No new credentials or settings.
 Automated tests use provider fakes: they verify language-policy contracts and
 notice handling, not real-model language accuracy. Native-speaker review of
 conversation scripts and live multilingual accuracy checks remain pilot gates
 (UX_DESIGN §12); no such review is claimed by these automated checks.
+
+### Interface language (T9.8b)
+
+Choose English or हिन्दी in the page header. The browser remembers this preference
+in a validated `chatbot_locale` cookie for one year; it does not change the
+workspace language, customer messages or unsaved form content. Server rendering,
+error boundaries and date/number formatting use the selected locale. Core
+authentication, navigation, bot settings and FAQ screens have Hindi copy; remaining
+controls and operational catalogs follow in T9.8c/d. The interface uses a bundled
+OFL-licensed Noto Sans Devanagari font, generous line spacing and mobile wrapping.
+Screenshot: [Hindi core interface](docs/screenshots/t9-8-hindi-core.png).

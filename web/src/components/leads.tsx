@@ -1,11 +1,12 @@
 'use client';
+import { useCopy } from '@/i18n/provider';
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import type { Workspace } from '@/components/app-shell';
 import { api } from '@/lib/api';
-import messages from '@/messages/en.json';
-import copy from '@/messages/leads.en.json';
+
+
 
 const stages = ['new', 'contacted', 'qualified', 'won', 'lost'] as const;
 type Stage = typeof stages[number];
@@ -16,12 +17,13 @@ type Lead = {
 type Owner = { id: string; name: string };
 const control = 'min-h-11 rounded border border-border bg-surface px-3 py-2';
 const size = 30;
-const fieldNames = copy.fields as Record<string, string>;
 
 function LeadCard({ lead, owners, editable, save }: {
   lead: Lead; owners: Owner[]; editable: boolean;
   save: (id: string, body: Pick<Lead, 'status' | 'owner_id' | 'notes'>) => Promise<void>;
 }) {
+  const copy = useCopy('leads');
+  const fieldNames = copy.fields as Record<string, string>;
   const [status, setStatus] = useState(lead.status);
   const [owner, setOwner] = useState(lead.owner_id ?? '');
   const [notes, setNotes] = useState(lead.notes);
@@ -78,6 +80,9 @@ function LeadCard({ lead, owners, editable, save }: {
 }
 
 export function Leads({ workspace }: { workspace: Workspace }) {
+  const messages = useCopy('base');
+  const copy = useCopy('leads');
+
   const [rows, setRows] = useState<Lead[]>();
   const [owners, setOwners] = useState<Owner[]>([]);
   const [board, setBoard] = useState(false);
@@ -94,7 +99,7 @@ export function Leads({ workspace }: { workspace: Workspace }) {
     api<Owner[]>('lead-owners', { headers: { 'X-Workspace-Id': workspace.id }, signal: controller.signal })
       .then(setOwners).catch(() => { if (!controller.signal.aborted) setError(copy.loadOwnersError); });
     return () => controller.abort();
-  }, [workspace.id]);
+  }, [copy.loadOwnersError, workspace.id]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -105,7 +110,7 @@ export function Leads({ workspace }: { workspace: Workspace }) {
       .then(result => { if (!controller.signal.aborted) setRows(result); })
       .catch(() => { if (!controller.signal.aborted) setError(copy.loadError); });
     return () => controller.abort();
-  }, [workspace.id, query, offset, revision]);
+  }, [workspace.id, query, offset, revision, copy.loadError]);
 
   function filter(key: keyof typeof filters, value: string) {
     setFilters(previous => ({ ...previous, [key]: value }));

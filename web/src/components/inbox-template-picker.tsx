@@ -1,8 +1,9 @@
 'use client';
+import { useCopy } from '@/i18n/provider';
 
 import { useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
-import copy from '@/messages/templates.en.json';
+
 
 type Template = { id: string; name: string; language: string; body: string };
 const field = 'min-h-11 rounded border border-border bg-surface p-2';
@@ -10,6 +11,7 @@ const field = 'min-h-11 rounded border border-border bg-surface p-2';
 export function InboxTemplatePicker({ conversationId, onQueued }: {
   conversationId: string; onQueued: () => void;
 }) {
+  const copy = useCopy('templates');
   const [templates, setTemplates] = useState<Template[]>();
   const [selected, setSelected] = useState('');
   const [values, setValues] = useState<string[]>([]);
@@ -33,7 +35,7 @@ export function InboxTemplatePicker({ conversationId, onQueued }: {
     }
     void load().catch(() => { if (!controller.signal.aborted) setError(copy.loadError); });
     return () => controller.abort();
-  }, []);
+  }, [copy.loadError]);
 
   async function send() {
     if (!template || busy || values.some(value => !value.trim())) return;

@@ -1,22 +1,28 @@
 'use client';
+import { useCopy, useDisplayLocale } from '@/i18n/provider';
 
 import { useEffect, useState } from 'react';
 import { overview, type Filters, type Overview } from '@/api/analytics';
 import { Card } from '@/components/ui/primitives';
-import copy from '@/messages/analytics.en.json';
+
 
 const field = 'min-h-11 rounded-lg border border-border bg-surface px-3 py-2';
-const number = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 1 });
-const date = new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' });
+
+
 const columns = ['conversations', 'messages', 'bot_share', 'handoff_rate', 'first_response_seconds', 'leads'] as const;
-function value(row: Overview['summary'], key: typeof columns[number]) {
-  const amount = row[key];
-  if (amount === null) return copy.unavailable;
-  if (key === 'first_response_seconds') return copy.seconds.replace('{value}', number.format(amount));
-  return number.format(amount) + (key === 'bot_share' || key === 'handoff_rate' ? '%' : '');
-}
+
 
 export function AnalyticsOverview({ workspaceId }: { workspaceId: string }) {
+  const displayLocale = useDisplayLocale();
+  const number = new Intl.NumberFormat(displayLocale, { maximumFractionDigits: 1 });
+  const date = new Intl.DateTimeFormat(displayLocale, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' });
+  const copy = useCopy('analytics');
+  function value(row: Overview['summary'], key: typeof columns[number]) {
+    const amount = row[key];
+    if (amount === null) return copy.unavailable;
+    if (key === 'first_response_seconds') return copy.seconds.replace('{value}', number.format(amount));
+    return number.format(amount) + (key === 'bot_share' || key === 'handoff_rate' ? '%' : '');
+  }
   const [draft, setDraft] = useState<Filters>(() => ({
     from_date: new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10),
     to_date: new Date().toISOString().slice(0, 10), channel: '',

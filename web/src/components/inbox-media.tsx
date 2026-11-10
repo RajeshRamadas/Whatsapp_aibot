@@ -1,10 +1,12 @@
 'use client';
+import { useCopy } from '@/i18n/provider';
 import { useRef, useState } from 'react';
 import { mediaUrl, queueMedia, type Attachment } from '@/api/media';
-import copy from '@/messages/media.en.json';
+
 const field = 'min-h-11 min-w-0 rounded border border-border bg-surface p-2';
 
 export function MessageMedia({ conversationId, attachments }: { conversationId: string; attachments: Attachment[] }) {
+  const copy = useCopy('media');
   return <ul className="grid gap-3">{attachments.map(item => <li key={item.id} className="min-w-0 space-y-2">
     {item.status === 'ready' && item.mime_type ? <>
       {/* Authenticated URLs refresh their five-minute storage redirect on each request. */}
@@ -21,6 +23,7 @@ export function MessageMedia({ conversationId, attachments }: { conversationId: 
 }
 
 export function InboxMedia({ conversationId, recipient, onQueued }: { conversationId: string; recipient: string; onQueued: () => void }) {
+  const copy = useCopy('media');
   const [file, setFile] = useState<File>(); const [caption, setCaption] = useState('');
   const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [notice, setNotice] = useState('');
   const input = useRef<HTMLInputElement>(null); const attempt = useRef<{ file: File; caption: string; key: string } | undefined>(undefined);
