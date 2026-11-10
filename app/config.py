@@ -86,6 +86,7 @@ class Settings(BaseSettings):
     ocr_max_pages: int = Field(20, ge=1, le=100)
     ocr_max_pixels: int = Field(20000000, ge=1000000, le=64000000)
     ocr_timeout_seconds: int = Field(30, ge=1, le=120)
+    crawl_page_cap: int = Field(200, ge=1, le=1000)
     media_max_bytes: int = Field(16777216, ge=1024, le=16777216)
     media_retention_days: int = Field(365, ge=1, le=3650)
     transcription_provider: Literal['disabled', 'openai'] = 'disabled'
