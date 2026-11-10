@@ -190,7 +190,9 @@ def handle(tenant_id: str, message: dict) -> None:
     text = '\n'.join([part.get('text', '') for part in parts if part.get('text')]
                      + ([description] if description else []))
     bind(tenant_id=tenant_id, conversation_id=conv.id)
-    copy = copy_for(tenant)
+    written = '\n'.join(part.get('text', '') for part in parts)
+    language_text = written or (text if any(item['kind'] == 'audio' for item in attachments) else '')
+    copy = copy_for(tenant, language_text)
     incoming = ('user', text or f"[{message['type']} message]")
     keywords = {'stop', 'बंद', *tenant.whatsapp_opt_out_keywords}
     consent = next((value for part in reversed(parts)
@@ -226,7 +228,7 @@ def handle(tenant_id: str, message: dict) -> None:
     if conv.handoff or conv.status in ('waiting', 'agent', 'closed'):
         if (tenant.bot_live and conv.status == 'waiting' and conv.last_message_at
                 and timestamp - conv.last_message_at >= timedelta(hours=1)):
-            reply(handoff_notice(tenant, timestamp))
+            reply(handoff_notice(tenant, timestamp, copy))
         else:
             save(incoming)
         return
@@ -237,7 +239,7 @@ def handle(tenant_id: str, message: dict) -> None:
             active = db.get(Conversation, conv.id)
             should_notify = active.status == 'bot' and not active.handoff
         if should_notify and (wants_handoff or tenant.bot_live):
-            reply(handoff_notice(tenant, timestamp))
+            reply(handoff_notice(tenant, timestamp, copy))
         else:
             save(incoming)
         with Session.begin() as db:
@@ -264,14 +266,13 @@ def handle(tenant_id: str, message: dict) -> None:
 
     if not reserve(tenant_id, 'whatsapp:' + str(message.get('id') or uid())[:120]):
         notice = blocked_notice(tenant_id)
-        if notice == QUOTA_NOTICE and copy['from'] != 'From: ':
-            notice = 'स्वचालित सहायक की मासिक सीमा पूरी हो गई है। हमारी टीम आपकी मदद कर सकती है।'
+        notice = copy['quota'] if notice == QUOTA_NOTICE else copy['billing']
         message_id = send_text(phone_id, wa_user, notice, tenant_id=tenant_id)
         save(incoming, ('assistant', notice), channel_message_id=message_id, waiting=True)
         return
 
     mark_typing(phone_id, parts[-1].get('id'), tenant_id)
-    answer = rag.answer(tenant, conv.id, text, whatsapp=True)
+    answer = rag.answer(tenant, conv.id, text, whatsapp=True, language=copy['_language'])
     with Session() as db:
         current = db.get(Conversation, conv.id)
         can_send = (current is not None and not current.handoff and current.status == 'bot'

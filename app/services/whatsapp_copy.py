@@ -4,49 +4,12 @@ from datetime import timedelta
 from zoneinfo import ZoneInfo
 
 from .bot_policy import validate_hours, within_hours
-
-COPY = {
-    'en': {
-        'greeting': "Hi, I'm {bot}, the automated assistant for {business}.\n"
-                    "Ask about hours, services or prices. Type *agent* to reach our team.",
-        'unsupported': 'Sorry, I can only read text messages for now. Could you type your question?',
-        'media_handoff': 'Thanks for the attachment. Our team will review it and reply here.',
-        'rate': "You're sending messages quickly. Please wait a minute and try again.",
-        'error': 'Sorry, something went wrong. Please try again or type *agent* to reach our team.',
-        'handoff': 'Thanks, our team will reply here as soon as someone is available.',
-        'closed': "We're closed now. Our team will reply after {opening}.",
-        'unknown': "I don't have that information. Shall I connect you to our team?",
-        'yes': 'Yes, connect me', 'no': 'No, thanks', 'team': 'Talk to our team',
-        'declined': 'Okay. You can type *agent* anytime to reach our team.',
-        'stop': 'Marketing messages are stopped. You can still ask questions. Type *START* to opt back in.',
-        'start': 'You are opted in to marketing messages. Type *STOP* to opt out.',
-        'from': 'From: ', 'page': 'page', 'more': 'Want the full details?', 'options': 'See options',
-    },
-    'hi': {
-        'greeting': 'नमस्ते, मैं {bot} हूँ, {business} का स्वचालित सहायक।\n'
-                    'समय, सेवाओं या कीमतों के बारे में पूछें। टीम से बात करने के लिए *agent* लिखें।',
-        'unsupported': 'क्षमा करें, अभी मैं केवल टेक्स्ट पढ़ सकता हूँ। कृपया अपना सवाल लिखें।',
-        'media_handoff': 'फ़ाइल भेजने के लिए धन्यवाद। हमारी टीम इसे देखकर यहाँ जवाब देगी।',
-        'rate': 'आप जल्दी-जल्दी संदेश भेज रहे हैं। कृपया एक मिनट बाद फिर कोशिश करें।',
-        'error': 'क्षमा करें, कुछ गड़बड़ हुई। फिर कोशिश करें या टीम से बात करने के लिए *agent* लिखें।',
-        'handoff': 'धन्यवाद, हमारी टीम उपलब्ध होते ही यहाँ जवाब देगी।',
-        'closed': 'अभी हम बंद हैं। हमारी टीम {opening} के बाद जवाब देगी।',
-        'unknown': 'मेरे पास यह जानकारी नहीं है। क्या मैं आपको हमारी टीम से जोड़ दूँ?',
-        'yes': 'हाँ, जोड़ें', 'no': 'नहीं, धन्यवाद', 'team': 'टीम से बात करें',
-        'declined': 'ठीक है। टीम से बात करने के लिए कभी भी *agent* लिखें।',
-        'stop': 'मार्केटिंग संदेश बंद हैं। आप सवाल पूछ सकते हैं। इन्हें फिर शुरू करने के लिए *START* लिखें।',
-        'start': 'मार्केटिंग संदेश फिर शुरू हैं। इन्हें बंद करने के लिए *STOP* लिखें।',
-        'from': 'स्रोत: ', 'page': 'पृष्ठ', 'more': 'क्या आप पूरी जानकारी चाहेंगे?', 'options': 'विकल्प देखें',
-    },
-}
+from .customer_languages import COPY as COPY
+from .customer_languages import copy_for
 
 
-def copy_for(tenant):
-    return COPY['hi' if tenant.default_language.lower().split('-')[0] == 'hi' else 'en']
-
-
-def handoff_notice(tenant, at):
-    copy = copy_for(tenant)
+def handoff_notice(tenant, at, copy=None):
+    copy = copy or copy_for(tenant)
     if within_hours(tenant, at):
         return copy['handoff']
     local = at.astimezone(ZoneInfo(tenant.timezone))

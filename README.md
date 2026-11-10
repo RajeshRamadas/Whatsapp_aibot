@@ -862,3 +862,28 @@ history. Seed it with `python -m scripts.seed_improvements_e2e` after the other
 browser fixtures in an isolated test database. Browser coverage checks analytics
 entry, metrics, publication, FAQ retrieval, filtering/dismissal, reader protection,
 320px layout and axe. [Demo screenshot](docs/screenshots/t9-7-improve-answers.png).
+
+### Multilingual bot replies (T9.8a)
+
+The reply policy now applies on web and WhatsApp: use the latest customer's
+language and script, switch with the customer, keep Latin-script Hinglish in Latin,
+and preserve facts, amounts, names, IDs, URLs and citation markers. Tenant rules
+cannot override this policy. Supported default notices cover English, Hindi,
+Hinglish, Kannada, Tamil, Telugu, Marathi and Bengali. Script/word hints select
+notices without network calls; ambiguous text falls back to the workspace default.
+These hints are heuristic, especially for Marathi/Hindi and transliteration.
+Attachment captions do not determine the customer's notice language.
+
+Migration `0035_bot_messages` adds tenant-owned notice overrides. Owners/admins
+read `GET /api/v1/bot/messages` and replace one language's overrides with
+`PUT` (`language`, `messages`). An empty object restores that language's defaults.
+Greeting templates retain `{bot}` and `{business}`; closed-hours templates retain
+`{opening}`. Unknown placeholders, attribute access, conversions, formatting specs
+and oversized/empty values return 422. Audits store only the language code.
+
+The English/Hindi admin interface follows in T9.8b/c, independently of the
+workspace's customer-facing default language. No new credentials or settings.
+Automated tests use provider fakes: they verify language-policy contracts and
+notice handling, not real-model language accuracy. Native-speaker review of
+conversation scripts and live multilingual accuracy checks remain pilot gates
+(UX_DESIGN §12); no such review is claimed by these automated checks.

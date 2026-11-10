@@ -4,6 +4,24 @@
  */
 
 export interface paths {
+    "/api/v1/bot/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Catalog */
+        get: operations["catalog_api_v1_bot_messages_get"];
+        /** Update */
+        put: operations["update_api_v1_bot_messages_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/improvements": {
         parameters: {
             query?: never;
@@ -2386,6 +2404,37 @@ export interface components {
             /** Confirm */
             confirm: boolean;
         };
+        /** MessageCatalog */
+        MessageCatalog: {
+            /** Languages */
+            languages: {
+                [key: string]: string;
+            };
+            /** Defaults */
+            defaults: {
+                [key: string]: {
+                    [key: string]: string;
+                };
+            };
+            /** Overrides */
+            overrides: {
+                [key: string]: {
+                    [key: string]: string;
+                };
+            };
+        };
+        /** MessageOverrides */
+        MessageOverrides: {
+            /**
+             * Language
+             * @enum {string}
+             */
+            language: "en" | "hi" | "hi-Latn" | "kn" | "ta" | "te" | "mr" | "bn";
+            /** Messages */
+            messages: {
+                [key: string]: string;
+            };
+        };
         /** MessageView */
         MessageView: {
             /** Id */
@@ -3098,6 +3147,74 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    catalog_api_v1_bot_messages_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageCatalog"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_api_v1_bot_messages_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MessageOverrides"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageCatalog"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     reviews_api_v1_improvements_get: {
         parameters: {
             query?: {

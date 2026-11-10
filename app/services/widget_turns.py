@@ -6,9 +6,10 @@ from sqlalchemy import or_, select
 
 from .. import rag
 from ..db import Conversation, Session, Tenant, WidgetTurn, now
+from .customer_languages import copy_for
 from .events import publish_sync
 from .leads import notify_created
-from .usage import blocked_notice, reserve
+from .usage import QUOTA_NOTICE, blocked_notice, reserve
 
 log = logging.getLogger(__name__)
 HANDOFF = 'Your message is with our team. Keep this chat open to see their reply.'
@@ -37,7 +38,10 @@ def process_turn() -> bool:
     try:
         wants_ai = not (turn.handoff or conversation.handoff or conversation.status == 'closed')
         quota_reached = wants_ai and not reserve(tenant.id, 'widget:' + turn.id)
-        notice = blocked_notice(tenant.id) if quota_reached else HANDOFF
+        copy = copy_for(tenant, turn.message)
+        notice = copy['widget_handoff']
+        if quota_reached:
+            notice = copy['quota'] if blocked_notice(tenant.id) == QUOTA_NOTICE else copy['billing']
         result = rag.answer(tenant, conversation.id, turn.message) if wants_ai and not quota_reached else None
     except Exception:
         log.warning('Widget answer generation failed')
