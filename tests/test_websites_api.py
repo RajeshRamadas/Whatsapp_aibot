@@ -70,8 +70,8 @@ def test_websites_api_permissions_validation_and_isolation(client, tenant):
     assert client.get(f'{BASE}/{identity}/pages', headers=owner).json() == [{'id': source_id, 'url': page_url}]
     assert retrieve(tenant['tenant_id'], 'refunds')[0].filename == page_url
     scheduled = client.patch(f'{BASE}/{identity}', headers=owner, json={'schedule': 'weekly'}).json()
-    assert scheduled['schedule'] == 'weekly' and scheduled['next_run']
-    assert client.post(f'{BASE}/{identity}/refresh', headers=owner).status_code == 202
+    assert scheduled['schedule'] == 'weekly' and scheduled['next_run'] and scheduled['pages'] == 1
+    assert client.post(f'{BASE}/{identity}/refresh', headers=owner).json()['pages'] == 1
     assert client.post(f'{BASE}/{identity}/refresh', headers=owner).status_code == 202
     with Session.begin() as db:
         db.get(Website, identity).status = 'running'

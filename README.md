@@ -794,4 +794,22 @@ an outbox, recovers interrupted runs after 70 minutes and retries queue outages.
 Only one crawl runs per workspace at a time. Manual refreshes preserve host
 Retry-After cooldowns. Terminal crawl failures appear in the platform console
 without URLs or error payloads; workspace admins can retry through refresh.
-Knowledge UI controls follow in T9.6c. No additional environment variables.
+No additional environment variables.
+
+### Website knowledge UI (T9.6c)
+
+In **Knowledge → Websites**, owners/admins can add a single public HTTPS page or
+follow links on its exact host, choose page/depth limits, and set a manual, daily
+or weekly refresh. The screen shows workspace page reservations, indexed pages,
+current progress, recovery advice and last/next refresh times in IST. It polls
+every five seconds. Expand indexed pages to open the public source URLs.
+
+Refresh queues work for the crawler; schedule changes apply after an active run.
+Deletion confirms the starting URL and removes all its indexed knowledge. Viewers
+and agents cannot manage website knowledge. Loading, empty and recoverable error
+states, budget upgrade links and narrow-screen layouts are included.
+
+Browser coverage uses local static website/model fakes and checks crawl → citation
+→ refresh → schedule → delete, reader permissions, 320-pixel layout and axe.
+Run `python -m scripts.seed_websites_e2e` after the other browser seed scripts in
+an isolated test database. [Website controls screenshot](docs/screenshots/t9-6-websites.png).

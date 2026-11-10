@@ -28,7 +28,9 @@ class FetchError(ValueError):
 
 def public(address):
     ip = ipaddress.ip_address(address)
-    return (ip.is_global and not ip.is_multicast and not ip.is_unspecified and not getattr(ip, 'scope_id', None) and
+    translated = any(ip in ipaddress.ip_network(prefix) for prefix in ('64:ff9b::/96', '64:ff9b:1::/48'))
+    return (str(ip) != '168.63.129.16' and not translated and ip.is_global and
+            not ip.is_multicast and not ip.is_unspecified and not getattr(ip, 'scope_id', None) and
             not getattr(ip, 'ipv4_mapped', None) and not getattr(ip, 'sixtofour', None) and
             not getattr(ip, 'teredo', None))
 
