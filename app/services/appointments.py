@@ -45,6 +45,7 @@ def catalog(tenant_id):
 def save_resource(tenant_id, kind, values, identity=None, actor=('system', None)):
     model = Service if kind == 'services' else Staff
     with Session.begin() as db:
+        db.get(Tenant, tenant_id, with_for_update=True)
         if model is Service and values.get('reminder_template_id'):
             template = db.scalar(select(Template).join(Channel).where(Channel.tenant_id == tenant_id,
                 Template.id == values['reminder_template_id'], Template.category == 'UTILITY',
@@ -70,13 +71,15 @@ def save_resource(tenant_id, kind, values, identity=None, actor=('system', None)
 
 def add_slot(tenant_id, service_id, staff_id, starts_at, actor=('system', None)):
     with Session.begin() as db:
+        db.get(Tenant, tenant_id, with_for_update=True)
         staff = row(db, Staff, tenant_id, staff_id, lock=True)  # Serialize overlapping availability for this staff.
         service = row(db, Service, tenant_id, service_id)
         if not staff.active or not service.active or not now() < starts_at <= now() + timedelta(days=366):
             raise AppointmentError('Choose active resources and a future time within one year', 422)
         ends_at = starts_at + timedelta(minutes=service.duration_minutes)
         overlap = db.scalar(select(Slot.id).where(Slot.tenant_id == tenant_id, Slot.staff_id == staff.id,
-            Slot.active, Slot.starts_at < ends_at, Slot.ends_at > starts_at).limit(1))
+            Slot.active, Slot.calendar_signature.is_(None), Slot.starts_at < ends_at,
+            Slot.ends_at > starts_at).limit(1))
         if overlap:
             raise AppointmentError('This staff member already has overlapping availability')
         value = Slot(tenant_id=tenant_id, service_id=service.id, staff_id=staff.id,
@@ -89,6 +92,7 @@ def add_slot(tenant_id, service_id, staff_id, starts_at, actor=('system', None))
 
 def remove_slot(tenant_id, identity, actor=('system', None)):
     with Session.begin() as db:
+        db.get(Tenant, tenant_id, with_for_update=True)
         value = row(db, Slot, tenant_id, identity, lock=True)
         if db.scalar(select(Booking.id).where(Booking.tenant_id == tenant_id,
                                              Booking.slot_id == identity, active_booking()).limit(1)):
@@ -98,6 +102,8 @@ def remove_slot(tenant_id, identity, actor=('system', None)):
 
 
 def slots(tenant_id, start, end, service_id=None, staff_id=None):
+    from . import calendar_availability as calendar
+    calendar.materialize(tenant_id, start, end, service_id, staff_id)
     with Session() as db:
         if service_id:
             row(db, Service, tenant_id, service_id)
@@ -114,7 +120,8 @@ def slots(tenant_id, start, end, service_id=None, staff_id=None):
         if staff_id:
             query = query.where(Slot.staff_id == staff_id)
         return [{**fields(s, 'id service_id staff_id starts_at ends_at'), 'service': service, 'staff': staff,
-                 'state': state or 'available', 'expires_at': expiry if state == 'held' else None}
+                 'state': state or calendar.state(db, db.get(Tenant, tenant_id), s),
+                 'expires_at': expiry if state == 'held' else None}
                 for s, service, staff, state, expiry in db.execute(query.order_by(Slot.starts_at, Slot.id).limit(100))]
 
 
@@ -142,6 +149,7 @@ def bookings(tenant_id, start, end, conversation_id=None):
 def hold(tenant_id, slot_id, conversation_id, customer_name, customer_phone=None, reminder_opt_in=False,
          replaces_id=None, language=None, actor=('system', None)):
     with Session.begin() as db:
+        db.get(Tenant, tenant_id, with_for_update=True)
         slot = row(db, Slot, tenant_id, slot_id, lock=True)
         service, staff = row(db, Service, tenant_id, slot.service_id), row(db, Staff, tenant_id, slot.staff_id)
         conversation = row(db, Conversation, tenant_id, conversation_id)
@@ -168,6 +176,11 @@ def hold(tenant_id, slot_id, conversation_id, customer_name, customer_phone=None
                     conversation_id, customer_name, phone, replaces_id, reminder_opt_in, language):
                 return booking_view(db, existing)
             raise AppointmentError('Another customer has reserved this slot')
+        from . import calendar_availability as calendar
+        pairs = calendar.targets(db, tenant_id, slot.service_id, slot.staff_id)
+        if calendar.state(db, db.get(Tenant, tenant_id), slot, pairs) != 'available' or calendar.overlap(
+                db, tenant_id, slot, pairs, excluding=replaces_id):
+            raise AppointmentError('This slot is unavailable or its calendar is refreshing')
         value = Booking(tenant_id=tenant_id, slot_id=slot_id, conversation_id=conversation_id,
             customer_name=customer_name, customer_phone=phone, language=language,
             expires_at=now() + timedelta(minutes=5),
@@ -187,6 +200,7 @@ def transition(tenant_id, identity, action, conversation_id=None, actor=('system
         if conversation_id and snapshot.conversation_id != conversation_id:
             raise AppointmentError('Appointment record not found', 404)
         previous = row(db, Booking, tenant_id, snapshot.replaces_id) if snapshot.replaces_id else None
+        db.get(Tenant, tenant_id, with_for_update=True)
         # Consistent ordering also protects simultaneous reschedules and cancellations.
         identities = sorted({snapshot.slot_id, *([previous.slot_id] if previous else [])})
         for slot_id in identities:

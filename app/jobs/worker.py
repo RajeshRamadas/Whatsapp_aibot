@@ -13,7 +13,7 @@ from ..db import AuditLog, Conversation, InboundEvent, Message, Session, Source,
 from ..integrations.ses import Transport, cache_certificate
 from ..observability import bind, configure, observed_job
 from ..rate_limits import RateLimiter
-from ..services import google_jobs, media
+from ..services import calendar_availability, google_jobs, media
 from ..services.analytics import reconcile as reconcile_analytics_daily
 from ..services.appointment_reminders import process_one as process_appointment_reminder
 from ..services.billing import reconcile_settlements, reconcile_subscriptions
@@ -340,6 +340,7 @@ async def dispatch_appointment_reminders(ctx):
 
 @observed_job
 async def dispatch_google_calendar(ctx):
+    await asyncio.to_thread(calendar_availability.schedule)
     for _ in range(10):
         if not await asyncio.to_thread(google_jobs.process_one):
             break

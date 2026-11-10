@@ -89,6 +89,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/google-calendar/bindings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bindings */
+        get: operations["bindings_api_v1_google_calendar_bindings_get"];
+        put?: never;
+        /** Bind */
+        post: operations["bind_api_v1_google_calendar_bindings_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/google-calendar/bindings/{identity}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Unbind */
+        delete: operations["unbind_api_v1_google_calendar_bindings__identity__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/appointments/catalog": {
         parameters: {
             query?: never;
@@ -2318,6 +2353,35 @@ export interface components {
             /** Gstin */
             gstin?: string | null;
         };
+        /** BindingInput */
+        BindingInput: {
+            /**
+             * Connection Id
+             * Format: uuid
+             */
+            connection_id: string;
+            /** Calendar Id */
+            calendar_id: string;
+            /** Service Id */
+            service_id?: string | null;
+            /** Staff Id */
+            staff_id?: string | null;
+            /** Confirm Data Sharing */
+            confirm_data_sharing: boolean;
+        };
+        /** BindingView */
+        BindingView: {
+            /** Id */
+            id: string;
+            /** Connection Id */
+            connection_id: string;
+            /** Calendar Id */
+            calendar_id: string;
+            /** Service Id */
+            service_id: string | null;
+            /** Staff Id */
+            staff_id: string | null;
+        };
         /** Body_import_csv_api_v1_contacts_import_post */
         Body_import_csv_api_v1_contacts_import_post: {
             /** File */
@@ -3783,6 +3847,108 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CalendarAccount"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bindings_api_v1_google_calendar_bindings_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BindingView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bind_api_v1_google_calendar_bindings_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BindingInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unbind_api_v1_google_calendar_bindings__identity__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

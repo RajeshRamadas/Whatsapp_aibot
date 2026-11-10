@@ -147,6 +147,9 @@ def execute(tenant_id, identity, kind, revision):
             if (not session or session.expires_at <= now() or not membership
                     or membership.role not in ('owner', 'admin')):
                 raise CalendarError('authorization_required')
+    if kind == 'availability':
+        from .calendar_availability import fetch
+        return fetch(tenant_id, identity, revision)
     provider = Client(tenant_id)
     if kind == 'disconnect':
         if credentials:
