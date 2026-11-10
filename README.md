@@ -898,3 +898,13 @@ authentication, navigation, bot settings and FAQ screens have Hindi copy; remain
 controls and operational catalogs follow in T9.8c/d. The interface uses a bundled
 OFL-licensed Noto Sans Devanagari font, generous line spacing and mobile wrapping.
 Screenshot: [Hindi core interface](docs/screenshots/t9-8-hindi-core.png).
+
+### Localized controls and customer notices (T9.8c)
+
+Inbox controls, offline snapshots, push notifications, widget settings and missing
+page recovery use the interface catalog. Customer text and widget greetings keep
+their original content. In Bot settings, expand Customer-facing default messages
+to edit common notices for one customer language, save them, or confirm a reset to
+its defaults. Only workspace owners/admins can use the editor. Interface language
+changes preserve drafts; workspace changes remount the editor.
+Screenshot: [Hindi customer notices](docs/screenshots/t9-8-hindi-notices.png).

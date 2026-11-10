@@ -34,7 +34,7 @@ test('agent handles an inbound conversation with live transcript updates', async
   expect(response.ok()).toBeTruthy();
   await expect(page.getByRole('list', { name: 'Messages' }).getByText(note)).toBeVisible();
   await page.getByRole('button', { name: 'Hand back to bot' }).click();
-  await expect(page.getByRole('button', { name: new RegExp(conversation + '.*bot') })).toHaveCount(1);
+  await expect(page.getByRole('button', { name: new RegExp(conversation + '.*Bot') })).toHaveCount(1);
   await page.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Reopen' })).toBeVisible();
 });

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useCopy, useLocale } from '@/i18n/provider';
 import { useEffect, useRef, useState } from 'react';
 import { InboxTemplatePicker } from '@/components/inbox-template-picker';
 import { InboxMedia, MessageMedia } from '@/components/inbox-media';
@@ -20,6 +21,9 @@ const endpoint = 'inbox/conversations';
 const field = 'min-h-11 rounded border border-border bg-surface p-2';
 
 export function Inbox({ canAct }: { canAct: boolean }) {
+  const copy = useCopy('inbox');
+  const locale = useLocale();
+  const labelFor = (value: string) => (copy as Record<string, string>)[value] ?? value;
   const workspace = useWorkspace();
   const [page, setPage] = useState<Page>();
   const [selected, select] = useState('');
@@ -59,7 +63,7 @@ export function Inbox({ canAct }: { canAct: boolean }) {
     stream.addEventListener('typing.updated', (event: MessageEvent<string>) => {
       const data = JSON.parse(event.data) as { conversation_id: string; user_id?: string; user_name?: string };
       if (data.conversation_id !== selected) return;
-      setTyping(data.user_name ? data.user_name + ' is typing…' : 'An agent is typing…');
+      setTyping(data.user_name || '\0');
       clearTimeout(timeout);
       timeout = setTimeout(() => setTyping(''), 5000);
     });
@@ -108,13 +112,13 @@ export function Inbox({ canAct }: { canAct: boolean }) {
   useEffect(() => {
     if (!page || !workspace || !('serviceWorker' in navigator)) return;
     const saveSnapshot = () => navigator.serviceWorker.controller?.postMessage({
-      type: 'INBOX_SNAPSHOT', workspace: workspace.name,
+      type: 'INBOX_SNAPSHOT', workspace: workspace.name, locale,
       conversations: page.items, messages,
     });
     saveSnapshot();
     navigator.serviceWorker.addEventListener('controllerchange', saveSnapshot);
     return () => navigator.serviceWorker.removeEventListener('controllerchange', saveSnapshot);
-  }, [page, messages, workspace]);
+  }, [page, messages, workspace, locale]);
 
   async function action(name: string, payload?: object, key?: string) {
     if (!canAct || busy) return;
@@ -171,59 +175,59 @@ export function Inbox({ canAct }: { canAct: boolean }) {
       void action('close');
     }
   }}>
-    <h1 className="mb-4 text-2xl font-semibold">Inbox</h1>
+    <h1 className="mb-4 text-2xl font-semibold">{copy.title}</h1>
     {error && <p role="alert" className="mb-3">{error}</p>}
     <div className="grid gap-4 lg:grid-cols-[minmax(13rem,1fr)_minmax(0,2fr)_minmax(12rem,1fr)]">
-      <section aria-label="Conversation list" className={active ? 'hidden lg:block' : ''}>
+      <section aria-label={copy.conversationList} className={active ? 'hidden lg:block' : ''}>
         <div className="grid gap-2">
-          <input className={field} aria-label="Search conversations" placeholder="Search conversations"
+          <input className={field} aria-label={copy.search} placeholder={copy.search}
             value={search} onChange={event => setSearch(event.target.value)} />
-          <select className={field} aria-label="Status" value={status} onChange={event => setStatus(event.target.value)}>
-            <option value="">All statuses</option>
+          <select className={field} aria-label={copy.status} value={status} onChange={event => setStatus(event.target.value)}>
+            <option value="">{copy.allStatuses}</option>
             {['waiting', 'agent', 'bot', 'closed'].map(value =>
-              <option key={value} value={value}>{value} ({page?.counts[value] ?? 0})</option>)}
+              <option key={value} value={value}>{labelFor(value)} ({page?.counts[value] ?? 0})</option>)}
           </select>
-          <select className={field} aria-label="Channel" value={channel} onChange={event => setChannel(event.target.value)}>
-            <option value="">All channels</option><option value="whatsapp">WhatsApp</option><option value="web">Web</option>
+          <select className={field} aria-label={copy.channel} value={channel} onChange={event => setChannel(event.target.value)}>
+            <option value="">{copy.allChannels}</option><option value="whatsapp">{copy.whatsapp}</option><option value="web">{copy.web}</option>
           </select>
-          <input className={field} aria-label="Assignee" placeholder="Assignee ID or unassigned"
+          <input className={field} aria-label={copy.assignee} placeholder={copy.assigneeHint}
             value={assignee} onChange={event => setAssignee(event.target.value)} />
-          <input className={field} aria-label="Label" placeholder="Filter by label"
+          <input className={field} aria-label={copy.label} placeholder={copy.filterLabel}
             value={label} onChange={event => setLabel(event.target.value)} />
-          {!page && <p role="status">Loading conversations…</p>}
-          {page?.items.length === 0 && <p>No conversations found.</p>}
+          {!page && <p role="status">{copy.loading}</p>}
+          {page?.items.length === 0 && <p>{copy.empty}</p>}
           {page?.items.map(item => <button key={item.id} type="button" className={field + ' text-left'}
             aria-pressed={selected === item.id} onClick={() => choose(item.id)}>
             <span className="block break-all">{item.user}</span>
-            <span className="text-sm">{item.channel} · {item.status}</span>
+            <span className="text-sm">{labelFor(item.channel)} · {labelFor(item.status)}</span>
           </button>)}
-          {page?.next_cursor && <button className={field} onClick={loadMore}>Load more</button>}
+          {page?.next_cursor && <button className={field} onClick={loadMore}>{copy.loadMore}</button>}
         </div>
       </section>
       {active ? <>
-        <section aria-label="Conversation" className="min-w-0">
-          <button className={field + ' mb-2 lg:hidden'} onClick={() => choose('')}>Back to conversations</button>
+        <section aria-label={copy.conversation} className="min-w-0">
+          <button className={field + ' mb-2 lg:hidden'} onClick={() => choose('')}>{copy.back}</button>
           <h2 className="break-all text-lg font-semibold">{active.user}</h2>
           {canAct && <div className="my-3 flex flex-wrap gap-2">
-            <button className={field} disabled={busy} onClick={() => action('take-over')}>Take over</button>
-            <button className={field} disabled={busy} onClick={() => action('hand-back')}>Hand back to bot</button>
+            <button className={field} disabled={busy} onClick={() => action('take-over')}>{copy.takeOver}</button>
+            <button className={field} disabled={busy} onClick={() => action('hand-back')}>{copy.handBack}</button>
             <button className={field} disabled={busy} onClick={() => action(active.status === 'closed' ? 'reopen' : 'close')}>
-              {active.status === 'closed' ? 'Reopen' : 'Close'}
+              {active.status === 'closed' ? copy.reopen : copy.close}
             </button>
           </div>}
-          <ol aria-label="Messages" aria-live="polite" className="mb-4 grid max-h-[50vh] gap-2 overflow-auto">
+          <ol aria-label={copy.messages} aria-live="polite" className="mb-4 grid max-h-[50vh] gap-2 overflow-auto">
             {messages.map((message, index) => <li key={index} className="rounded border border-border p-2">
-              <span className="text-sm font-semibold">{message.kind === 'note' ? 'Internal note' : message.role}</span>
+              <span className="text-sm font-semibold">{message.kind === 'note' ? copy.internalNote : labelFor(message.role)}</span>
               {!message.attachments?.some(item => item.transcript === message.content) &&
                 <p className="whitespace-pre-wrap break-words">{message.content}</p>}
               {!!message.attachments?.length && <MessageMedia conversationId={selected} attachments={message.attachments} />}
-              {!!message.sources?.length && <ul aria-label="Sources" className="mt-2 text-sm">
+              {!!message.sources?.length && <ul aria-label={copy.sources} className="mt-2 text-sm">
                 {message.sources.map(source => <li key={source.number}>
                   [{source.number}] {source.filename}{source.heading && ' · ' + source.heading}
-                  {source.page != null && ' · p. ' + source.page}
+                  {source.page != null && ' · ' + copy.page + ' ' + source.page}
                 </li>)}
               </ul>}
-              {message.delivery_status && <span className="text-sm">{message.delivery_status}</span>}
+              {message.delivery_status && <span className="text-sm">{labelFor(message.delivery_status)}</span>}
             </li>)}
           </ol>
           {canAct && <form className="grid gap-2" onSubmit={event => {
@@ -236,8 +240,8 @@ export function Inbox({ canAct }: { canAct: boolean }) {
               void action('reply', { message: text }, pendingReply.current.key);
             }
           }}>
-            {typing && <p role="status">{typing}</p>}
-            <textarea ref={composer} aria-label="Reply or internal note" className={field} value={draft} maxLength={4000}
+            {typing && <p role="status">{typing === '\0' ? copy.agentTyping : copy.typing.replace('{name}', typing)}</p>}
+            <textarea ref={composer} aria-label={copy.composer} className={field} value={draft} maxLength={4000}
               onChange={event => {
                 const text = event.target.value;
                 setDrafts(old => ({ ...old, [selected]: text }));
@@ -252,16 +256,16 @@ export function Inbox({ canAct }: { canAct: boolean }) {
                   event.currentTarget.form?.requestSubmit();
                 }
               }} />
-            {draft.startsWith('/') && <ul aria-label="Canned replies">
+            {draft.startsWith('/') && <ul aria-label={copy.canned}>
               {canned.filter(item => item.title.toLowerCase().includes(draft.slice(1).toLowerCase())).map(item =>
                 <li key={item.id}><button type="button" className={field}
                   onClick={() => setDrafts(old => ({ ...old, [selected]: item.body }))}>{item.title}</button></li>)}
             </ul>}
             <div className="flex flex-wrap gap-2">
               <button type="submit" className={field} disabled={busy || !draft.trim() || !active.can_reply_freely
-                || active.status === 'closed'}>Send reply</button>
+                || active.status === 'closed'}>{copy.send}</button>
               <button type="button" className={field} disabled={busy || !draft.trim()}
-                onClick={() => action('note', { text: draft.trim() })}>Add internal note</button>
+                onClick={() => action('note', { text: draft.trim() })}>{copy.addNote}</button>
             </div>
           </form>}
           {canAct && active.channel === 'whatsapp' && active.can_reply_freely && active.status !== 'closed' &&
@@ -270,19 +274,19 @@ export function Inbox({ canAct }: { canAct: boolean }) {
             <InboxTemplatePicker key={selected} conversationId={selected}
               onQueued={() => refresh(value => value + 1)} />}
         </section>
-        <aside aria-label="Contact details" className="rounded border border-border p-3">
-          <h2 className="font-semibold">Contact</h2>
+        <aside aria-label={copy.contactDetails} className="rounded border border-border p-3">
+          <h2 className="font-semibold">{copy.contact}</h2>
           <p className="break-all">{active.user}</p>
-          <p>{active.channel} · {active.status}</p>
-          <p>Labels: {active.labels.join(', ') || 'None'}</p>
-          <p className="break-all">Assignee: {active.assignee_user_id ?? 'Unassigned'}</p>
-          <h3 className="mt-4 font-semibold">Lead</h3>
+          <p>{labelFor(active.channel)} · {labelFor(active.status)}</p>
+          <p>{copy.labels}: {active.labels.join(', ') || copy.none}</p>
+          <p className="break-all">{copy.assignee}: {active.assignee_user_id ?? copy.unassigned}</p>
+          <h3 className="mt-4 font-semibold">{copy.lead}</h3>
           {lead?.id === selected ? <>
-            <p className="break-words">{lead.fields.name || lead.fields.phone || 'Unnamed lead'} · {lead.status}</p>
-            <Link href="/dashboard/leads" className="underline">View leads</Link>
-          </> : <p>No lead captured.</p>}
+            <p className="break-words">{lead.fields.name || lead.fields.phone || copy.unnamedLead} · {lead.status}</p>
+            <Link href="/dashboard/leads" className="underline">{copy.viewLeads}</Link>
+          </> : <p>{copy.noLead}</p>}
         </aside>
-      </> : <p className="hidden lg:block">Choose a conversation to see its messages.</p>}
+      </> : <p className="hidden lg:block">{copy.choose}</p>}
     </div>
   </main>;
 }

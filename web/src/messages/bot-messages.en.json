@@ -1,0 +1,20 @@
+{
+  "title": "Customer-facing default messages",
+  "help": "Edit notices for one customer language. This is separate from your interface language. Keep {bot} and {business} in greetings and {opening} in closed-hours notices.",
+  "language": "Message language",
+  "greeting": "Greeting",
+  "unknown": "Answer unavailable",
+  "handoff": "Team handoff",
+  "closed": "Outside business hours",
+  "unsupported": "Unreadable message",
+  "rate": "Too many messages",
+  "error": "Temporary problem",
+  "save": "Save messages",
+  "reset": "Restore defaults",
+  "confirmReset": "Restore the default messages for this language? Custom notices for this language will be removed.",
+  "saved": "Messages saved.",
+  "loading": "Loading default messages…",
+  "loadError": "Could not load default messages. Try again.",
+  "saveError": "Could not save messages. Check the placeholders and try again.",
+  "retry": "Retry"
+}

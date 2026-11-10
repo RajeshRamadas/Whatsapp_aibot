@@ -2,6 +2,7 @@
 import { useCopy } from '@/i18n/provider';
 import { useEffect, useState, type FormEvent } from 'react';
 import { api } from '@/lib/api';
+import { BotMessageSettings } from '@/components/bot-message-settings';
 import { Button } from '@/components/ui/button';
 
 
@@ -109,6 +110,7 @@ export function BotSettings({ workspaceId }: { workspaceId: string }) {
         </details>}
       </div>}
     </section>
+    {settings && <BotMessageSettings workspaceId={workspaceId} />}
     {(error || notice || loadError) && <p role="status" className="lg:col-span-2">{loadError ? messages.genericError : error || notice}</p>}
   </div>;
 }

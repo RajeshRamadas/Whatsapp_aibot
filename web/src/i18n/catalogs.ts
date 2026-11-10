@@ -1,3 +1,9 @@
+import inbox from '@/messages/inbox.en.json';
+import inboxHi from '@/messages/inbox.hi.json';
+import widget from '@/messages/widget.en.json';
+import widgetHi from '@/messages/widget.hi.json';
+import botMessages from '@/messages/bot-messages.en.json';
+import botMessagesHi from '@/messages/bot-messages.hi.json';
 import base from '@/messages/en.json';
 import websites from '@/messages/websites.en.json';
 import campaigns from '@/messages/campaigns.en.json';
@@ -16,11 +22,11 @@ import baseHi from '@/messages/hi.json';
 import faqHi from '@/messages/faq.hi.json';
 import errorsHi from '@/messages/errors.hi.json';
 
-export const english = { base, websites, campaigns, platform, invoices, analytics, billing, errors, templates, improvements, faq, media, leads, signup };
-export const hindi: typeof english = { ...english, base: baseHi, faq: faqHi, errors: errorsHi };
+export const english = { inbox, widget, botMessages, base, websites, campaigns, platform, invoices, analytics, billing, errors, templates, improvements, faq, media, leads, signup };
+export const hindi: typeof english = { ...english, inbox: inboxHi, widget: widgetHi, botMessages: botMessagesHi, base: baseHi, faq: faqHi, errors: errorsHi };
 export type Locale = 'en' | 'hi';
 export type Catalog = typeof english;
-export const translatedNamespaces: (keyof Catalog)[] = ['base', 'faq', 'errors'];
+export const translatedNamespaces: (keyof Catalog)[] = ['base', 'faq', 'errors', 'inbox', 'widget', 'botMessages'];
 export const normalizeLocale = (value?: string): Locale => value === 'hi' ? 'hi' : 'en';
 export const catalogFor = (locale: Locale): Catalog => locale === 'hi' ? hindi : english;
 export function browserLocale(): Locale {
