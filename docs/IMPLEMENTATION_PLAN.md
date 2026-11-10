@@ -704,7 +704,7 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 |---|---|---|---|
 | T9.4a | Private media backend: receive, authenticated download, durable agent sends and retention | WA-4, WA-11 | T6.1, T1.7 |
 | T9.4b | Inbox media controls; voice transcription and image interpretation | CH-5, STT-1, STT-2 | T9.4a |
-| T9.5 | OCR for scanned PDFs and images | KN-4, OCR-1 | T2.2 |
+| T9.5 | OCR for scanned PDFs and images (local Tesseract, page citations and usage metering) | KN-4, OCR-1 | T2.2 (merged #20) |
 | T9.6 | Website crawling | KN-2, WEB-1 to WEB-5 | T2.2 |
 | T9.7 | "Improve answers" queue and feedback | KN-7, ANL-2, ANL-3 | T8.2 |
 | T9.8 | Multilingual replies and Hindi UI | BOT-2, CONV-8, L10N-1 to L10N-3 | T6.3 |
@@ -776,7 +776,7 @@ Tick each task in the PR that completes it.
 | M6 | T6.1 ☐ · T6.2 ☐ · T6.3 ☐ · T6.4 ☐ · T6.5 ☐ | |
 | M7 | T7.1 ☐ · T7.2 ☐ · T7.3 ☐ · T7.4 ☐ · T7.5 ☑ | |
 | M8 | T8.1 ☐ · T8.2 ☑ · T8.3 ☑ · T8.4 ☐ · T8.5 ☐ | T8.4 code ready; live SES/DNS staging check pending. |
-| M9 | T9.1 ☑ · T9.2a ☑ · T9.2b ☑ · T9.3 ☑ · T9.4a ☑ · T9.4b ☐ | T9.4b code ready; real Indian-language speech evaluation and final provider selection pending. |
+| M9 | T9.1 ☑ · T9.2a ☑ · T9.2b ☑ · T9.3 ☑ · T9.4a ☑ · T9.4b ☐ · T9.5 ☑ | T9.4b code merged; user has no speech dataset and chose to keep transcription disabled. Real-language evaluation pending. |
 
 ## 7. Human decisions needed before certain tasks
 
@@ -788,4 +788,4 @@ Tick each task in the PR that completes it.
 | T7.3 | Accountant review of the invoice format and SAC code | DESIGN §9 |
 | T8.4 | SES Mumbai; notifications@marketingadda.com. Staging/DNS verification pending. | INTEGRATIONS EM-1 |
 | T8.5 | Hosting provider and region | REQUIREMENTS §10.6 |
-| T9.4b | OpenAI candidate adapter provided, disabled by default. Measure real Indian-language voice notes before final provider selection/production enablement. | INTEGRATIONS STT-1 |
+| T9.4b | OpenAI selected for the first adapter. User confirmed no dataset yet; keep transcription disabled until real-language evaluation is complete. | INTEGRATIONS STT-1 |

@@ -11,7 +11,8 @@ export function isPending(status: string): boolean {
 }
 export function failureAdvice(error: string | null): string {
   const reason = (error ?? '').toLowerCase();
-  if (reason.includes('empty') || reason.includes('no text')) return 'emptyFileAdvice';
+  if (reason.includes('recognition') || reason.includes('ocr')) return 'ocrAdvice';
+  if (reason.includes('empty') || reason.includes('no text') || reason.includes('no extractable text')) return 'emptyFileAdvice';
   if (reason.includes('format') || reason.includes('unsupported')) return 'formatAdvice';
   if (reason.includes('size') || reason.includes('large')) return 'sizeAdvice';
   return 'generalFileAdvice';

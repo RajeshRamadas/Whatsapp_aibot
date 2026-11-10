@@ -31,8 +31,13 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt -r requirements-dev.txt
-      - name: Ensure the voice decoder is available
-        run: command -v ffmpeg || (sudo apt-get update && sudo apt-get install -y ffmpeg)
+      - name: Ensure media and OCR tools are available
+        run: |
+          if command -v ffmpeg && command -v pdftoppm && command -v prlimit && command -v tesseract && tesseract --list-langs | grep -qx hin; then
+            exit 0
+          fi
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg poppler-utils util-linux tesseract-ocr tesseract-ocr-eng tesseract-ocr-hin
       - run: ruff check app tests
       - run: alembic upgrade head
       - run: alembic check
@@ -67,6 +72,7 @@ jobs:
           python -m scripts.seed_analytics_e2e
           python -m scripts.seed_campaigns_e2e
           python -m scripts.seed_media_e2e
+          python -m scripts.seed_ocr_e2e
           uvicorn tests.browser_app:app --port 8000 &
           cd web
           npm install
