@@ -1,3 +1,14 @@
+import signupHi from '@/messages/whatsapp-signup.hi.json';
+import leadsHi from '@/messages/leads.hi.json';
+import mediaHi from '@/messages/media.hi.json';
+import improvementsHi from '@/messages/improvements.hi.json';
+import templatesHi from '@/messages/templates.hi.json';
+import billingHi from '@/messages/billing.hi.json';
+import analyticsHi from '@/messages/analytics.hi.json';
+import invoicesHi from '@/messages/invoices.hi.json';
+import platformHi from '@/messages/platform.hi.json';
+import campaignsHi from '@/messages/campaigns.hi.json';
+import websitesHi from '@/messages/websites.hi.json';
 import inbox from '@/messages/inbox.en.json';
 import inboxHi from '@/messages/inbox.hi.json';
 import widget from '@/messages/widget.en.json';
@@ -23,10 +34,10 @@ import faqHi from '@/messages/faq.hi.json';
 import errorsHi from '@/messages/errors.hi.json';
 
 export const english = { inbox, widget, botMessages, base, websites, campaigns, platform, invoices, analytics, billing, errors, templates, improvements, faq, media, leads, signup };
-export const hindi: typeof english = { ...english, inbox: inboxHi, widget: widgetHi, botMessages: botMessagesHi, base: baseHi, faq: faqHi, errors: errorsHi };
+export const hindi: typeof english = { ...english, websites: websitesHi, campaigns: campaignsHi, platform: platformHi, invoices: invoicesHi, analytics: analyticsHi, billing: billingHi, templates: templatesHi, improvements: improvementsHi, media: mediaHi, leads: leadsHi, signup: signupHi, inbox: inboxHi, widget: widgetHi, botMessages: botMessagesHi, base: baseHi, faq: faqHi, errors: errorsHi };
 export type Locale = 'en' | 'hi';
 export type Catalog = typeof english;
-export const translatedNamespaces: (keyof Catalog)[] = ['base', 'faq', 'errors', 'inbox', 'widget', 'botMessages'];
+export const translatedNamespaces = Object.keys(english) as (keyof Catalog)[];
 export const normalizeLocale = (value?: string): Locale => value === 'hi' ? 'hi' : 'en';
 export const catalogFor = (locale: Locale): Catalog => locale === 'hi' ? hindi : english;
 export function browserLocale(): Locale {

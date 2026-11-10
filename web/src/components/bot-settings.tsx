@@ -106,7 +106,7 @@ export function BotSettings({ workspaceId }: { workspaceId: string }) {
         <p className="whitespace-pre-wrap">{preview.answer}</p>
         {preview.sources.length > 0 && <details className="mt-3"><summary className="cursor-pointer">{messages.source}</summary>
           <ul className="mt-2 list-inside list-disc text-sm">{preview.sources.map(source =>
-            <li key={source.number}>{source.filename}{source.heading ? ' — ' + source.heading : ''}{source.page ? ' (p. ' + source.page + ')' : ''}</li>)}</ul>
+            <li key={source.number}>{source.filename}{source.heading ? ' — ' + source.heading : ''}{source.page ? ' (' + messages.pageLabel + ' ' + source.page + ')' : ''}</li>)}</ul>
         </details>}
       </div>}
     </section>

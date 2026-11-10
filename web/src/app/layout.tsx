@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: english.base.brand };
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const locale = await requestLocale();
   return <html lang={locale}><body><LocaleProvider locale={locale}>
-    <a href="#main" className="sr-only focus:not-sr-only">{catalogFor(locale).base.back}</a>
+    <a href="#main" className="sr-only focus:not-sr-only">{catalogFor(locale).base.skipContent}</a>
     <section aria-label={catalogFor(locale).base.interfaceLanguage}><LanguageSwitch /></section>{children}
   </LocaleProvider></body></html>;
 }

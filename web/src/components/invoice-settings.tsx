@@ -9,7 +9,7 @@ type Details = { name: string; address: string; state: string; postal_code: stri
 type Profile = { details: Details | null; invoicing_enabled: boolean; states: Record<string, string> };
 type Invoice = { id: string; number: string; issued_on: string; gross_paise: number };
 const empty: Details = { name: '', address: '', state: '', postal_code: '', gstin: null };
-const field = 'min-h-11 rounded border border-border bg-surface px-3 py-2';
+const field = 'min-w-0 w-full min-h-11 rounded border border-border bg-surface px-3 py-2';
 
 
 export function InvoiceSettings({ workspaceId, revision = 0 }: { workspaceId: string; revision?: number }) {
@@ -91,7 +91,7 @@ export function InvoiceSettings({ workspaceId, revision = 0 }: { workspaceId: st
     {!profile && !error && <p role="status">{copy.loading}</p>}
     {profile && <>
       <p className="text-sm">{profile.invoicing_enabled ? copy.beforeCheckout : copy.disabled}</p>
-      <form className="grid max-w-lg gap-2" onSubmit={event => { event.preventDefault(); void save(); }}>
+      <form className="grid max-w-lg grid-cols-1 gap-2" onSubmit={event => { event.preventDefault(); void save(); }}>
         <label className="grid gap-1">{copy.name}
           <input className={field} required maxLength={200} value={details.name}
             onChange={event => change('name', event.target.value)} />

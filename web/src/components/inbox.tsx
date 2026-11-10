@@ -22,6 +22,7 @@ const field = 'min-h-11 rounded border border-border bg-surface p-2';
 
 export function Inbox({ canAct }: { canAct: boolean }) {
   const copy = useCopy('inbox');
+  const leadCopy = useCopy('leads');
   const locale = useLocale();
   const labelFor = (value: string) => (copy as Record<string, string>)[value] ?? value;
   const workspace = useWorkspace();
@@ -282,7 +283,7 @@ export function Inbox({ canAct }: { canAct: boolean }) {
           <p className="break-all">{copy.assignee}: {active.assignee_user_id ?? copy.unassigned}</p>
           <h3 className="mt-4 font-semibold">{copy.lead}</h3>
           {lead?.id === selected ? <>
-            <p className="break-words">{lead.fields.name || lead.fields.phone || copy.unnamedLead} · {lead.status}</p>
+            <p className="break-words">{lead.fields.name || lead.fields.phone || copy.unnamedLead} · {(leadCopy.stages as Record<string, string>)[lead.status] ?? lead.status}</p>
             <Link href="/dashboard/leads" className="underline">{copy.viewLeads}</Link>
           </> : <p>{copy.noLead}</p>}
         </aside>

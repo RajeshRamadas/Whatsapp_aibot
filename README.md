@@ -893,9 +893,10 @@ conversation scripts and live multilingual accuracy checks remain pilot gates
 Choose English or हिन्दी in the page header. The browser remembers this preference
 in a validated `chatbot_locale` cookie for one year; it does not change the
 workspace language, customer messages or unsaved form content. Server rendering,
-error boundaries and date/number formatting use the selected locale. Core
-authentication, navigation, bot settings and FAQ screens have Hindi copy; remaining
-controls and operational catalogs follow in T9.8c/d. The interface uses a bundled
+error boundaries and date/number formatting use the selected locale. All admin
+catalogs include Hindi copy, covering authentication, navigation, bot settings,
+knowledge, Inbox, leads, analytics, campaigns, billing and platform operations.
+The interface uses a bundled
 OFL-licensed Noto Sans Devanagari font, generous line spacing and mobile wrapping.
 Screenshot: [Hindi core interface](docs/screenshots/t9-8-hindi-core.png).
 
@@ -908,3 +909,14 @@ to edit common notices for one customer language, save them, or confirm a reset 
 its defaults. Only workspace owners/admins can use the editor. Interface language
 changes preserve drafts; workspace changes remount the editor.
 Screenshot: [Hindi customer notices](docs/screenshots/t9-8-hindi-notices.png).
+
+### Complete Hindi catalogs (T9.8d)
+
+All 17 admin message namespaces now include English and Hindi copy. Catalog tests
+require identical keys and substitution placeholders. Product/provider names,
+protocol examples, currency codes and customer-authored content retain their
+original values. Browser checks cover Hindi operational screens at 320px and
+desktop, accessible controls, error/retry/empty states and unchanged URLs/CSV examples.
+Screenshot: [Hindi knowledge controls](docs/screenshots/t9-8-hindi-operations.png).
+Native-speaker script review and live-model language evaluation are still required
+before a pilot; automated tests verify contracts and UI behavior using fakes.

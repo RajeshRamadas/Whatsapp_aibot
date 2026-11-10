@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import { createElement, useState } from 'react';
 import { afterEach, expect, test } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
@@ -14,7 +15,13 @@ function leaves(value: unknown, prefix = ''): Record<string, string> {
   if (typeof value === 'string') return { [prefix]: value };
   return Object.assign({}, ...Object.entries(value as object).map(([key, item]) => leaves(item, prefix + '.' + key)));
 }
-test('translated catalogs have matching keys and preserve every substitution placeholder', () => {
+test('every catalog has Hindi keys and preserves every substitution placeholder', () => {
+  const files = import.meta.glob<{ default: unknown }>('../messages/*.en.json', { eager: true });
+  expect(Object.keys(english)).toHaveLength(Object.keys(files).length + 1); // base uses en.json
+  for (const file of Object.values(files)) expect(Object.values(english)).toContainEqual(file.default);
+  for (const name of translatedNamespaces) expect(hindi[name]).not.toBe(english[name]);
+  expect(hindi.campaigns.csvSample).toBe(english.campaigns.csvSample);
+  expect(hindi.websites.placeholder).toBe(english.websites.placeholder);
   for (const namespace of translatedNamespaces) {
     const en = leaves(english[namespace]), hi = leaves(hindi[namespace]);
     expect(Object.keys(hi).sort()).toEqual(Object.keys(en).sort());
