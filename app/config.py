@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     email_configuration_set: str | None = None
     email_sends_per_second: int = Field(1, ge=1, le=1000)
     public_app_url: str = 'http://localhost:3000'
+    google_calendar_client_id: str | None = None
+    google_calendar_client_secret: str | None = None
+    google_calendar_redirect_uri: str | None = None
+    google_calendar_requests_per_minute: int = Field(60, ge=1, le=600)
     contact_import_max_bytes: int = Field(1048576, ge=1024, le=10485760)
     contact_import_max_rows: int = Field(1000, ge=1, le=10000)
     campaign_max_recipients: int = Field(1000, ge=1, le=10000)

@@ -635,3 +635,4 @@ class Invoice(Base):
 
 # Register domain tables without expanding this shared module further.
 from .models import appointments as _appointments  # noqa: E402, F401
+from .models import google_calendar as _google_calendar  # noqa: E402, F401

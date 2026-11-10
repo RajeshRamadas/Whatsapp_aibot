@@ -717,7 +717,7 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 | T9.9a | Product-managed services, staff, availability and atomic booking APIs | APT-1 (core), GCAL-4/5 (own slots) | T5.1 (merged #36) |
 | T9.9b | Appointment chat tools and consent-aware reminder worker | APT-1 | T9.9a |
 | T9.9c | English/Hindi appointments administration | APT-1, L10N-1/2 | T9.9b |
-| T9.9d | Google Calendar OAuth, free/busy and event synchronization | GCAL-1 to GCAL-4 | T9.9c |
+| T9.9d | Google Calendar OAuth, free/busy and event synchronization (connection foundation implemented; availability/sync follow) | GCAL-1 to GCAL-4 | T9.9c |
 | T9.10 | Payment links | PAY-1, RZ-4 | T5.1, T1.8 |
 | T9.11 | Leads to Google Sheets, Zoho and HubSpot | LEAD-3, GSH-1 to GSH-3, CRM-1, CRM-2 | T5.2 |
 | T9.12 | Accuracy runs in the UI with history | ANL-4 | T3.3 |
