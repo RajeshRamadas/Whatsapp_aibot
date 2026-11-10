@@ -55,7 +55,7 @@ class BrowserBilling(FakeBilling):
         return snapshot
 
 
-auth._auth_limiter = RateLimiter(30, window_seconds=900, namespace='browser-test-auth')
+auth._auth_limiter = RateLimiter(60, window_seconds=900, namespace='browser-test-auth')
 graph = BrowserBilling()
 settings.razorpay_key_id = 'browser-test-key'
 settings.razorpay_key_secret = 'browser-test-secret'
@@ -194,4 +194,14 @@ async def improvement_worker_fixture(request, call_next):
     if (request.method == 'POST' and request.url.path.startswith('/api/v1/improvements/')
             and request.url.path.endswith('/answer') and response.status_code == 202):
         await asyncio.to_thread(publish_correction)
+    return response
+
+
+@app.middleware('http')
+async def appointment_worker_fixture(request, call_next):
+    response = await call_next(request)
+    if request.method == 'POST' and '/appointments/bookings/' in request.url.path \
+            and request.url.path.endswith('/confirm') and response.status_code == 200:
+        from app.services.appointment_reminders import process_one
+        await asyncio.to_thread(process_one)
     return response

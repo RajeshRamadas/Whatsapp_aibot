@@ -966,3 +966,21 @@ not proof of delivery. Uncertain sends and stale claims become `unknown` and are
 never retried automatically. Cancellation suppresses pending reminders; messages
 already in flight cannot be recalled. Suspended workspaces and opted-out contacts
 receive no reminders. Native-speaker script review remains required before pilot.
+
+### Appointments administration (T9.9c)
+
+Open Appointments from the workspace navigation. Owners/admins configure services,
+staff and explicit availability; agents can hold, confirm, reschedule and cancel
+bookings. Viewers cannot access appointment data. A hold requires a recent customer
+conversation and customer-provided contact details; reminder consent is a separate
+checkbox. Confirmation uses a review dialog. Rescheduling holds a replacement while
+the original booking stays confirmed. Reminder states and permission/configuration
+problems are visible beside bookings; only blocked reminders can be retried.
+
+Filters and new slot inputs use the device's timezone; appointment lists and
+customer notices show the workspace timezone. The screen displays both zones.
+Lists are bounded to 100 records and date ranges of at most 60 days. All controls
+have English/Hindi copy; interface changes preserve drafts and do not change the
+customer language. Staff can choose each customer's language on the hold form.
+Screenshot: [Appointments](docs/screenshots/t9-9-appointments.png).
+Google Calendar connection is the separately ordered T9.9d task. No new credentials.

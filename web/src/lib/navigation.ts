@@ -6,6 +6,7 @@ export const pages = [
   { key: 'leads', path: '/dashboard/leads', roles: ['owner', 'admin', 'agent', 'viewer'] },
   { key: 'analytics', path: '/dashboard/analytics', roles: ['owner', 'admin', 'agent', 'viewer'] },
   { key: 'campaigns', path: '/dashboard/campaigns', roles: ['owner', 'admin'] },
+  { key: 'appointments', path: '/dashboard/appointments', roles: ['owner', 'admin', 'agent'] },
   { key: 'team', path: '/dashboard/team', roles: ['owner', 'admin'] },
   { key: 'billing', path: '/dashboard/billing', roles: ['owner'] },
 ] as const;

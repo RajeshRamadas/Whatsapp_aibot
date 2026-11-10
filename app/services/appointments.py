@@ -19,7 +19,7 @@ class AppointmentError(ValueError):
 
 def row(db, model, tenant_id, identity, *, lock=False):
     query = select(model).where(model.id == identity, model.tenant_id == tenant_id)
-    value = db.scalar(query.with_for_update() if lock else query)
+    value = db.scalar(query.with_for_update().execution_options(populate_existing=True) if lock else query)
     if value is None:
         raise AppointmentError('Appointment record not found', 404)
     return value
