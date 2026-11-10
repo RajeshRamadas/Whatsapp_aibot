@@ -6,7 +6,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from ..db import Campaign, CampaignRecipient, Contact, Session, now
 from ..services import campaigns as service
@@ -156,4 +156,6 @@ def cancel(campaign_id: UUID, principal: Principal = Depends(require_role('admin
         row = service.scoped(db, Campaign, campaign_id, principal.tenant.id, lock=True)
         if row.state != 'completed':
             row.state = 'cancelled'
+            db.execute(update(CampaignRecipient).where(CampaignRecipient.tenant_id == principal.tenant.id,
+                CampaignRecipient.campaign_id == row.id, CampaignRecipient.state == 'queued').values(state='cancelled'))
         return service.report(db, row)

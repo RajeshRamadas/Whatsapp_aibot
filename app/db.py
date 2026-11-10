@@ -365,6 +365,7 @@ class Channel(Base):
     campaign_quality: Mapped[str] = mapped_column(String(16), default='UNKNOWN', server_default='UNKNOWN')
     campaign_limit: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
     campaign_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    campaign_portfolio: Mapped[str | None] = mapped_column(String(64), index=True)
 
 
 class Template(Base):
@@ -410,7 +411,7 @@ class CampaignRecipient(Base):
     state: Mapped[str] = mapped_column(String(16), default='queued')
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     next_attempt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
-    claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     provider_id: Mapped[str | None] = mapped_column(String(128), unique=True)
     accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     replied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

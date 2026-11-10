@@ -15,6 +15,9 @@ from ..observability import bind, configure, observed_job
 from ..rate_limits import RateLimiter
 from ..services.analytics import reconcile as reconcile_analytics_daily
 from ..services.billing import reconcile_settlements, reconcile_subscriptions
+from ..services.campaign_delivery import deliver as deliver_campaign
+from ..services.campaign_delivery import maintain as maintain_campaigns
+from ..services.campaigns import pending as pending_campaigns
 from ..services.channels import whatsapp_channel
 from ..services.email import deliver_one
 from ..services.email import validate_configuration as validate_email
@@ -24,6 +27,7 @@ from ..services.templates import eligible_contact, render, send_payload, templat
 from ..services.usage import reconcile, send_alerts
 from ..services.whatsapp_copy import copy_for
 from ..services.widget_turns import process_turn
+from .queue import enqueue
 
 
 @observed_job
@@ -250,6 +254,22 @@ async def cache_email_certificate(ctx, url):
         raise
 
 
+@observed_job
+async def send_campaign_recipient(ctx, recipient_id, tenant_id):
+    await asyncio.to_thread(deliver_campaign, recipient_id, tenant_id)
+
+
+@observed_job
+async def dispatch_campaigns(ctx):
+    await asyncio.to_thread(maintain_campaigns)
+    for identity, tenant_id, stamp in await asyncio.to_thread(pending_campaigns):
+        try:
+            await enqueue('send_campaign_recipient', recipient_id=identity, tenant_id=tenant_id,
+                          _job_id=f'campaign:{identity}:{stamp.timestamp()}')
+        except RuntimeError:
+            continue  # Already enqueued; durable state remains the source of truth.
+
+
 async def startup(ctx):
     configure()
     validate_email()
@@ -258,6 +278,7 @@ async def startup(ctx):
 class WorkerSettings:
     on_startup = startup
     cron_jobs = [cron(dispatch_agent_replies, second={0, 10, 20, 30, 40, 50}),
+                 cron(dispatch_campaigns, second=set(range(60))),
                  cron(dispatch_email, second=set(range(60))),
                  cron(notify_inbox, second={5, 15, 25, 35, 45, 55}),
                  cron(dispatch_widget_turn, second=set(range(0, 60, 2)), timeout=600),
@@ -265,7 +286,7 @@ class WorkerSettings:
                  cron(reconcile_analytics, hour=1, minute=10, second=0, timeout=600),
                  cron(dispatch_usage_alerts, second=25),
                  cron(reconcile_billing, hour=2, minute=0, second=0, timeout=600)]
-    functions = [sample_job, ingest_source, handle_message, cache_email_certificate]
+    functions = [sample_job, ingest_source, handle_message, cache_email_certificate, send_campaign_recipient]
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
     max_jobs = 10
     job_timeout = 60

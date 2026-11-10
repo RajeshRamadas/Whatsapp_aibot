@@ -1,7 +1,7 @@
 """Immutable campaign preparation; no provider calls occur in API commands."""
 from collections import Counter
 
-from sqlalchemy import select
+from sqlalchemy import case, func, select
 
 from ..config import settings
 from ..db import Campaign, CampaignRecipient, Contact, ContactSegment, Session, now
@@ -64,7 +64,8 @@ def prepare(db, tenant_id, body, actor):
     if not eligible:
         raise CampaignError(422, 'No eligible recipients')
     campaign = Campaign(tenant_id=tenant_id, channel_id=channel.id, template_id=template.id, name=body.name,
-        snapshot={key: getattr(template, key) for key in ('name', 'language', 'body')}, bindings=bindings,
+        snapshot={**{key: getattr(template, key) for key in ('name', 'language', 'body')},
+                  'phone_id': channel.external_id}, bindings=bindings,
         excluded=len(contacts) - len(eligible), unit_price=body.unit_price, currency=body.currency)
     db.add(campaign)
     db.flush()
@@ -78,27 +79,39 @@ def prepare(db, tenant_id, body, actor):
 
 
 def report(db, campaign):
-    rows = db.scalars(select(CampaignRecipient).where(CampaignRecipient.tenant_id == campaign.tenant_id,
-        CampaignRecipient.campaign_id == campaign.id).order_by(CampaignRecipient.id)).all()
-    audience = [row for row in rows if not row.is_test]
-    counts = Counter(row.state for row in audience)
-    for state in ('queued', 'sending', 'sent', 'delivered', 'read', 'failed', 'suppressed', 'unknown'):
-        counts.setdefault(state, 0)
     accepted = ('sent', 'delivered', 'read')
-    counts.update(replied=sum(row.replied_at is not None for row in audience),
-                  opt_outs=sum(row.opted_out_at is not None for row in audience))
-    for key, states in [('sent', accepted), ('delivered', ('delivered', 'read'))]:
-        counts[key] = sum(row.state in states for row in audience)
+    match = (CampaignRecipient.tenant_id == campaign.tenant_id, CampaignRecipient.campaign_id == campaign.id)
+    groups = db.execute(select(CampaignRecipient.state, CampaignRecipient.is_test, func.count(),
+        func.sum(case((CampaignRecipient.replied_at.is_not(None), 1), else_=0)),
+        func.sum(case((CampaignRecipient.opted_out_at.is_not(None), 1), else_=0)),
+        func.sum(case((CampaignRecipient.billable.is_(True), 1), else_=0)),
+        func.sum(case((CampaignRecipient.billable.is_(None), 1), else_=0)))
+        .where(*match).group_by(CampaignRecipient.state, CampaignRecipient.is_test)).all()
+    counts = Counter({key: 0 for key in ('queued', 'sending', 'sent', 'delivered', 'read', 'failed',
+                                        'suppressed', 'unknown', 'cancelled', 'replied', 'opt_outs')})
+    total, billable, unconfirmed, tested = 0, 0, 0, False
+    for state, is_test, count, replies, optouts, charged, unknown in groups:
+        if is_test:
+            tested = tested or state in accepted
+            continue
+        total += count
+        counts[state] += count
+        counts['replied'] += replies
+        counts['opt_outs'] += optouts
+        billable += charged
+        unconfirmed += unknown if state in accepted else 0
+    counts['sent'] += counts['delivered'] + counts['read']
+    counts['delivered'] += counts['read']
+    preview = db.execute(select(CampaignRecipient.contact_id, CampaignRecipient.values).where(*match,
+        CampaignRecipient.is_test.is_(False)).order_by(CampaignRecipient.id).limit(3)).all()
     return {'id': campaign.id, 'name': campaign.name, 'state': campaign.state, 'reason': campaign.reason,
-        'scheduled_at': campaign.scheduled_at, 'recipients': len(audience), 'excluded': campaign.excluded,
-        'currency': campaign.currency, 'estimated_max_cost': (
-            campaign.unit_price * len(audience) if campaign.unit_price is not None else None),
-        'estimated_billable_cost': (campaign.unit_price * sum(row.billable is True for row in audience)
-                                   if campaign.unit_price is not None else None),
-        'pricing_unconfirmed': sum(row.state in accepted and row.billable is None for row in audience),
-        'test_accepted': any(row.is_test and row.state in accepted for row in rows), 'results': dict(counts),
-        'preview': [{'contact_id': row.contact_id, 'text': render(campaign.snapshot['body'], row.values)}
-                    for row in audience[:3]]}
+        'scheduled_at': campaign.scheduled_at, 'recipients': total, 'excluded': campaign.excluded,
+        'currency': campaign.currency,
+        'estimated_max_cost': campaign.unit_price * total if campaign.unit_price is not None else None,
+        'estimated_billable_cost': campaign.unit_price * billable if campaign.unit_price is not None else None,
+        'pricing_unconfirmed': unconfirmed, 'test_accepted': tested, 'results': dict(counts),
+        'preview': [{'contact_id': identity, 'text': render(campaign.snapshot['body'], values)}
+                    for identity, values in preview]}
 
 
 def pending():
