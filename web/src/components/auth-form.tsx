@@ -1,11 +1,12 @@
 'use client';
+import { useCopy } from '@/i18n/provider';
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input, Card } from '@/components/ui/primitives';
-import messages from '@/messages/en.json';
+
 
 type Mode = 'signup' | 'login' | 'verify' | 'forgot' | 'reset' | 'invitation' | 'workspace';
 type Field = 'email' | 'password' | 'name' | 'code' | 'token';
@@ -20,6 +21,7 @@ const endpoints: Record<Mode, string> = {
   invitation: 'invitations/accept', workspace: 'workspaces',
 };
 export function AuthForm({ mode }: { mode: Mode }) {
+  const messages = useCopy('base');
   const router = useRouter();
   const [values, setValues] = useState<Record<string, string>>({});
   const [error, setError] = useState('');

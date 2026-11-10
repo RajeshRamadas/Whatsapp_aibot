@@ -117,5 +117,12 @@
   "pushEnabled": "Notifications enabled for this workspace on this device.",
   "pushDisabled": "Notifications disabled for this workspace on this device.",
   "pushEnable": "Enable notifications",
-  "pushDisable": "Disable notifications"
+  "pushDisable": "Disable notifications",
+  "interfaceLanguage": "Interface language",
+  "english": "English",
+  "hindi": "हिन्दी",
+  "toneNeutral": "Neutral",
+  "toneFriendly": "Friendly",
+  "toneFormal": "Formal",
+  "pageLabel": "p."
 }

@@ -1,12 +1,14 @@
 'use client';
+import { useCopy } from '@/i18n/provider';
 
-import messages from '@/messages/en.json';
+
 import { UsageMeter } from '@/components/usage-meter';
 import { OnboardingChecklist } from '@/components/onboarding-checklist';
 import { WidgetSettings } from '@/components/widget-settings';
 import { useWorkspace } from '@/components/app-shell';
 
 export default function Dashboard() {
+  const messages = useCopy('base');
   const active = useWorkspace();
   if (!active) return null;
   return <main id="main" className="mx-auto max-w-5xl p-4 sm:p-8">

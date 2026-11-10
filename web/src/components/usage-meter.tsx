@@ -1,11 +1,12 @@
 'use client';
+import { useCopy, useDisplayLocale } from '@/i18n/provider';
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/primitives';
 import { api } from '@/lib/api';
 import { usageProjection } from '@/lib/usage-projection';
-import copy from '@/messages/billing.en.json';
+
 
 type Policy = 'pause' | 'overage';
 type Usage = {
@@ -13,13 +14,17 @@ type Usage = {
   limits: { ai_messages: number; overage_inr?: number };
 };
 
-const number = new Intl.NumberFormat('en-IN');
-const date = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+
+
 const field = 'min-h-11 rounded border border-border bg-surface px-3 py-2';
 
 export function UsageMeter({ workspaceId, manage = false, revision = 0 }: {
   workspaceId: string; manage?: boolean; revision?: number;
 }) {
+  const displayLocale = useDisplayLocale();
+  const number = new Intl.NumberFormat(displayLocale);
+  const date = new Intl.DateTimeFormat(displayLocale, { day: 'numeric', month: 'short', timeZone: 'UTC' });
+  const copy = useCopy('billing');
   const [usage, setUsage] = useState<Usage>();
   const [retry, setRetry] = useState(0);
   const [loadError, setLoadError] = useState(false);

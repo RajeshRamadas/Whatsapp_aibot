@@ -1,4 +1,5 @@
 'use client';
+import { useCopy, useDisplayLocale } from '@/i18n/provider';
 
 import { useEffect, useState } from 'react';
 import { InvoiceSettings } from '@/components/invoice-settings';
@@ -6,7 +7,7 @@ import { UsageMeter } from '@/components/usage-meter';
 import { useWorkspace } from '@/components/app-shell';
 import { Badge, Card } from '@/components/ui/primitives';
 import { api } from '@/lib/api';
-import copy from '@/messages/billing.en.json';
+
 
 type Subscription = {
   plan: string; status: string; checkout_url: string | null; period_end: string | null;
@@ -21,14 +22,19 @@ type Billing = {
   timezone: string; tax_rate: string | null; subscription: Subscription | null; plans: Plan[];
 };
 const field = 'min-h-11 rounded border border-border bg-surface px-3 py-2';
-const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 });
-const number = new Intl.NumberFormat('en-IN');
+
+
 const name = (id: string) => id.charAt(0).toUpperCase() + id.slice(1);
-const quotas = [
-  ['ai_messages', copy.messages], ['channels', copy.channels], ['seats', copy.seats], ['files', copy.files],
-] as const;
+
 
 function WorkspaceBilling({ id }: { id: string }) {
+  const displayLocale = useDisplayLocale();
+  const currency = new Intl.NumberFormat(displayLocale, { style: 'currency', currency: 'INR', maximumFractionDigits: 2 });
+  const number = new Intl.NumberFormat(displayLocale);
+  const copy = useCopy('billing');
+  const quotas = [
+    ['ai_messages', copy.messages], ['channels', copy.channels], ['seats', copy.seats], ['files', copy.files],
+  ] as const;
   const [data, setData] = useState<Billing>();
   const [choice, setChoice] = useState<string>();
   const [revision, setRevision] = useState(0);
@@ -182,6 +188,8 @@ function WorkspaceBilling({ id }: { id: string }) {
 }
 
 export default function BillingPage() {
+  const copy = useCopy('billing');
+
   const workspace = useWorkspace();
   return workspace?.role === 'owner'
     ? <WorkspaceBilling key={workspace.id} id={workspace.id} />

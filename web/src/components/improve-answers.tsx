@@ -1,14 +1,19 @@
 'use client';
+import { useCopy, useDisplayLocale } from '@/i18n/provider';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import * as reviews from '@/api/improvements';
 import { Button } from '@/components/ui/button';
 import { Badge, Card } from '@/components/ui/primitives';
-import copy from '@/messages/improvements.en.json';
+
 
 const field = 'min-h-11 w-full rounded-lg border border-border bg-surface p-2';
-const date = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Calcutta', dateStyle: 'medium', timeStyle: 'short' });
-const number = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 1 });
+
+
 export function ImproveAnswers({ workspaceId }: { workspaceId: string }) {
+  const displayLocale = useDisplayLocale();
+  const date = new Intl.DateTimeFormat(displayLocale, { timeZone: 'Asia/Calcutta', dateStyle: 'medium', timeStyle: 'short' });
+  const number = new Intl.NumberFormat(displayLocale, { maximumFractionDigits: 1 });
+  const copy = useCopy('improvements');
   const [draftFilters, setDraftFilters] = useState<reviews.Filters>(() => ({
     from_date: new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10),
     to_date: new Date().toISOString().slice(0, 10), channel: '', state: 'open', reason: 'attention',

@@ -1,17 +1,21 @@
 'use client';
+import { useCopy, useDisplayLocale } from '@/i18n/provider';
 
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import copy from '@/messages/invoices.en.json';
+
 
 type Details = { name: string; address: string; state: string; postal_code: string; gstin: string | null };
 type Profile = { details: Details | null; invoicing_enabled: boolean; states: Record<string, string> };
 type Invoice = { id: string; number: string; issued_on: string; gross_paise: number };
 const empty: Details = { name: '', address: '', state: '', postal_code: '', gstin: null };
 const field = 'min-h-11 rounded border border-border bg-surface px-3 py-2';
-const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
+
 
 export function InvoiceSettings({ workspaceId, revision = 0 }: { workspaceId: string; revision?: number }) {
+  const displayLocale = useDisplayLocale();
+  const currency = new Intl.NumberFormat(displayLocale, { style: 'currency', currency: 'INR' });
+  const copy = useCopy('invoices');
   const [profile, setProfile] = useState<Profile>();
   const [details, setDetails] = useState<Details>(empty);
   const [invoices, setInvoices] = useState<Invoice[]>();
@@ -19,6 +23,7 @@ export function InvoiceSettings({ workspaceId, revision = 0 }: { workspaceId: st
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -29,7 +34,7 @@ export function InvoiceSettings({ workspaceId, revision = 0 }: { workspaceId: st
           setDetails(value.details ?? empty);
         }
       })
-      .catch(() => { if (!controller.signal.aborted) setError(copy.loadError); });
+      .catch(() => { if (!controller.signal.aborted) setLoadError(true); });
     return () => controller.abort();
   }, [workspaceId]);
 
@@ -38,7 +43,7 @@ export function InvoiceSettings({ workspaceId, revision = 0 }: { workspaceId: st
     api<Invoice[]>('billing/invoices?limit=26&offset=' + offset, {
       headers: { 'X-Workspace-Id': workspaceId }, signal: controller.signal,
     }).then(value => { if (!controller.signal.aborted) setInvoices(value); })
-      .catch(() => { if (!controller.signal.aborted) setError(copy.loadError); });
+      .catch(() => { if (!controller.signal.aborted) setLoadError(true); });
     return () => controller.abort();
   }, [workspaceId, offset, revision]);
 
@@ -51,7 +56,7 @@ export function InvoiceSettings({ workspaceId, revision = 0 }: { workspaceId: st
     if (busy) return;
     setBusy(true);
     setSaved(false);
-    setError('');
+    setError(''); setLoadError(false);
     try {
       await api('billing/details', { method: 'PUT', headers: { 'X-Workspace-Id': workspaceId },
         body: JSON.stringify({ ...details, gstin: details.gstin?.trim().toUpperCase() || null }) });
@@ -64,7 +69,7 @@ export function InvoiceSettings({ workspaceId, revision = 0 }: { workspaceId: st
   }
 
   async function download(invoice: Invoice) {
-    setError('');
+    setError(''); setLoadError(false);
     try {
       const response = await fetch('/api/backend/billing/invoices/' + encodeURIComponent(invoice.id) + '/pdf',
         { headers: { 'X-Workspace-Id': workspaceId }, cache: 'no-store' });
@@ -82,7 +87,7 @@ export function InvoiceSettings({ workspaceId, revision = 0 }: { workspaceId: st
 
   return <section className="space-y-4 rounded border border-border p-4" aria-label={copy.title}>
     <h2 className="font-semibold">{copy.title}</h2>
-    {error && <p role="alert">{error}</p>}
+    {(error || loadError) && <p role="alert">{loadError ? copy.loadError : error}</p>}
     {!profile && !error && <p role="status">{copy.loading}</p>}
     {profile && <>
       <p className="text-sm">{profile.invoicing_enabled ? copy.beforeCheckout : copy.disabled}</p>

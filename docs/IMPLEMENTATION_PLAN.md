@@ -712,7 +712,8 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 | T9.7b | "Improve answers" queue UI | KN-7, ANL-2, ANL-3 | T9.7a |
 | T9.8a | Multilingual reply policy, localized notices and workspace overrides | BOT-2, CONV-8, L10N-3 | T6.3 (merged #42) |
 | T9.8b | English/Hindi UI language preference and core screens | L10N-1, L10N-2 | T9.8a |
-| T9.8c | Hindi copy for operational screens and full UI coverage | L10N-1, L10N-2 | T9.8b |
+| T9.8c | Localized inbox/widget controls and editable bot notices | L10N-1, L10N-2, L10N-3 | T9.8b |
+| T9.8d | Hindi copy for operational screens and full catalog coverage | L10N-1, L10N-2 | T9.8c |
 | T9.9 | Appointments (own slots, then Google Calendar) | APT-1, GCAL-1 to GCAL-5 | T5.1 |
 | T9.10 | Payment links | PAY-1, RZ-4 | T5.1, T1.8 |
 | T9.11 | Leads to Google Sheets, Zoho and HubSpot | LEAD-3, GSH-1 to GSH-3, CRM-1, CRM-2 | T5.2 |
@@ -781,7 +782,7 @@ Tick each task in the PR that completes it.
 | M6 | T6.1 ☐ · T6.2 ☐ · T6.3 ☐ · T6.4 ☐ · T6.5 ☐ | |
 | M7 | T7.1 ☐ · T7.2 ☐ · T7.3 ☐ · T7.4 ☐ · T7.5 ☑ | |
 | M8 | T8.1 ☐ · T8.2 ☑ · T8.3 ☑ · T8.4 ☐ · T8.5 ☐ | T8.4 code ready; live SES/DNS staging check pending. |
-| M9 | T9.1 ☑ · T9.2a ☑ · T9.2b ☑ · T9.3 ☑ · T9.4a ☑ · T9.4b ☐ · T9.5 ☑ · T9.6a ☑ · T9.6b ☑ · T9.6c ☑ · T9.7a ☑ · T9.7b ☑ · T9.8a ☑ · T9.8b ☐ · T9.8c ☐ | T9.4b code merged; user has no speech dataset and chose to keep transcription disabled. Real-language evaluation pending. T9.8 native-speaker script review and live model accuracy checks remain pilot gates. |
+| M9 | T9.1 ☑ · T9.2a ☑ · T9.2b ☑ · T9.3 ☑ · T9.4a ☑ · T9.4b ☐ · T9.5 ☑ · T9.6a ☑ · T9.6b ☑ · T9.6c ☑ · T9.7a ☑ · T9.7b ☑ · T9.8a ☑ · T9.8b ☑ · T9.8c ☐ · T9.8d ☐ | T9.4b code merged; user has no speech dataset and chose to keep transcription disabled. Real-language evaluation pending. T9.8 native-speaker script review and live model accuracy checks remain pilot gates. |
 
 ## 7. Human decisions needed before certain tasks
 

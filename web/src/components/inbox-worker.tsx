@@ -1,11 +1,13 @@
 'use client';
+import { useCopy } from '@/i18n/provider';
 
 import { useEffect, useState } from 'react';
 import { useWorkspace } from '@/components/app-shell';
 import { api } from '@/lib/api';
-import messages from '@/messages/en.json';
+
 
 export function InboxWorker() {
+  const messages = useCopy('base');
   const workspace = useWorkspace();
   const [registration, setRegistration] = useState<ServiceWorkerRegistration>();
   const [publicKey, setPublicKey] = useState<string | null>(null);
@@ -23,7 +25,7 @@ export function InboxWorker() {
         .catch(() => { if (active) setFeedback(messages.pushUnavailable); });
     }
     return () => { active = false; };
-  }, []);
+  }, [messages.pushUnavailable]);
 
   useEffect(() => {
     if (!registration || !workspace || !canAct || !('pushManager' in registration)) return;
@@ -49,7 +51,7 @@ export function InboxWorker() {
     }
     void readStatus();
     return () => controller.abort();
-  }, [registration, workspace, canAct]);
+  }, [registration, workspace, canAct, messages.pushUnavailable]);
 
   async function changeSubscription(enable: boolean) {
     if (!registration || !workspace || busy) return;

@@ -1,11 +1,14 @@
 'use client';
+import { useCopy } from '@/i18n/provider';
 import Link from 'next/link';
-import improvements from '@/messages/improvements.en.json';
+
 import { AnalyticsOverview } from '@/components/analytics-overview';
 import { useWorkspace } from '@/components/app-shell';
-import copy from '@/messages/analytics.en.json';
+
 
 export default function AnalyticsPage() {
+  const improvements = useCopy('improvements');
+  const copy = useCopy('analytics');
   const active = useWorkspace();
   if (!active) return null;
   return <main id="main" className="mx-auto max-w-6xl p-4 sm:p-8">

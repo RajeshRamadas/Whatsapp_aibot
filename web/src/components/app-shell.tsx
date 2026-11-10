@@ -1,11 +1,12 @@
 'use client';
+import { useCopy } from '@/i18n/provider';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createContext, useContext, useLayoutEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { visiblePages, type Role } from '@/lib/navigation';
-import messages from '@/messages/en.json';
-import platformCopy from '@/messages/platform.en.json';
+
+
 
 export type Workspace = { id: string; name: string; role: Role };
 const WorkspaceContext = createContext<Workspace | null>(null);
@@ -14,6 +15,8 @@ export const useWorkspace = () => useContext(WorkspaceContext);
 export function AppShell({ workspaces, active, children, platformAdmin = false }: {
   workspaces: Workspace[]; active: Workspace; children: React.ReactNode; platformAdmin?: boolean;
 }) {
+  const messages = useCopy('base');
+  const platformCopy = useCopy('platform');
   const router = useRouter();
   const pathname = usePathname();
   const [selected, setSelected] = useState(active.id);

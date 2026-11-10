@@ -1,14 +1,18 @@
 'use client';
+import { useCopy, useDisplayLocale } from '@/i18n/provider';
 import Link from 'next/link';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import * as websites from '@/api/websites';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/primitives';
-import copy from '@/messages/websites.en.json';
+
 
 const field = 'min-h-11 w-full rounded-lg border border-border bg-surface p-2';
-const date = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Calcutta', dateStyle: 'medium', timeStyle: 'short' });
+
 export function WebsiteSources({ workspaceId }: { workspaceId: string }) {
+  const displayLocale = useDisplayLocale();
+  const date = new Intl.DateTimeFormat(displayLocale, { timeZone: 'Asia/Calcutta', dateStyle: 'medium', timeStyle: 'short' });
+  const copy = useCopy('websites');
   const [data, setData] = useState<websites.WebsiteList | null>(null);
   const [error, setError] = useState('');
   const [offset, setOffset] = useState(0);
@@ -30,7 +34,7 @@ export function WebsiteSources({ workspaceId }: { workspaceId: string }) {
     refresh();
     const timer = setInterval(refresh, 5000);
     return () => clearInterval(timer);
-  }, [load]);
+  }, [copy.error, load]);
   async function mutate(action: () => Promise<unknown>) {
     setBusy(true); setError('');
     try { await action(); await load(); }

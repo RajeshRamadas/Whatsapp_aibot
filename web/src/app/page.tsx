@@ -1,6 +1,8 @@
+import { getCopy } from '@/i18n/server';
 import Link from 'next/link';
-import messages from '@/messages/en.json';
-export default function Home() {
+
+export default async function Home() {
+  const messages = await getCopy('base');
   return <main id="main" className="mx-auto max-w-4xl p-6 sm:p-12">
     <h1 className="text-3xl font-semibold">{messages.home}</h1>
     <p className="mt-4 text-muted">{messages.homeDescription}</p>

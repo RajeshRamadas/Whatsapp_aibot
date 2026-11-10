@@ -1,9 +1,11 @@
+import { getCopy } from '@/i18n/server';
 import { notFound } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge, Card, ChatBubble, Input } from '@/components/ui/primitives';
 import { ThemeToggle } from '@/components/theme-toggle';
-import messages from '@/messages/en.json';
-export default function Gallery() {
+
+export default async function Gallery() {
+  const messages = await getCopy('base');
   if (process.env.NODE_ENV === 'production') notFound();
   return <main id="main" className="mx-auto grid max-w-5xl gap-6 p-4 sm:p-10">
     <header className="flex flex-wrap items-center justify-between gap-4"><div><h1 className="text-3xl font-semibold">{messages.gallery}</h1><p className="text-muted">{messages.galleryDescription}</p></div><ThemeToggle label={messages.theme} /></header>
