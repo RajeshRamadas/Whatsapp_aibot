@@ -68,6 +68,7 @@ class Tenant(Base):
     quota_behavior: Mapped[str] = mapped_column(String(16), default='pause', server_default='pause')
     widget_theme: Mapped[dict] = mapped_column(JSONB, default=dict)
     whatsapp_opt_out_keywords: Mapped[list] = mapped_column(JSONB, default=list)
+    bot_messages: Mapped[dict] = mapped_column(JSONB, default=dict, server_default=text("'{}'::jsonb"))
     default_language: Mapped[str] = mapped_column(String(16), default='en')
     bot_live: Mapped[bool] = mapped_column(Boolean, default=False)
     suspended: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text('false'))

@@ -12,7 +12,8 @@ from sqlalchemy import select
 from .. import evaluate, ingest, llm, rag, whatsapp
 from ..config import settings
 from ..db import Conversation, EvalCase, Message, Session, Source, Tenant, uid
-from ..services.usage import blocked_notice, reserve
+from ..services.customer_languages import copy_for
+from ..services.usage import QUOTA_NOTICE, blocked_notice, reserve
 from .shared import (
     UPLOADS,
     WIDGET,
@@ -54,13 +55,14 @@ def public_chat(public_key: str, body: ChatInput, request: Request):
     if not rag.chat_limiter.allow(f'web:{t.id}:{client}'):
         raise HTTPException(429, 'Too many messages. Please wait a minute.')
     if conv and (conv.handoff or conv.status in ('waiting', 'agent', 'closed')):
-        reply = 'Your message is with our team.'
+        reply = copy_for(t, body.message)['web_handoff']
         rag.save_exchange(conv, ('user', body.message), ('assistant', reply))
         return {'conversation_id': conv.id, 'answer': reply, 'sources': []}
     if not reserve(t.id, 'legacy-web:' + uid()):
         is_new = conv is None
         conv = conv or Conversation(id=uid(), tenant_id=t.id, channel='web', status='bot')
-        notice = blocked_notice(t.id)
+        copy = copy_for(t, body.message)
+        notice = copy['quota'] if blocked_notice(t.id) == QUOTA_NOTICE else copy['billing']
         rag.save_exchange(conv, ('user', body.message), ('assistant', notice), create=is_new, waiting=True)
         return {'conversation_id': conv.id, 'answer': notice, 'sources': []}
     try:

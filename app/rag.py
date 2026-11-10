@@ -19,6 +19,7 @@ from .observability import bind
 from .rate_limits import RateLimiter
 from .services.analytics import record
 from .services.bot_policy import tenant_instructions
+from .services.customer_languages import language_policy
 from .services.events import publish_sync
 from .services.leads import notify_created, save_lead
 from .services.usage import meter
@@ -125,14 +126,15 @@ def standalone_query(chat, model: str, turns: list[dict], question: str) -> str:
     return query if 0 < len(query) <= 500 else question
 
 
-def answer(tenant: Tenant, conversation_id: str | None, question: str, *, whatsapp: bool = False) -> Answer:
+def answer(tenant: Tenant, conversation_id: str | None, question: str, *,
+           whatsapp: bool = False, language: str | None = None) -> Answer:
     """Generate a reply. Persisting it is up to the caller (see save_exchange)."""
     bind(tenant_id=tenant.id, conversation_id=conversation_id)
     with meter(tenant.id):
-        return _answer(tenant, conversation_id, question, whatsapp=whatsapp)
+        return _answer(tenant, conversation_id, question, whatsapp=whatsapp, language=language)
 
 
-def _answer(tenant, conversation_id, question, *, whatsapp):
+def _answer(tenant, conversation_id, question, *, whatsapp, language=None):
     provider, model = llm.resolve_chat(tenant.chat_provider, tenant.chat_model)
     chat = llm.chat_provider(provider)
     turns = history(conversation_id) if conversation_id else []
@@ -146,7 +148,8 @@ def _answer(tenant, conversation_id, question, *, whatsapp):
     matches = [Match(faq, 'FAQ', None, None)] if faq is not None else retrieve(tenant.id, query, vector)
     evidence = '\n\n'.join(f'[{i + 1}] {m.label}: {m.content}' for i, m in enumerate(matches))
     platform_prompt = SYSTEM_PROMPT.split('\n\nKNOWLEDGE:', 1)[0].format(name=tenant.name)
-    prompt = platform_prompt + tenant_instructions(tenant) + '\n\nKNOWLEDGE:\n' + (evidence or '(none)')
+    prompt = (platform_prompt + language_policy(tenant, question, language) + tenant_instructions(tenant)
+              + '\n\nKNOWLEDGE:\n' + (evidence or '(none)'))
     if faq is not None:
         prompt += (
             '\n\nUse the curated FAQ as the sole factual answer. Rephrase only for the customer’s '

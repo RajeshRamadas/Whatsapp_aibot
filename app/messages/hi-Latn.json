@@ -1,0 +1,19 @@
+{
+  "greeting": "Namaste, main {bot}, {business} ka automated sahayak hoon. Samay, seva ya keemat poochhein. Team se baat karne ke liye *agent* likhein.",
+  "unsupported": "Maaf kijiye, ise padh nahi saka. Kripya apna sawaal likhein.",
+  "media_handoff": "File bhejne ke liye dhanyavaad. Hamari team ise dekhkar yahin jawab degi.",
+  "rate": "Aap bahut jaldi sandesh bhej rahe hain. Kripya ek minute baad koshish karein.",
+  "error": "Maaf kijiye, kuch gadbad hui. Dobara koshish karein ya *agent* likhein.",
+  "handoff": "Dhanyavaad, hamari team uplabdh hote hi yahin jawab degi.",
+  "closed": "Abhi hum band hain. Hamari team {opening} ke baad jawab degi.",
+  "unknown": "Mere paas yeh jaankari nahi hai. Kya main aapko team se jod doon?",
+  "yes": "Haan, jod dein", "no": "Nahi, dhanyavaad", "team": "Team se baat karein",
+  "declined": "Theek hai. Team se baat karne ke liye kabhi bhi *agent* likhein.",
+  "stop": "Marketing sandesh band hain. Aap sawaal poochh sakte hain. Dobara shuru karne ke liye *START* likhein.",
+  "start": "Marketing sandesh shuru hain. Band karne ke liye *STOP* likhein.",
+  "from": "Srot: ", "page": "Panna", "more": "Puri jaankari chahiye?", "options": "Vikalp dekhein",
+  "quota": "Automated sahayak ki maasik seema poori ho gayi hai. Hamari team madad kar sakti hai.",
+  "billing": "Automated jawab abhi ruke hue hain. Hamari team madad kar sakti hai.",
+  "widget_handoff": "Aapka sandesh hamari team ke paas hai. Jawab dekhne ke liye yeh chat khuli rakhein.",
+  "web_handoff": "Aapka sandesh hamari team ke paas hai."
+}
