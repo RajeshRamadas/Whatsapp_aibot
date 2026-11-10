@@ -107,6 +107,7 @@
   "pauseBot": "Pause bot",
   "confirmGoLive": "Take the bot live? It will answer new WhatsApp messages during configured business hours.",
   "confirmPause": "Pause the bot? New WhatsApp messages will wait for an agent.",
+  "campaigns": "Campaigns",
   "pushSettings": "Inbox notifications",
   "pushUnavailable": "Notifications are unavailable. Contact your workspace administrator.",
   "pushDenied": "Allow notifications in your browser settings, then try again.",

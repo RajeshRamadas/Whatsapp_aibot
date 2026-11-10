@@ -58,6 +58,7 @@ class Report(BaseModel):
     estimated_billable_cost: Decimal | None
     pricing_unconfirmed: int
     test_accepted: bool
+    test_state: str | None = None
     results: dict[str, int]
     preview: list[dict[str, str]]
 
@@ -74,6 +75,8 @@ class RecipientResult(BaseModel):
     replied_at: datetime | None
     opted_out_at: datetime | None
     billable: bool | None
+    name: str | None
+    phone: str
 
 
 @router.post('', response_model=Report, status_code=201)
@@ -100,14 +103,25 @@ def details(campaign_id: UUID, principal: Principal = Depends(require_role('admi
 
 @router.get('/{campaign_id}/recipients', response_model=list[RecipientResult])
 def recipients(campaign_id: UUID, limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0),
+               outcome: Literal['sent', 'delivered', 'read', 'failed', 'queued', 'sending', 'suppressed',
+                                'unknown', 'cancelled', 'replied', 'opt_outs'] | None = None,
                principal: Principal = Depends(require_role('admin'))):
     with Session() as db:
         service.scoped(db, Campaign, campaign_id, principal.tenant.id)
-        rows = db.scalars(select(CampaignRecipient).where(CampaignRecipient.tenant_id == principal.tenant.id,
-            CampaignRecipient.campaign_id == str(campaign_id)).order_by(CampaignRecipient.id)
-            .offset(offset).limit(limit)).all()
-        return [{key: getattr(row, key) for key in ('id', 'contact_id', 'is_test', 'state', 'attempts',
-                 'error_code', 'provider_id', 'replied_at', 'opted_out_at', 'billable')} for row in rows]
+        query = select(CampaignRecipient, Contact.name, Contact.external_user).join(Contact,
+            (Contact.id == CampaignRecipient.contact_id) & (Contact.tenant_id == principal.tenant.id))
+        query = query.where(CampaignRecipient.tenant_id == principal.tenant.id,
+                            CampaignRecipient.campaign_id == str(campaign_id))
+        if outcome in ('replied', 'opt_outs'):
+            query = query.where((CampaignRecipient.replied_at if outcome == 'replied'
+                                 else CampaignRecipient.opted_out_at).is_not(None))
+        elif outcome:
+            states = {'sent': ('sent', 'delivered', 'read'), 'delivered': ('delivered', 'read')}
+            query = query.where(CampaignRecipient.state.in_(states.get(outcome, (outcome,))))
+        rows = db.execute(query.order_by(CampaignRecipient.id).offset(offset).limit(limit)).all()
+        return [{**{key: getattr(row, key) for key in ('id', 'contact_id', 'is_test', 'state', 'attempts',
+                 'error_code', 'provider_id', 'replied_at', 'opted_out_at', 'billable')}, 'name': name, 'phone': phone}
+                for row, name, phone in rows]
 
 
 @router.post('/{campaign_id}/test', status_code=202)

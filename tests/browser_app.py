@@ -1,14 +1,20 @@
 """ASGI app for browser CI with an isolated Razorpay fake."""
+import asyncio
 from datetime import timedelta
 
+import httpx
 from fastapi.responses import JSONResponse
+from sqlalchemy import select
 
-from app.api import auth, billing
+from app import whatsapp
+from app.api import auth, billing, templates
 from app.config import settings
-from app.db import now
+from app.db import CampaignRecipient, Channel, Session, Template, now
 from app.invoice_config import InvoiceIssuer
 from app.main import app
 from app.rate_limits import RateLimiter
+from app.services import campaign_delivery
+from app.services import templates as template_service
 from tests.test_billing import FakeBilling
 
 __all__ = ['app']
@@ -28,11 +34,55 @@ settings.razorpay_key_id = 'browser-test-key'
 settings.razorpay_key_secret = 'browser-test-secret'
 settings.razorpay_webhook_secret = 'browser-test-webhook'
 settings.razorpay_plan_ids = {'starter': 'plan_starter', 'growth': 'plan_growth'}
+settings.campaign_sends_per_second = 80
 settings.gst_invoice_issuer = InvoiceIssuer(
     name='Browser Test Supplier', address='Test office', state='27', postal_code='400001',
     gstin='27ABCDE1234F1Z5', sac='998314', tax_rate=18,
 )
 billing.provider = lambda: graph
+
+
+class BrowserMeta:
+    def request(self, path, *, token, params=None, payload=None):
+        if params and params.get('fields') == 'owner_business_info':
+            return {'owner_business_info': {'id': '987654'}}
+        if params and 'quality_rating' in params.get('fields', ''):
+            return {'quality_rating': 'GREEN', 'whatsapp_business_manager_messaging_limit': 'TIER_2K'}
+        if payload:
+            return {'id': 'browser-template', 'status': 'PENDING'}
+        with Session() as db:
+            rows = db.scalars(select(Template).join(Channel, Channel.id == Template.channel_id)
+                .where(Channel.waba_id == path.split('/')[0])).all()
+            return {'data': [{'id': row.meta_id, 'name': row.name, 'language': row.language,
+                'category': row.category, 'status': 'APPROVED', 'components': [{'type': 'BODY', 'text': row.body}]}
+                for row in rows]}
+
+
+def browser_send(phone, payload, tenant_id, **kwargs):
+    identity = payload['biz_opaque_callback_data']
+    message_id = 'wamid.browser.' + identity
+    campaign_delivery.receipt({'phone_number_id': phone, 'id': message_id, 'status': 'read',
+                              'biz_opaque_callback_data': identity, 'pricing': {'billable': True}})
+    return httpx.Response(200, json={'messages': [{'id': message_id}]})
+
+
+templates.MetaSignup = template_service.MetaSignup = campaign_delivery.MetaSignup = BrowserMeta
+whatsapp.graph_message = browser_send
+
+
+@app.middleware('http')
+async def campaign_worker_fixture(request, call_next):
+    response = await call_next(request)
+    path = request.url.path.split('/')
+    if (request.method == 'POST' and response.status_code < 300 and len(path) == 6
+            and path[3] == 'campaigns' and path[5] in ('test', 'start')):
+        with Session() as db:
+            rows = db.execute(select(CampaignRecipient.id, CampaignRecipient.tenant_id).where(
+                CampaignRecipient.campaign_id == path[4], CampaignRecipient.state == 'queued')).all()
+        for identity, tenant_id in rows:
+            await asyncio.to_thread(campaign_delivery.deliver, identity, tenant_id)
+        await asyncio.to_thread(campaign_delivery.maintain)
+    return response
 
 
 @app.middleware('http')

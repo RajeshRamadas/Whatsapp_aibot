@@ -97,7 +97,11 @@ schedules and delivery reports. Apply `0028_campaigns` and `0029_campaign_portfo
 The arq worker sends individual recipients with current consent/approval checks,
 per-phone rate limits and a verified, shared Meta portfolio budget. Quality drops
 pause campaigns and publish workspace alerts. See [campaign API and delivery rules](docs/CAMPAIGNS.md).
-Campaign screens remain T9.3.
+Owners and admins can use `/dashboard/campaigns` (T9.3) to submit/sync templates,
+import CSV contacts, manage consent and segments, preview personalized drafts, test
+on their own number and confirm an immediate or scheduled send. Results update
+live with a polling fallback and recipient drill-down; agents/viewers cannot use
+this page. Schedules use the browser's displayed time zone. No new credentials or migration.
 
 Agents can read `/api/v1/contacts` and `/api/v1/segments`; owners/admins can import
 contact CSV files, record consent and manage saved dynamic segments. Apply migration

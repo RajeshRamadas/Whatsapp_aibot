@@ -685,9 +685,23 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
   `whatsapp_business_manager_messaging_limit`, while rate limits remain per phone.
   Unknown quality, tier or verified portfolio identity blocks sending.
 
+#### T9.3 Campaigns UI
+- **Delivers:** UX_DESIGN §4.7, UI-1, UI-6, A11Y-4
+- **Depends on:** T9.2 (merged in #54 and #55)
+- **Size:** M
+- **Steps:** owner/admin navigation; template submission/sync and previews; contact CSV,
+  consent and saved-segment management; personalized campaign drafts, excluded counts
+  and estimates; mandatory own-number test and explicit confirmation for now/scheduled
+  sending; live results with recipient drill-down and cancellation.
+- **Done when:** fake-provider Playwright flow covers import through confirmed delivery,
+  scheduling/cancellation, permissions, loading/empty/error/filled states, accessibility
+  and 320 px layout. Component/helper tests and frontend build pass.
+- **Notes:** No migration or new provider credentials. Existing endpoints gain typed
+  template results, recipient names/phones, outcome filters and a global own-number
+  test state. Browser scheduling uses the displayed local timezone.
+
 | ID | Task | Delivers | Depends on |
 |---|---|---|---|
-| T9.3 | Campaigns UI | UX_DESIGN §4.7 | T9.2 |
 | T9.4 | Media in and out; voice-note transcription | CH-5, WA-4, WA-11, STT-1, STT-2 | T6.1, T1.7 |
 | T9.5 | OCR for scanned PDFs and images | KN-4, OCR-1 | T2.2 |
 | T9.6 | Website crawling | KN-2, WEB-1 to WEB-5 | T2.2 |
@@ -761,7 +775,7 @@ Tick each task in the PR that completes it.
 | M6 | T6.1 ☐ · T6.2 ☐ · T6.3 ☐ · T6.4 ☐ · T6.5 ☐ | |
 | M7 | T7.1 ☐ · T7.2 ☐ · T7.3 ☐ · T7.4 ☐ · T7.5 ☑ | |
 | M8 | T8.1 ☐ · T8.2 ☑ · T8.3 ☑ · T8.4 ☐ · T8.5 ☐ | T8.4 code ready; live SES/DNS staging check pending. |
-| M9 | T9.1 ☑ · T9.2a ☑ · T9.2b ☑ | Campaign sending/results complete; screens remain T9.3. |
+| M9 | T9.1 ☑ · T9.2a ☑ · T9.2b ☑ · T9.3 ☑ | Campaign backend and owner/admin screens complete. |
 
 ## 7. Human decisions needed before certain tasks
 
