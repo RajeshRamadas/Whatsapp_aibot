@@ -206,7 +206,8 @@ def _answer(tenant, conversation_id, question, *, whatsapp):
                   choices=choices or None, uncertain=uncertain)
 
 
-def save_exchange_rows(db, conversation, pairs, channel_message_id=None, sources=None, lead_fields=None):
+def save_exchange_rows(db, conversation, pairs, channel_message_id=None, sources=None, lead_fields=None,
+                       attachments=None):
     if any(role == 'user' for role, _ in pairs):
         record(db, 'first_customer_conversation', conversation.tenant_id)
     lead_created = False
@@ -218,6 +219,7 @@ def save_exchange_rows(db, conversation, pairs, channel_message_id=None, sources
         db.add(Message(conversation_id=conversation.id, role=role, content=content,
                        direction='outbound' if outbound else 'inbound',
                        sources=(sources or []) if role == 'assistant' else [],
+                       attachments=(attachments or []) if role == 'user' else [],
                        kind='note' if role == 'note' else 'text',
                        channel_message_id=channel_message_id if outbound else None,
                        delivery_status='sent' if outbound and channel_message_id else None))
@@ -232,7 +234,7 @@ def save_exchange_rows(db, conversation, pairs, channel_message_id=None, sources
 
 def save_exchange(conversation: Conversation, *pairs: tuple[str, str], create: bool = False,
                   channel_message_id: str | None = None, sources: list[dict] | None = None,
-                  lead_fields: dict | None = None, waiting: bool = False) -> None:
+                  lead_fields: dict | None = None, waiting: bool = False, attachments: list | None = None) -> None:
     lead_created = False
     with Session.begin() as db:
         if create:
@@ -241,7 +243,7 @@ def save_exchange(conversation: Conversation, *pairs: tuple[str, str], create: b
         current = conversation if create else db.get(Conversation, conversation.id, with_for_update=waiting)
         if waiting and current.status == 'bot':
             current.status, current.handoff = 'waiting', True
-        lead_created = save_exchange_rows(db, current, pairs, channel_message_id, sources, lead_fields)
+        lead_created = save_exchange_rows(db, current, pairs, channel_message_id, sources, lead_fields, attachments)
     if lead_created:
         notify_created(conversation.tenant_id, conversation.id)
     if pairs:

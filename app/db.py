@@ -166,6 +166,8 @@ class Message(Base):
     sources: Mapped[list] = mapped_column(JSONB, default=list)
     reply_key: Mapped[str | None] = mapped_column(String(128))
     template_payload: Mapped[dict | None] = mapped_column(JSONB)
+    attachments: Mapped[list] = mapped_column(JSONB, default=list, server_default=text("'[]'::jsonb"))
+    upload_data: Mapped[bytes | None] = mapped_column(LargeBinary, deferred=True)
     dispatch_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     delivery_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)

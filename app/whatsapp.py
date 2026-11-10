@@ -63,8 +63,16 @@ def parse_messages(payload: dict) -> list[dict]:
                     choice = reply.get('id')
                 else:
                     text = ''
+                media = None
+                if kind in ('image', 'document', 'audio'):
+                    item = msg.get(kind) or {}
+                    if item.get('id'):
+                        media = {key: item[key] for key in ('id', 'filename') if key in item}
+                        text = item.get('caption') or ''
                 found.append({'phone_number_id': phone_number_id, 'from': msg['from'], 'id': msg['id'],
                               'type': kind, 'text': text.strip(), 'choice': choice,
+                              'media': media,
+                              'details': msg.get(kind) if kind in ('location', 'contacts') else None,
                               'context_id': (msg.get('context') or {}).get('id')})
     return found
 
@@ -173,6 +181,8 @@ def handle(tenant_id: str, message: dict) -> None:
     if tenant is None or tenant.suspended:
         return
     conv = conversation_for(tenant_id, wa_user)
+    from .services.media import prepare
+    attachments = prepare(tenant_id, message.get('parts', [message]))
     bind(tenant_id=tenant_id, conversation_id=conv.id)
     copy = copy_for(tenant)
     incoming = ('user', text or f"[{message['type']} message]")
@@ -189,10 +199,13 @@ def handle(tenant_id: str, message: dict) -> None:
         part.get('text', '').strip().lower() in settings.handoff_keywords for part in parts)
     timestamp = now()
 
+    def save(*pairs, **kwargs):
+        rag.save_exchange(conv, *pairs, attachments=attachments, **kwargs)
+
     def reply(body, options=None, sources=None, lead_fields=None):
         interactive = interactive_payload(body, options, copy)
         message_id = send_text(phone_id, wa_user, body, tenant_id=tenant_id, interactive=interactive)
-        rag.save_exchange(conv, incoming, ('assistant', body), channel_message_id=message_id,
+        save(incoming, ('assistant', body), channel_message_id=message_id,
                           sources=sources, lead_fields=lead_fields)
 
     if consent is not None:
@@ -210,7 +223,7 @@ def handle(tenant_id: str, message: dict) -> None:
                 and timestamp - conv.last_message_at >= timedelta(hours=1)):
             reply(handoff_notice(tenant, timestamp))
         else:
-            rag.save_exchange(conv, incoming)
+            save(incoming)
         return
 
     open_now = within_hours(tenant, timestamp)
@@ -221,7 +234,7 @@ def handle(tenant_id: str, message: dict) -> None:
         if should_notify and (wants_handoff or tenant.bot_live):
             reply(handoff_notice(tenant, timestamp))
         else:
-            rag.save_exchange(conv, incoming)
+            save(incoming)
         with Session.begin() as db:
             active = db.get(Conversation, conv.id, with_for_update=True)
             if active.status == 'bot' and not active.handoff:
@@ -231,6 +244,10 @@ def handle(tenant_id: str, message: dict) -> None:
         return
     if 'handoff-decline' in choices:
         reply(copy['declined'])
+        return
+    if attachments and (not text or any(item['status'] != 'ready' for item in attachments)):
+        message_id = send_text(phone_id, wa_user, copy['media_handoff'], tenant_id=tenant_id)
+        save(incoming, ('assistant', copy['media_handoff']), channel_message_id=message_id, waiting=True)
         return
     if not text:
         reply(copy['unsupported'])
@@ -244,7 +261,7 @@ def handle(tenant_id: str, message: dict) -> None:
         if notice == QUOTA_NOTICE and copy['from'] != 'From: ':
             notice = 'स्वचालित सहायक की मासिक सीमा पूरी हो गई है। हमारी टीम आपकी मदद कर सकती है।'
         message_id = send_text(phone_id, wa_user, notice, tenant_id=tenant_id)
-        rag.save_exchange(conv, incoming, ('assistant', notice), channel_message_id=message_id, waiting=True)
+        save(incoming, ('assistant', notice), channel_message_id=message_id, waiting=True)
         return
 
     mark_typing(phone_id, parts[-1].get('id'), tenant_id)
@@ -256,7 +273,7 @@ def handle(tenant_id: str, message: dict) -> None:
         has_history = db.scalar(select(Message.id).where(
             Message.conversation_id == conv.id, Message.role == 'user').limit(1)) is not None
     if not can_send:
-        rag.save_exchange(conv, incoming)
+        save(incoming)
         return
     greeting = '' if has_history else copy['greeting'].format(bot=tenant.bot_name, business=tenant.name)
     sources = answer.sources if answer.text and not answer.uncertain else []

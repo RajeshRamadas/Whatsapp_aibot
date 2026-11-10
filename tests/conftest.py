@@ -111,8 +111,10 @@ def client(chats, tmp_path, monkeypatch):
             raise ValueError('Unexpected job')
         with Session.begin() as db:
             event = db.get(InboundEvent, kwargs['event_id'])
-            whatsapp.handle(event.tenant_id, event.payload)
-            event.status = 'processed'
+            tenant_id, payload = event.tenant_id, event.payload
+        whatsapp.handle(tenant_id, payload)
+        with Session.begin() as db:
+            db.get(InboundEvent, kwargs['event_id']).status = 'processed'
         return kwargs['_job_id']
 
     monkeypatch.setattr(whatsapp_api, 'enqueue', inline_whatsapp)

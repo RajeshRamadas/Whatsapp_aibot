@@ -2,11 +2,13 @@
 import json
 import logging
 import secrets
+from datetime import datetime
 from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Header, HTTPException, Query, Request, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, PlainTextResponse
+from pydantic import BaseModel
 from sqlalchemy import select
 
 from .. import evaluate, ingest, llm, rag, whatsapp
@@ -14,6 +16,8 @@ from ..config import settings
 from ..db import Conversation, EvalCase, Message, Session, Source, Tenant, uid
 from ..services.events import publish_sync
 from .inbox import Reply, reply
+from .media import AttachmentView
+from .media import public as public_attachments
 from .principal import Principal, require_role, tenant_for_role
 from .shared import (
     UPLOADS,
@@ -54,15 +58,30 @@ def tenant_conversation(db, tenant: Tenant, conversation_id: str) -> Conversatio
     return conv
 
 
-@router.get('/api/v1/conversations/{conversation_id}/messages')
+class MessageView(BaseModel):
+    id: int
+    role: str
+    content: str
+    created_at: datetime
+    direction: str
+    kind: str
+    author_user_id: str | None
+    channel_message_id: str | None
+    delivery_status: str | None
+    sources: list[dict]
+    error: str | None
+    attachments: list[AttachmentView]
+
+
+@router.get('/api/v1/conversations/{conversation_id}/messages', response_model=list[MessageView])
 def conversation_messages(conversation_id: str, tenant: Tenant = Depends(tenant_for_role('viewer'))):
     with Session() as db:
         conv = tenant_conversation(db, tenant, conversation_id)
         rows = db.scalars(select(Message).where(Message.conversation_id == conv.id).order_by(Message.id)).all()
-    return [{'role': m.role, 'content': m.content, 'created_at': m.created_at,
+    return [{'id': m.id, 'role': m.role, 'content': m.content, 'created_at': m.created_at,
              'direction': m.direction, 'kind': m.kind, 'author_user_id': m.author_user_id,
              'channel_message_id': m.channel_message_id, 'delivery_status': m.delivery_status,
-             'sources': m.sources, 'error': m.error} for m in rows]
+             'sources': m.sources, 'error': m.error, 'attachments': public_attachments(m.attachments)} for m in rows]
 
 
 @router.post('/api/v1/conversations/{conversation_id}/handoff')

@@ -10,6 +10,7 @@ COPY = {
         'greeting': "Hi, I'm {bot}, the automated assistant for {business}.\n"
                     "Ask about hours, services or prices. Type *agent* to reach our team.",
         'unsupported': 'Sorry, I can only read text messages for now. Could you type your question?',
+        'media_handoff': 'Thanks for the attachment. Our team will review it and reply here.',
         'rate': "You're sending messages quickly. Please wait a minute and try again.",
         'error': 'Sorry, something went wrong. Please try again or type *agent* to reach our team.',
         'handoff': 'Thanks, our team will reply here as soon as someone is available.',
@@ -25,6 +26,7 @@ COPY = {
         'greeting': 'नमस्ते, मैं {bot} हूँ, {business} का स्वचालित सहायक।\n'
                     'समय, सेवाओं या कीमतों के बारे में पूछें। टीम से बात करने के लिए *agent* लिखें।',
         'unsupported': 'क्षमा करें, अभी मैं केवल टेक्स्ट पढ़ सकता हूँ। कृपया अपना सवाल लिखें।',
+        'media_handoff': 'फ़ाइल भेजने के लिए धन्यवाद। हमारी टीम इसे देखकर यहाँ जवाब देगी।',
         'rate': 'आप जल्दी-जल्दी संदेश भेज रहे हैं। कृपया एक मिनट बाद फिर कोशिश करें।',
         'error': 'क्षमा करें, कुछ गड़बड़ हुई। फिर कोशिश करें या टीम से बात करने के लिए *agent* लिखें।',
         'handoff': 'धन्यवाद, हमारी टीम उपलब्ध होते ही यहाँ जवाब देगी।',

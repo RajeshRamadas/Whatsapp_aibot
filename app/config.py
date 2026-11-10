@@ -82,6 +82,8 @@ class Settings(BaseSettings):
     storage_endpoint_url: str | None = None
     storage_region: str = 'us-east-1'
     max_upload_mb: int = 15
+    media_max_bytes: int = Field(16777216, ge=1024, le=16777216)
+    media_retention_days: int = Field(365, ge=1, le=3650)
     chat_rate_limit_per_minute: int = 20
 
     # WhatsApp Cloud API (Meta). Webhook verification requires the verify token and app secret.
