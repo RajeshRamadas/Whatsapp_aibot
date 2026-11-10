@@ -777,5 +777,21 @@ Main text retains headings and removes navigation, scripts and footers. Only
 changed text is embedded; missing/private/noindex pages lose their indexed chunks.
 Transient errors retry five times with backoff, jitter and Retry-After. Publication
 checks workspace state and a run token, so deleted or replaced runs cannot publish.
-Schedules record the next daily/weekly run; API controls, dispatch and UI follow
-in T9.6b. No live website or model call is required by the offline tests.
+Schedules record the next daily/weekly run. No live website or model call is required by the offline tests.
+
+### Website controls and scheduled dispatch (T9.6b)
+
+Owners/admins use `/api/v1/websites` to list page budgets and POST a website
+(`url`, `max_pages` 1–50, `depth` 0–3, `schedule` manual/daily/weekly).
+`POST /{id}/refresh` queues a manual refresh, `PATCH /{id}` changes schedule,
+`GET /{id}/pages` lists indexed URLs and `DELETE /{id}` removes the website and
+all its indexed pages. Creation reserves the requested page count under a
+workspace lock; duplicate URLs and exhausted budgets return 409. File-source
+endpoints exclude website pages. These handlers perform no external fetches.
+
+Run the normal arq worker: its ten-second dispatcher uses database due times as
+an outbox, recovers interrupted runs after 70 minutes and retries queue outages.
+Only one crawl runs per workspace at a time. Manual refreshes preserve host
+Retry-After cooldowns. Terminal crawl failures appear in the platform console
+without URLs or error payloads; workspace admins can retry through refresh.
+Knowledge UI controls follow in T9.6c. No additional environment variables.

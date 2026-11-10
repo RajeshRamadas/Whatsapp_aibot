@@ -167,6 +167,8 @@ def test_budget_retry_exhaustion_and_weekly_schedule(client, tenant):
         db.get(Plan, 'starter').limits = {'crawl_pages': 1}
         db.get(Website, identity).status = 'queued'
     for attempt in range(5):
+        with Session.begin() as db:
+            db.get(Website, identity).next_run = now()
         snapshot = crawl.claim(identity, tenant['tenant_id'])
         crawl.finish(snapshot, fetch.FetchError('Busy', 90))
         with Session() as db:
@@ -174,8 +176,11 @@ def test_budget_retry_exhaustion_and_weekly_schedule(client, tenant):
             assert site.status == ('queued' if attempt < 4 else 'failed')
             if attempt < 4:
                 assert (site.next_run - now()).total_seconds() >= 89
+        if attempt < 4:
+            assert crawl.claim(identity, tenant['tenant_id']) is None
     with Session.begin() as db:
         db.get(Website, identity).status = 'queued'
+        db.get(Website, identity).next_run = now()
     crawl.finish(crawl.claim(identity, tenant['tenant_id']))
     with Session() as db:
         site = db.get(Website, identity)

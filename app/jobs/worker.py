@@ -27,6 +27,7 @@ from ..services.inbox_push import deliver_waiting
 from ..services.templates import eligible_contact, render, send_payload, template_for_send
 from ..services.usage import reconcile, send_alerts
 from ..services.website_crawl import crawl
+from ..services.website_dispatch import pending as pending_websites
 from ..services.whatsapp_copy import copy_for
 from ..services.widget_turns import process_turn
 from .queue import enqueue
@@ -313,9 +314,20 @@ async def crawl_website(ctx, website_id, tenant_id):
     await crawl(website_id, tenant_id)
 
 
+@observed_job
+async def dispatch_websites(ctx):
+    for identity, tenant_id, stamp in await asyncio.to_thread(pending_websites):
+        try:
+            await enqueue('crawl_website', website_id=identity, tenant_id=tenant_id,
+                          _job_id=f'website:{identity}:{stamp.timestamp()}')
+        except (OSError, ConnectionError, TimeoutError, RuntimeError):
+            continue  # A short database lease allows redispatch after queue failures.
+
+
 class WorkerSettings:
     on_startup = startup
-    cron_jobs = [cron(dispatch_agent_replies, second={0, 10, 20, 30, 40, 50}),
+    cron_jobs = [cron(dispatch_websites, second={0, 10, 20, 30, 40, 50}),
+                 cron(dispatch_agent_replies, second={0, 10, 20, 30, 40, 50}),
                  cron(dispatch_campaigns, second=set(range(60))),
                  cron(dispatch_email, second=set(range(60))),
                  cron(notify_inbox, second={5, 15, 25, 35, 45, 55}),

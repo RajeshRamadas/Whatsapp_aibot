@@ -1338,6 +1338,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/websites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Websites */
+        get: operations["websites_api_v1_websites_get"];
+        put?: never;
+        /** Create */
+        post: operations["create_api_v1_websites_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/websites/{website_id}/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Refresh */
+        post: operations["refresh_api_v1_websites__website_id__refresh_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/websites/{website_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove */
+        delete: operations["remove_api_v1_websites__website_id__delete"];
+        options?: never;
+        head?: never;
+        /** Schedule */
+        patch: operations["schedule_api_v1_websites__website_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/websites/{website_id}/pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Pages */
+        get: operations["pages_api_v1_websites__website_id__pages_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/webhooks/whatsapp": {
         parameters: {
             query?: never;
@@ -1959,6 +2029,14 @@ export interface components {
             /** File */
             file: string;
         };
+        /** Cadence */
+        Cadence: {
+            /**
+             * Schedule
+             * @enum {string}
+             */
+            schedule: "manual" | "daily" | "weekly";
+        };
         /** CampaignInput */
         CampaignInput: {
             /** Name */
@@ -2130,7 +2208,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "ingestion" | "whatsapp" | "widget" | "email";
+            kind: "ingestion" | "whatsapp" | "widget" | "email" | "website";
             /**
              * Received At
              * Format: date-time
@@ -2305,6 +2383,13 @@ export interface components {
         Note: {
             /** Text */
             text: string;
+        };
+        /** PageView */
+        PageView: {
+            /** Id */
+            id: string;
+            /** Url */
+            url: string;
         };
         /** PairInput */
         PairInput: {
@@ -2757,6 +2842,73 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** WebsiteInput */
+        WebsiteInput: {
+            /**
+             * Schedule
+             * @enum {string}
+             */
+            schedule: "manual" | "daily" | "weekly";
+            /** Url */
+            url: string;
+            /**
+             * Max Pages
+             * @default 1
+             */
+            max_pages: number;
+            /**
+             * Depth
+             * @default 0
+             */
+            depth: number;
+        };
+        /** WebsiteList */
+        WebsiteList: {
+            /** Items */
+            items: components["schemas"]["WebsiteView"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Page Limit */
+            page_limit: number;
+            /** Reserved Pages */
+            reserved_pages: number;
+        };
+        /** WebsiteView */
+        WebsiteView: {
+            /** Id */
+            id: string;
+            /** Url */
+            url: string;
+            /** Max Pages */
+            max_pages: number;
+            /** Depth */
+            depth: number;
+            /**
+             * Schedule
+             * @enum {string}
+             */
+            schedule: "manual" | "daily" | "weekly";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "running" | "ready" | "failed";
+            /** Error */
+            error: string | null;
+            /** Next Run */
+            next_run: string | null;
+            /** Last Success */
+            last_success: string | null;
+            /**
+             * Pages
+             * @default 0
+             */
+            pages: number;
         };
         /** WorkspaceInput */
         WorkspaceInput: {
@@ -6066,6 +6218,215 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    websites_api_v1_websites_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebsiteList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_api_v1_websites_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebsiteInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebsiteView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    refresh_api_v1_websites__website_id__refresh_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                website_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebsiteView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_api_v1_websites__website_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                website_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    schedule_api_v1_websites__website_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                website_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Cadence"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebsiteView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pages_api_v1_websites__website_id__pages_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                website_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageView"][];
                 };
             };
             /** @description Validation Error */

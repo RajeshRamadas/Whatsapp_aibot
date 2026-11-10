@@ -75,9 +75,10 @@ def retrieve(tenant_id: str, query: str, vector: list[float] | None = None) -> l
     if vector is None:
         vector = llm.embedder().embed([query], query=True)[0]
     distance = Chunk.embedding.cosine_distance(vector)
-    columns = (Chunk.id, Chunk.content, Source.filename, Chunk.heading, Chunk.page)
+    columns = (Chunk.id, Chunk.content, func.coalesce(Source.url, Source.filename).label('filename'),
+               Chunk.heading, Chunk.page)
     base = select(*columns).join(Source, Chunk.source_id == Source.id) \
-        .where(Chunk.tenant_id == tenant_id, Source.status == 'ready')
+        .where(Chunk.tenant_id == tenant_id, Source.tenant_id == tenant_id, Source.status == 'ready')
     limit = settings.retrieval_candidates
     with Session() as db:
         semantic = db.execute(base.where(distance <= settings.retrieval_max_distance)
