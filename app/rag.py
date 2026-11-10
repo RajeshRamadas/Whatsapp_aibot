@@ -250,7 +250,7 @@ def save_exchange_rows(db, conversation, pairs, channel_message_id=None, sources
             db.flush()
             db.add(AnswerReview(tenant_id=conversation.tenant_id, message_id=message.id,
                 widget_turn_id=widget_turn_id, question=question,
-                unanswered=review_answer.uncertain or not review_answer.sources))
+                unanswered=review_answer.uncertain or (not review_answer.sources and not review_answer.appointment)))
     conv = conversation
     if conv and pairs:
         conv.last_message_at = timestamp

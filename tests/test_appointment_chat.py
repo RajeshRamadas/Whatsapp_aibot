@@ -7,7 +7,7 @@ import pytest
 from sqlalchemy import func, select
 
 from app import rag, whatsapp
-from app.db import Channel, Contact, Conversation, Message, Session, Template, Tenant, engine, now, uid
+from app.db import AnswerReview, Channel, Contact, Conversation, Message, Session, Template, Tenant, engine, now, uid
 from app.models.appointments import Booking, Service
 from app.services import appointment_chat as chat
 from app.services.appointment_reminders import process_one
@@ -34,6 +34,10 @@ def test_chat_hold_needs_literal_customer_confirmation_and_stays_customer_scoped
     assert all(len(label) <= 20 for label in answer.choices)
     [booking] = client.get(BASE + '/bookings', headers=headers).json()
     assert booking['state'] == 'held' and not booking['reminder_opt_in'] and booking['language'] == 'hi'
+    with Session.begin() as db:
+        rag.save_exchange_rows(db, db.get(Conversation, conversations[0]),
+            [('user', 'मुझे अपॉइंटमेंट चाहिए'), ('assistant', answer.text)], review_answer=answer)
+        assert not db.scalar(select(AnswerReview)).unanswered
     ref = chat.reference(booking['id'])
     # Even a correct command cannot affect another customer's booking.
     assert chat.command(workspace, conversations[1], 'REMIND ' + ref) == chat.COPY['en']['error']
