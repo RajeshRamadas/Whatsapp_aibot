@@ -69,7 +69,14 @@
     "sent": "Sent",
     "blocked": "Blocked",
     "unknown": "Unknown",
-    "skipped": "Skipped"
+    "skipped": "Skipped",
+    "confirming": "Checking calendar…",
+    "calendar_unavailable": "Calendar availability paused",
+    "calendar_busy": "Calendar busy",
+    "unavailable": "Unavailable",
+    "none": "Not linked",
+    "synced": "Calendar synchronized",
+    "cancelling": "Removing calendar event…"
   },
   "reasons": {
     "workspace_suspended": "Workspace suspended",
@@ -93,5 +100,46 @@
     "te": "Telugu",
     "mr": "Marathi",
     "bn": "Bengali"
-  }
+  },
+  "calendar": {
+    "title": "Google Calendar",
+    "help": "Connect calendars to offer times within workspace hours. Bookings stay pending until Google confirms. Without calendar links, manual availability is used.",
+    "permissions": "Google permissions: read calendar names, check busy times and create or remove appointment events. No invitations are sent.",
+    "hours": "Edit workspace hours and timezone",
+    "loading": "Loading calendars…",
+    "error": "Could not update calendars. Refresh and try again.",
+    "retry": "Retry calendars",
+    "disabled": "Google connection is not configured. A platform administrator must add the OAuth app credentials in environment settings. Live verification is pending.",
+    "connect": "Connect Google account",
+    "label": "Account label",
+    "empty": "No Google accounts connected.",
+    "success": "Last successful check",
+    "never": "Not checked yet",
+    "attention": "Calendar needs attention. Refresh the connection or disconnect and authorize it again.",
+    "test": "Refresh and test connection",
+    "disconnect": "Disconnect account",
+    "disconnectConfirm": "Disconnect this Google account? Linked availability will pause. Existing Google events remain; remove links to use manual slots.",
+    "binding": "Link a calendar",
+    "calendar": "Calendar",
+    "choose": "Choose a calendar",
+    "service": "Service",
+    "staff": "Staff member",
+    "allServices": "All services",
+    "allStaff": "All staff",
+    "bindingHelp": "Select a service, a staff member, or both. Up to five calendar links are supported. All matching calendars must be free. Availability refreshes every minute and pauses if stale.",
+    "consent": "I authorize sharing the customer name, phone number and conversation link in appointment events on this calendar.",
+    "link": "Link calendar",
+    "noBindings": "No calendar links. Manual availability is active.",
+    "unlink": "Remove calendar link",
+    "unlinkConfirm": "Remove this calendar link? New reservations use the remaining links or manual slots. Existing bookings keep their calendar events.",
+    "states": {
+      "requested": "Awaiting Google authorization",
+      "connecting": "Connecting…",
+      "connected": "Connected",
+      "needs_attention": "Needs attention",
+      "disconnecting": "Disconnecting…",
+      "disconnected": "Disconnected"
+    }
+  },
+  "calendarStatus": "Calendar"
 }

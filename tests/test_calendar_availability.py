@@ -72,3 +72,23 @@ def test_fresh_busy_hours_shared_holds_and_no_calendar_fallback(client, tenant, 
                        json={**hold, 'slot_id': available[1]['id']}).status_code == 409
     client.delete(BASE + '/bindings/' + binding_id, headers=headers)
     assert client.post('/api/v1/appointments/bookings', headers=headers, json=hold).status_code == 201
+
+
+def test_foreign_bindings_and_all_admin_routes_deny_viewers(client, tenant, connected, setup):
+    from app.db import Membership
+    headers, _, connection, body, binding_id = attach(client, tenant, connected, setup)
+    other = client.post('/api/v1/tenants', headers={'X-Bootstrap-Token': 'test-bootstrap'},
+                        json={'name': 'Foreign calendar workspace'}).json()
+    foreign = {'Authorization': 'Bearer ' + other['admin_key']}
+    assert client.get(BASE + '/bindings', headers=foreign).json() == []
+    assert client.delete(BASE + '/bindings/' + binding_id, headers=foreign).status_code == 404
+    assert client.post(BASE + '/bindings', headers=foreign, json=body).status_code == 404
+    with Session.begin() as db:
+        m = db.scalar(select(Membership).where(Membership.tenant_id == tenant['tenant_id'],
+                                               Membership.user_id == connected[2]))
+        m.role = 'viewer'
+    for method, path, payload in [('GET', '', None), ('POST', '/connect', {'label': 'Team'}),
+            ('POST', '/connections/' + connection['id'] + '/refresh', None),
+            ('DELETE', '/connections/' + connection['id'], {'confirm': True}), ('GET', '/bindings', None),
+            ('POST', '/bindings', body), ('DELETE', '/bindings/' + binding_id, None)]:
+        assert client.request(method, BASE + path, headers=headers, json=payload).status_code == 403

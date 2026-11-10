@@ -8,14 +8,14 @@
   "jobHelp": "Terminal failures from document ingestion, WhatsApp processing, website replies, website crawling, Q&A publication and email delivery. Customer content and raw error text are excluded.",
   "webhooks": "Webhook failures",
   "webhookHelp": "Rejected or failed WhatsApp, Razorpay and email webhook requests. Records contain the provider, time and HTTP status only.",
-  "loading": "Loading records\u2026",
+  "loading": "Loading records…",
   "error": "Could not load records. Try again.",
   "retry": "Retry",
   "refresh": "Refresh",
   "empty": "No records to show.",
   "previous": "Previous page",
   "next": "Next page",
-  "page": "{from}\u2013{to} of {total}",
+  "page": "{from}–{to} of {total}",
   "active": "Active",
   "suspended": "Suspended",
   "live": "Bot enabled",
@@ -27,7 +27,7 @@
   "unpriced": "Calls without a price: {count}. The cost shown is incomplete.",
   "suspend": "Suspend workspace",
   "resume": "Resume workspace",
-  "saving": "Saving\u2026",
+  "saving": "Saving…",
   "confirmSuspend": "Suspend {name}? Workspace access, tenant logins and bot replies will stop.",
   "confirmResume": "Resume {name}? Workspace access and the previous bot configuration will be restored.",
   "saveError": "Could not complete the action. Try again.",
@@ -43,5 +43,6 @@
   "httpStatus": "HTTP status",
   "time": "Received (UTC)",
   "website": "Website crawling",
-  "answer_review": "Q&A publication"
+  "answer_review": "Q&A publication",
+  "google_calendar": "Google Calendar"
 }

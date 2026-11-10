@@ -65,7 +65,8 @@ class Client:
                                     follow_redirects=False)
         except httpx.HTTPError:
             raise CalendarError('provider_unavailable', retry=True) from None
-        if missing and response.status_code in (404, 410):
+        if (missing and response.status_code in (404, 410) or path == 'https://oauth2.googleapis.com/revoke'
+                and response.status_code == 400):
             return None
         if response.status_code >= 400 or 300 <= response.status_code < 400:
             raw = response.headers.get('Retry-After', '')
@@ -75,8 +76,9 @@ class Client:
             except (TypeError, ValueError, OverflowError):
                 wait = 0
             status = response.status_code
-            raise CalendarError('authorization_required' if status == 401 else 'event_conflict' if status == 409
-                                else 'provider_rejected',
+            code = ('authorization_required' if status == 401 or status == 400 and path == TOKEN
+                    else 'event_conflict' if status == 409 else 'provider_rejected')
+            raise CalendarError(code,
                                 retry=status in (408, 429) or status >= 500, wait=wait)
         if len(response.content) > 4 * 1024 * 1024:
             raise CalendarError('response_too_large')

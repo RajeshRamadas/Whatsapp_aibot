@@ -43,5 +43,6 @@
   "httpStatus": "HTTP स्थिति",
   "time": "प्राप्त समय (UTC)",
   "website": "वेबसाइट क्रॉल",
-  "answer_review": "प्रश्नोत्तर प्रकाशन"
+  "answer_review": "प्रश्नोत्तर प्रकाशन",
+  "google_calendar": "Google कैलेंडर"
 }

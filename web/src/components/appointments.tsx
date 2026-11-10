@@ -1,4 +1,5 @@
 'use client';
+import { CalendarSettings } from './calendar-settings';
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { client, type Booking, type Language, type Slot } from '@/api/appointments';
@@ -72,6 +73,7 @@ export function Appointments({ workspaceId, admin }: { workspaceId: string; admi
     {loadError && <div role="alert">{copy.loadError} <Button onClick={() => refresh(v => v + 1)}>{copy.retry}</Button></div>}
     {error && <p role="alert">{copy.error}</p>}{saved && <p role="status">{copy.saved}</p>}
     {catalog && <>
+      {admin && <CalendarSettings workspaceId={workspaceId} catalog={catalog} />}
       {admin && <AppointmentSettings catalog={catalog} templates={templates ?? []} api={api} act={act} busy={busy} />}
       {admin && <form aria-label={copy.addSlot} className="grid grid-cols-1 gap-3 rounded-xl border border-border p-4 sm:grid-cols-2" onSubmit={async event => {
         event.preventDefault();
@@ -126,13 +128,14 @@ export function Appointments({ workspaceId, admin }: { workspaceId: string; admi
         <ul className="grid gap-3 lg:grid-cols-2">{bookings?.map(booking => <li key={booking.id}><Card className="min-w-0 space-y-3 break-words">
           <h3 className="font-semibold">{booking.service} · {booking.staff}</h3><p>{time(booking.starts_at)} – {time(booking.ends_at)}</p>
           <Badge>{status(booking.state)}</Badge>
+          {booking.calendar_state !== 'none' && <p>{copy.calendarStatus}: {status(booking.calendar_state)}{booking.calendar_error ? ' · ' + copy.calendar.attention : ''}</p>}
           <details><summary className="min-h-11 cursor-pointer py-2">{copy.contact}</summary><p>{booking.customer_name} · {booking.customer_phone}</p>
             <p>{copy.language}: {booking.language ? copy.languages[booking.language] : copy.defaultLanguage}</p></details>
           <Link className="inline-block min-h-11 underline" href={'/dashboard/inbox?conversation=' + booking.conversation_id}>{copy.openConversation}</Link>
           {booking.state === 'held' && <><p>{copy.expires}: {time(booking.expires_at)}</p><Button disabled={busy} onClick={() => {
             if (window.confirm(copy.confirmPrompt.replace('{service}', booking.service).replace('{time}', time(booking.starts_at)))) void act(() => api.change(booking.id, 'confirm'));
           }}>{copy.confirm}</Button></>}
-          {['held', 'confirmed'].includes(booking.state) && <div className="flex flex-wrap gap-2"><Button variant="secondary" disabled={busy} onClick={() => {
+          {['held', 'confirming', 'confirmed'].includes(booking.state) && <div className="flex flex-wrap gap-2"><Button variant="secondary" disabled={busy} onClick={() => {
             if (window.confirm(copy.cancelPrompt)) void act(() => api.change(booking.id, 'cancel'));
           }}>{copy.cancel}</Button>{booking.state === 'confirmed' && <Button variant="secondary" disabled={busy} onClick={() => reschedule(booking)}>{copy.reschedule}</Button>}</div>}
           {booking.state === 'confirmed' && <p>{copy.reminder}: {status(booking.reminder_state)}{booking.reminder_error ? ' · ' + ((copy.reasons as Record<string, string>)[booking.reminder_error] ?? copy.error) : ''}</p>}

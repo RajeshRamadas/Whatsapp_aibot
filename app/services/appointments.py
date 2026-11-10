@@ -121,7 +121,7 @@ def slots(tenant_id, start, end, service_id=None, staff_id=None):
         if staff_id:
             query = query.where(Slot.staff_id == staff_id)
         return [{**fields(s, 'id service_id staff_id starts_at ends_at'), 'service': service, 'staff': staff,
-                 'state': state or calendar.state(db, db.get(Tenant, tenant_id), s),
+                 'state': state or calendar.offered_state(db, db.get(Tenant, tenant_id), s),
                  'expires_at': expiry if state == 'held' else None}
                 for s, service, staff, state, expiry in db.execute(query.order_by(Slot.starts_at, Slot.id).limit(100))]
 
