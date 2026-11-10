@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { InboxTemplatePicker } from '@/components/inbox-template-picker';
+import { InboxMedia, MessageMedia } from '@/components/inbox-media';
+import type { Attachment } from '@/api/media';
 import { useWorkspace } from '@/components/app-shell';
 import { api } from '@/lib/api';
 
@@ -11,7 +13,7 @@ type Conversation = {
   labels: string[]; can_reply_freely: boolean; assignee_user_id: string | null;
 };
 type Citation = { number: number; filename: string; heading?: string; page?: number };
-type Message = { role: string; kind: string; content: string; delivery_status: string | null; sources?: Citation[] };
+type Message = { role: string; kind: string; content: string; delivery_status: string | null; sources?: Citation[]; attachments?: Attachment[] };
 type Page = { items: Conversation[]; next_cursor: string | null; counts: Record<string, number> };
 type Canned = { id: string; title: string; body: string };
 const endpoint = 'inbox/conversations';
@@ -152,7 +154,7 @@ export function Inbox({ canAct }: { canAct: boolean }) {
     select(id);
   }
 
-  return <main className="p-4" onKeyDown={event => {
+  return <main id="main" tabIndex={-1} className="p-4" onKeyDown={event => {
     if (event.ctrlKey || event.metaKey || event.altKey || !(event.target instanceof HTMLElement)
       || event.target.closest('input, textarea, select, [contenteditable]')) return;
     if (event.key === 'r' || event.key === '/') {
@@ -212,7 +214,9 @@ export function Inbox({ canAct }: { canAct: boolean }) {
           <ol aria-label="Messages" aria-live="polite" className="mb-4 grid max-h-[50vh] gap-2 overflow-auto">
             {messages.map((message, index) => <li key={index} className="rounded border border-border p-2">
               <span className="text-sm font-semibold">{message.kind === 'note' ? 'Internal note' : message.role}</span>
-              <p className="whitespace-pre-wrap break-words">{message.content}</p>
+              {!message.attachments?.some(item => item.transcript === message.content) &&
+                <p className="whitespace-pre-wrap break-words">{message.content}</p>}
+              {!!message.attachments?.length && <MessageMedia conversationId={selected} attachments={message.attachments} />}
               {!!message.sources?.length && <ul aria-label="Sources" className="mt-2 text-sm">
                 {message.sources.map(source => <li key={source.number}>
                   [{source.number}] {source.filename}{source.heading && ' · ' + source.heading}
@@ -260,6 +264,8 @@ export function Inbox({ canAct }: { canAct: boolean }) {
                 onClick={() => action('note', { text: draft.trim() })}>Add internal note</button>
             </div>
           </form>}
+          {canAct && active.channel === 'whatsapp' && active.can_reply_freely && active.status !== 'closed' &&
+            <InboxMedia key={selected} conversationId={selected} recipient={active.user} onQueued={() => refresh(value => value + 1)} />}
           {canAct && active.channel === 'whatsapp' && !active.can_reply_freely && active.status !== 'closed' &&
             <InboxTemplatePicker key={selected} conversationId={selected}
               onQueued={() => refresh(value => value + 1)} />}

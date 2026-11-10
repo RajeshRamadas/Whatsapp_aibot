@@ -204,3 +204,14 @@ def test_media_expiry_and_structured_inbound(client, tenant, sent, monkeypatch):
         rows = db.scalars(select(Message).where(Message.role == 'user').order_by(Message.id)).all()
         assert rows[0].attachments[0]['status'] == 'expired'
         assert rows[-1].attachments[0]['details'] == {'latitude': 12.97, 'longitude': 77.59}
+
+
+def test_expired_meta_file_still_appears_in_the_inbox(client, tenant, sent, monkeypatch):
+    link_number(client, tenant)
+    def gone(*args):
+        raise httpx.HTTPStatusError('fixture', request=httpx.Request('GET', 'https://graph.facebook.com/123'),
+                                    response=httpx.Response(404))
+    monkeypatch.setattr(media, 'download', gone)
+    assert post(client, payload()).status_code == 200
+    with Session() as db:
+        assert db.scalar(select(Message).where(Message.role == 'user')).attachments[0]['status'] == 'failed'

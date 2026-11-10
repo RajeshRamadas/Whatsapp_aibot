@@ -3,7 +3,7 @@ import asyncio
 from datetime import timedelta
 
 import httpx
-from arq import Retry, cron, run_worker
+from arq import Retry, cron, func, run_worker
 from arq.connections import RedisSettings
 from sqlalchemy import select, text, update
 
@@ -319,7 +319,8 @@ class WorkerSettings:
                  cron(reconcile_analytics, hour=1, minute=10, second=0, timeout=600),
                  cron(dispatch_usage_alerts, second=25),
                  cron(reconcile_billing, hour=2, minute=0, second=0, timeout=600)]
-    functions = [sample_job, ingest_source, handle_message, cache_email_certificate, send_campaign_recipient]
+    functions = [sample_job, ingest_source, func(handle_message, timeout=600), cache_email_certificate,
+                 send_campaign_recipient]
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
     max_jobs = 10
     job_timeout = 60

@@ -606,7 +606,35 @@ audio/documents to `MEDIA_MAX_BYTES` (16 MiB maximum). Media expires after
 `MEDIA_RETENTION_DAYS` (365 by default), with worker cleanup every ten minutes. Enable
 bucket default encryption and an equivalent lifecycle for orphaned objects. Migration
 `0030_message_media` adds attachment metadata and temporary outbound bytes. Inbox controls,
-image interpretation and voice transcription follow in T9.4b; unread attachments go to an agent.
+image interpretation and voice transcription are described below; unread attachments go to an agent.
+
+### Inbox attachments and voice notes (T9.4b)
+
+The inbox displays private images, voice playback, transcripts, image descriptions and
+location/contact cards. Owners, admins and agents can send an image/document after
+confirming its filename and recipient; viewers have read-only access. Media is not
+cached for offline playback. Worker hosts need `ffmpeg` (included in the Docker image).
+Audio is decoded locally with network/file protocols disabled and a bounded output:
+over five minutes, invalid, unavailable or rate-limited media goes to an agent. At most
+20 interpretation requests per workspace per minute are allowed, within subscription/trial entitlement. Successful transcripts
+become the customer's message for answering, handoff and opt-out matching. Checkpoints
+avoid repeating provider calls after an interrupted interpretation or answer retry.
+`usage_events.audio_seconds` meters attempted speech duration separately from tokens;
+cost remains unknown rather than inventing a per-token charge (migration `0031_audio_usage`).
+
+`TRANSCRIPTION_PROVIDER=disabled` is the default. The first adapter is OpenAI with
+automatic language detection, `TRANSCRIPTION_MODEL=gpt-4o-transcribe` and `OPENAI_API_KEY`.
+This is a candidate adapter, **not a measured production-provider selection**. Before
+enabling it, compare representative English, Hindi, Kannada, Tamil, Telugu, Marathi,
+Bengali and Hinglish voice notes against human transcripts. Keep recordings outside git.
+Run `TRANSCRIPTION_PROVIDER=openai python -m scripts.evaluate_speech /private/samples.json`
+with a JSON list such as `[{"file":"clip.wav","language":"hi","reference":"मानव प्रतिलेख"}]`.
+It prints aggregate word error rates and missing languages without printing transcripts.
+Review domain names, numbers, background noise and mixed-language errors as well as WER;
+the real-sample evaluation remains pending without recordings and provider credentials.
+`MEDIA_VISION_ENABLED=true` sends images to the workspace's configured vision-capable
+OpenAI, Anthropic or Gemini model. Descriptions are treated as customer input for the
+existing grounded answer flow; unsupported models and provider failures go to an agent.
 
 ### Website widget v2
 

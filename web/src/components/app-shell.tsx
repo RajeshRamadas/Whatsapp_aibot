@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useLayoutEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { visiblePages, type Role } from '@/lib/navigation';
 import messages from '@/messages/en.json';
@@ -17,7 +17,8 @@ export function AppShell({ workspaces, active, children, platformAdmin = false }
   const router = useRouter();
   const pathname = usePathname();
   const [selected, setSelected] = useState(active.id);
-  useEffect(() => { document.cookie = 'active_workspace=' + encodeURIComponent(active.id) + '; Path=/; SameSite=Lax'; }, [active.id]);
+  // Child data effects need workspace context on the first request after login.
+  useLayoutEffect(() => { document.cookie = 'active_workspace=' + encodeURIComponent(active.id) + '; Path=/; SameSite=Lax'; }, [active.id]);
   const pages = visiblePages(active.role);
   function switchWorkspace(id: string) {
     navigator.serviceWorker?.controller?.postMessage({ type: 'CLEAR_INBOX' });

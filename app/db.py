@@ -457,6 +457,7 @@ class UsageEvent(Base):
     model: Mapped[str | None] = mapped_column(String(200))
     input_tokens: Mapped[int | None] = mapped_column(BigInteger)
     output_tokens: Mapped[int | None] = mapped_column(BigInteger)
+    audio_seconds: Mapped[Decimal | None] = mapped_column(Numeric(12, 3))
     cost_usd: Mapped[Decimal | None] = mapped_column(Numeric(20, 10))
     overage: Mapped[bool] = mapped_column(Boolean, default=False)
     notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
