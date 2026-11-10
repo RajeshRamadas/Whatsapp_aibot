@@ -1819,6 +1819,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/conversations/{conversation_id}/media/{attachment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download */
+        get: operations["download_api_v1_conversations__conversation_id__media__attachment_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inbox/conversations/{conversation_id}/media": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reply */
+        post: operations["reply_api_v1_inbox_conversations__conversation_id__media_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1860,6 +1894,28 @@ export interface components {
             /** User Id */
             user_id?: string | null;
         };
+        /** AttachmentView */
+        AttachmentView: {
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Status */
+            status: string;
+            /** Filename */
+            filename?: string | null;
+            /** Mime Type */
+            mime_type?: string | null;
+            /**
+             * Size
+             * @default 0
+             */
+            size: number;
+            /** Details */
+            details?: {
+                [key: string]: unknown;
+            } | unknown[] | null;
+        };
         /** BillingDetails */
         BillingDetails: {
             /** Name */
@@ -1877,6 +1933,16 @@ export interface components {
         Body_import_csv_api_v1_contacts_import_post: {
             /** File */
             file: string;
+        };
+        /** Body_reply_api_v1_inbox_conversations__conversation_id__media_post */
+        Body_reply_api_v1_inbox_conversations__conversation_id__media_post: {
+            /** File */
+            file: string;
+            /**
+             * Caption
+             * @default
+             */
+            caption: string;
         };
         /** Body_upload_api_v1_sources_post */
         Body_upload_api_v1_sources_post: {
@@ -2174,6 +2240,38 @@ export interface components {
             /** Confirm */
             confirm: boolean;
         };
+        /** MessageView */
+        MessageView: {
+            /** Id */
+            id: number;
+            /** Role */
+            role: string;
+            /** Content */
+            content: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Direction */
+            direction: string;
+            /** Kind */
+            kind: string;
+            /** Author User Id */
+            author_user_id: string | null;
+            /** Channel Message Id */
+            channel_message_id: string | null;
+            /** Delivery Status */
+            delivery_status: string | null;
+            /** Sources */
+            sources: {
+                [key: string]: unknown;
+            }[];
+            /** Error */
+            error: string | null;
+            /** Attachments */
+            attachments: components["schemas"]["AttachmentView"][];
+        };
         /** Metrics */
         Metrics: {
             /** Conversations */
@@ -2251,6 +2349,13 @@ export interface components {
              * Format: date-time
              */
             month: string;
+        };
+        /** QueuedMedia */
+        QueuedMedia: {
+            /** Status */
+            status: string;
+            /** Message Id */
+            message_id: number;
         };
         /** QuotaPolicy */
         QuotaPolicy: {
@@ -4126,7 +4231,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["MessageView"][];
                 };
             };
             /** @description Validation Error */
@@ -7026,6 +7131,80 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Report"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_api_v1_conversations__conversation_id__media__attachment_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                conversation_id: string;
+                attachment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reply_api_v1_inbox_conversations__conversation_id__media_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "idempotency-key": string;
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_reply_api_v1_inbox_conversations__conversation_id__media_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueuedMedia"];
                 };
             };
             /** @description Validation Error */

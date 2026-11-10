@@ -9,10 +9,11 @@ from sqlalchemy import select, text, update
 
 from .. import ingest, whatsapp
 from ..config import settings
-from ..db import AuditLog, Conversation, InboundEvent, Message, Session, Source, Tenant, now
+from ..db import AuditLog, Conversation, InboundEvent, Message, Session, Source, Tenant, engine, now
 from ..integrations.ses import Transport, cache_certificate
 from ..observability import bind, configure, observed_job
 from ..rate_limits import RateLimiter
+from ..services import media
 from ..services.analytics import reconcile as reconcile_analytics_daily
 from ..services.billing import reconcile_settlements, reconcile_subscriptions
 from ..services.campaign_delivery import deliver as deliver_campaign
@@ -66,62 +67,76 @@ async def ingest_source(ctx: dict, source_id: str, tenant_id: str) -> None:
             raise
 
 
-@observed_job
-async def handle_message(ctx: dict, event_id: str) -> None:
-    """Debounce one contact and serialize its turn with a PostgreSQL advisory lock."""
-    await asyncio.sleep(2)
-    with Session.begin() as db:
+def process_inbound(event_id):
+    """Serialize a contact with a session advisory lock, closing sessions before I/O."""
+    with Session() as db:
         event = db.get(InboundEvent, event_id)
         if not event or event.status in ('processed', 'merged', 'failed'):
-            return
-        payload = event.payload
-        contact = payload['from']
-        tenant_id = event.tenant_id
-        bind(tenant_id=tenant_id)
-        db.execute(text('SELECT pg_advisory_xact_lock(hashtext(:key))'),
-                   {'key': f'{tenant_id}:whatsapp:{contact}'})
-        db.refresh(event)
+            return False
+        tenant_id, contact = event.tenant_id, event.payload['from']
+    bind(tenant_id=tenant_id)
+    with engine.connect().execution_options(isolation_level='AUTOCOMMIT') as lock:
+        params = {'key': f'{tenant_id}:whatsapp:{contact}'}
+        lock.execute(text('SELECT pg_advisory_lock(hashtextextended(:key, 0))'), params)
+        try:
+            return process_inbound_locked(event_id, tenant_id, contact)
+        finally:
+            lock.execute(text('SELECT pg_advisory_unlock(hashtextextended(:key, 0))'), params)
+
+
+def process_inbound_locked(event_id, tenant_id, contact):
+    with Session() as db:
+        event = db.get(InboundEvent, event_id)
         if event.status in ('processed', 'merged', 'failed'):
-            return
+            return False
         candidates = db.scalars(select(InboundEvent).where(
-            InboundEvent.tenant_id == tenant_id,
-            InboundEvent.status == 'queued').order_by(InboundEvent.received_at, InboundEvent.id)
-            .with_for_update()).all()
+            InboundEvent.tenant_id == tenant_id, InboundEvent.status == 'queued')
+            .order_by(InboundEvent.received_at, InboundEvent.id)).all()
         batch = [row for row in candidates if row.payload.get('from') == contact]
-        if not batch:
-            return
         combined = dict(batch[0].payload)
         combined['parts'] = [row.payload for row in batch]
-        combined['text'] = '\\n'.join(row.payload.get('text', '') for row in batch if row.payload.get('text'))
-        try:
-            # This call performs synchronous LLM and HTTP work off the event loop.
-            await asyncio.to_thread(whatsapp.handle, tenant_id, combined)
-        except Exception as exc:
-            for row in batch:
+        combined['text'] = '\n'.join(row.payload.get('text', '') for row in batch if row.payload.get('text'))
+    try:
+        whatsapp.handle(tenant_id, combined)
+    except Exception:
+        exhausted = False
+        with Session.begin() as db:
+            rows = db.scalars(select(InboundEvent).where(InboundEvent.tenant_id == tenant_id,
+                              InboundEvent.id.in_([row.id for row in batch]))).all()
+            for row in rows:
                 row.attempts += 1
-                row.last_error = str(exc)[:500]
-            raise_after_commit = event.attempts < 5
-            if not raise_after_commit:
-                conv = whatsapp.conversation_for(tenant_id, contact)
-                db.execute(text("UPDATE conversations SET handoff = true, analytics_handoff = true, "
-                                "status = 'waiting' WHERE id = :id"),
-                           {'id': conv.id})
-                db.add(Message(conversation_id=conv.id, role='agent', kind='note', direction='outbound',
-                               content='Internal note: automated WhatsApp reply failed; agent follow-up required.'))
-                for row in batch:
+                row.last_error = 'Automated message processing failed'
+            exhausted = max(row.attempts for row in rows) >= 5
+            if exhausted:
+                for row in rows:
                     row.status = 'failed'
-                try:
-                    await asyncio.to_thread(whatsapp.send_text, combined['phone_number_id'],
-                                            contact, copy_for(db.get(Tenant, tenant_id))['error'],
-                                            tenant_id=tenant_id)
-                except Exception:
-                    pass  # Handoff remains recorded even if Meta is unavailable.
-        else:
-            for row in batch:
+        if not exhausted:
+            return True
+        conv = whatsapp.conversation_for(tenant_id, contact)
+        with Session.begin() as db:
+            db.execute(update(Conversation).where(Conversation.id == conv.id, Conversation.tenant_id == tenant_id)
+                       .values(handoff=True, analytics_handoff=True, status='waiting'))
+            db.add(Message(conversation_id=conv.id, role='agent', kind='note', direction='outbound',
+                           content='Internal note: automated WhatsApp reply failed; agent follow-up required.'))
+            tenant = db.get(Tenant, tenant_id)
+        try:
+            whatsapp.send_text(combined['phone_number_id'], contact, copy_for(tenant)['error'], tenant_id=tenant_id)
+        except Exception:
+            pass
+        publish_sync(tenant_id, 'conversation.updated', {'conversation_id': conv.id})
+    else:
+        with Session.begin() as db:
+            for row in db.scalars(select(InboundEvent).where(InboundEvent.tenant_id == tenant_id,
+                                  InboundEvent.id.in_([item.id for item in batch]))):
                 row.status = 'processed' if row.id == event_id else 'merged'
                 row.last_error = None
-            raise_after_commit = False
-    if raise_after_commit:
+    return False
+
+
+@observed_job
+async def handle_message(ctx: dict, event_id: str) -> None:
+    await asyncio.sleep(2)
+    if await asyncio.to_thread(process_inbound, event_id):
         raise Retry(defer=min(2 ** ctx.get('job_try', 1), 60))
 
 
@@ -145,6 +160,8 @@ def dispatch_agent_reply() -> bool:
         eligible = (not tenant.suspended and conversation.handoff and conversation.status == 'agent' and phone
                     and conversation.last_inbound_at
                     and conversation.last_inbound_at > now() - timedelta(hours=24))
+        attachment = message.attachments[0] if message.attachments else None
+        upload_data = message.upload_data if attachment else None
         template_payload = None
         if message.template_payload is not None:
             queued = message.template_payload
@@ -163,9 +180,14 @@ def dispatch_agent_reply() -> bool:
             message.dispatch_started_at = now()
         if not eligible:
             message.error = 'Conversation is no longer eligible for this WhatsApp reply'
+            if attachment:
+                message.attachments = [{**attachment, 'status': 'failed'}]
+                message.upload_data = None
     if eligible:
         try:
-            if template_payload is None:
+            if attachment:
+                provider_id = media.send(phone, recipient, tenant_id, attachment, upload_data, content)
+            elif template_payload is None:
                 provider_id = whatsapp.send_text(phone, recipient, content, tenant_id=tenant_id)
             else:
                 response = whatsapp.graph_message(phone, {
@@ -179,6 +201,11 @@ def dispatch_agent_reply() -> bool:
         with Session.begin() as db:
             message = db.get(Message, message_id)
             if message:
+                if attachment:
+                    message.attachments = [{**attachment, 'status': attachment['status']
+                                            if attachment['status'] == 'ready' else 'failed'}]
+                    if attachment['status'] == 'ready':
+                        message.upload_data = None
                 message.channel_message_id = provider_id
                 message.delivery_status = 'sent' if provider_id else 'unknown'
                 if not provider_id:
@@ -223,6 +250,11 @@ async def dispatch_usage_alerts(ctx: dict) -> None:
 async def reconcile_billing(ctx: dict) -> None:
     await asyncio.to_thread(reconcile_subscriptions)
     await asyncio.to_thread(reconcile_settlements)
+
+
+@observed_job
+async def expire_media(ctx):
+    await asyncio.to_thread(media.expire)
 
 
 @observed_job
@@ -283,6 +315,7 @@ class WorkerSettings:
                  cron(notify_inbox, second={5, 15, 25, 35, 45, 55}),
                  cron(dispatch_widget_turn, second=set(range(0, 60, 2)), timeout=600),
                  cron(reconcile_usage, hour=1, minute=0, second=0, timeout=600),
+                 cron(expire_media, minute=set(range(0, 60, 10)), second=0),
                  cron(reconcile_analytics, hour=1, minute=10, second=0, timeout=600),
                  cron(dispatch_usage_alerts, second=25),
                  cron(reconcile_billing, hour=2, minute=0, second=0, timeout=600)]

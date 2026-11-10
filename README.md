@@ -591,6 +591,23 @@ tracked in the catalog. Sending requires recorded contact opt-in. The worker
 rechecks approval and consent before dispatch.
 
 
+### Private WhatsApp media (T9.4a)
+
+Inbound images, documents and audio are downloaded by the worker with the channel's
+token and saved under `tenant/<tenant_id>/media/<id>` in the configured private storage.
+Locations and contact cards are retained as structured message attachments. Agents can
+queue images/documents with multipart `POST /api/v1/inbox/conversations/{id}/media`
+(`file`, optional `caption`, required `Idempotency-Key`). The worker rechecks the 24-hour
+window and uploads to Meta; an uncertain send is marked `unknown` and is not retried.
+Authenticated viewers download through `/api/v1/conversations/{id}/media/{attachment_id}`.
+S3 links expire after five minutes; local downloads remain authenticated and uncached.
+Types, signatures, checksums and streamed size are checked. Images are limited to 5 MiB;
+audio/documents to `MEDIA_MAX_BYTES` (16 MiB maximum). Media expires after
+`MEDIA_RETENTION_DAYS` (365 by default), with worker cleanup every ten minutes. Enable
+bucket default encryption and an equivalent lifecycle for orphaned objects. Migration
+`0030_message_media` adds attachment metadata and temporary outbound bytes. Inbox controls,
+image interpretation and voice transcription follow in T9.4b; unread attachments go to an agent.
+
 ### Website widget v2
 
 Workspace owners and admins can open **Website widget** on the dashboard to

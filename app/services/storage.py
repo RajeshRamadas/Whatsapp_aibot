@@ -21,7 +21,7 @@ class Storage(ABC):
     def presign_put(self, key: str, content_type: str) -> str: ...
 
     @abstractmethod
-    def presign_get(self, key: str) -> str: ...
+    def presign_get(self, key: str, **options) -> str: ...
 
 
 class LocalStorage(Storage):
@@ -51,7 +51,7 @@ class LocalStorage(Storage):
         # Local development uses the authenticated API upload endpoint instead of a public URL.
         return f'/api/v1/sources/uploads/local/{quote(key, safe="/")}'
 
-    def presign_get(self, key: str) -> str:
+    def presign_get(self, key: str, **options) -> str:
         return f'/api/v1/sources/uploads/local/{quote(key, safe="/")}'
 
 
@@ -78,9 +78,13 @@ class S3Storage(Storage):
         return self.client.generate_presigned_url('put_object', Params={
             'Bucket': self.bucket, 'Key': key, 'ContentType': content_type}, ExpiresIn=900)
 
-    def presign_get(self, key: str) -> str:
-        return self.client.generate_presigned_url('get_object', Params={
-            'Bucket': self.bucket, 'Key': key}, ExpiresIn=900)
+    def presign_get(self, key: str, **options) -> str:
+        params = {'Bucket': self.bucket, 'Key': key}
+        if options:
+            disposition = 'inline' if options.get('inline') else 'attachment'
+            params.update(ResponseContentType=options['content_type'], ResponseCacheControl='private, no-store',
+                          ResponseContentDisposition=disposition + "; filename*=UTF-8''" + quote(options['filename']))
+        return self.client.generate_presigned_url('get_object', Params=params, ExpiresIn=300)
 
 
 def storage() -> Storage:
