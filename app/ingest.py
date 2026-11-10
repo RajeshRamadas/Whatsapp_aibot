@@ -6,6 +6,7 @@ crossing a heading or page, so a section or table row is never cut in half,
 and each chunk is embedded with its document and heading as context.
 """
 import csv
+import hashlib
 import json
 import re
 import tempfile
@@ -16,15 +17,18 @@ from docx import Document as WordDocument
 from docx.table import Table
 from openpyxl import load_workbook
 from pypdf import PdfReader
-from sqlalchemy import delete
+from sqlalchemy import delete, select
+from sqlalchemy.dialects.postgresql import insert
 
 from . import llm
-from .db import Chunk, Session, Source
+from .config import settings
+from .db import Chunk, Session, Source, UsageEvent
+from .services import ocr
 from .services.analytics import milestone
 from .services.storage import storage
 from .services.usage import meter
 
-SUPPORTED_SUFFIXES = {'.pdf', '.docx', '.txt', '.md', '.csv', '.xlsx', '.json'}
+SUPPORTED_SUFFIXES = {'.pdf', '.docx', '.txt', '.md', '.csv', '.xlsx', '.json'} | ocr.IMAGE_SUFFIXES
 EMBED_BATCH = 32
 CHUNK_CHARS = 1200
 
@@ -114,10 +118,27 @@ def docx_blocks(path) -> list[Block]:
     return blocks
 
 
-def extract(path, suffix) -> list[Block]:
+def extract(path, suffix, *, on_ocr_page=None) -> list[Block]:
+    reader = ocr.Reader(on_ocr_page)
+    if suffix in ocr.IMAGE_SUFFIXES:
+        return [Block(text, page=frame + 1) for frame in range(ocr.frames(path))
+                for text in paragraphs(reader.read(path, frame + 1, frame=frame))]
     if suffix == '.pdf':
-        return [Block(p, page=n) for n, page in enumerate(PdfReader(path).pages, 1)
-                for p in paragraphs(page.extract_text() or '')]
+        try:
+            pdf = PdfReader(path)
+            if pdf.is_encrypted:
+                raise ocr.OCRError('This PDF is password protected. Upload an unlocked copy.')
+            blocks = []
+            for page, item in enumerate(pdf.pages, 1):
+                text = item.extract_text() or ''
+                if not text.strip():
+                    text = reader.read(path, page, pdf=True)
+                blocks.extend(Block(paragraph, page=page) for paragraph in paragraphs(text))
+            return blocks
+        except ocr.OCRError:
+            raise
+        except Exception:
+            raise ocr.OCRError('The PDF could not be read. Upload a valid, unlocked PDF.') from None
     if suffix == '.docx':
         return docx_blocks(path)
     if suffix == '.md':
@@ -204,39 +225,51 @@ def embedding_text(filename: str, piece: Piece) -> str:
     return f'{source_label(filename, piece.heading, piece.page)}\n{piece.content}'
 
 
-def ingest(source_id: str) -> None:
-    with Session() as db:
-        src = db.get(Source, source_id)
+def ingest(source_id: str, tenant_id: str) -> None:
+    # Snapshot scope and close the session before storage, OCR or embedding work.
+    with Session.begin() as db:
+        src = db.scalar(select(Source).where(Source.id == source_id, Source.tenant_id == tenant_id))
         if not src:
             return
         src.status = 'processing'
-        db.commit()
-        try:
-            if src.file_path.startswith('storage:'):
-                key = src.file_path.removeprefix('storage:')
-                with tempfile.TemporaryDirectory() as directory:
-                    path = Path(directory) / ('source' + Path(key).suffix.lower())
-                    path.write_bytes(storage().get(key))
-                    pieces = chunk_blocks(extract(path, path.suffix.lower()))
-            else:
-                pieces = chunk_blocks(extract(src.file_path, Path(src.file_path).suffix.lower()))
-            if not pieces:
-                raise ValueError('No extractable text; OCR is not implemented')
-            embedder = llm.embedder()
-            rows = []
-            for i in range(0, len(pieces), EMBED_BATCH):
-                batch = pieces[i:i + EMBED_BATCH]
-                with meter(src.tenant_id):
-                    vectors = embedder.embed([embedding_text(src.filename, p) for p in batch])
-                rows += [Chunk(tenant_id=src.tenant_id, source_id=src.id, position=i + n, content=p.content,
-                               heading=p.heading, page=p.page, embedding=v)
-                         for n, (p, v) in enumerate(zip(batch, vectors, strict=True))]
-            # All chunks land together with the status change, so a failure leaves none behind.
-            db.execute(delete(Chunk).where(Chunk.source_id == source_id))
-            db.add_all(rows)
-            src.status, src.error = 'ready', None
-            milestone(db, 'first_knowledge_ready', src.tenant_id, 'knowledge')
-            db.commit()
-        except Exception:
-            db.rollback()
-            raise
+        filename, file_path = src.filename, src.file_path
+    with tempfile.TemporaryDirectory(prefix='knowledge-source-') as directory:
+        if file_path.startswith('storage:'):
+            key = file_path.removeprefix('storage:')
+            path = Path(directory) / ('source' + Path(key).suffix.lower())
+            path.write_bytes(storage().get(key))
+        else:
+            path = Path(file_path)
+        with path.open('rb') as source:
+            digest = hashlib.file_digest(source, 'sha256').hexdigest()
+        identity = hashlib.sha256((digest + ':' + settings.ocr_languages).encode()).hexdigest()
+
+        def metered_page(page):
+            with Session.begin() as db:
+                db.execute(insert(UsageEvent).values(tenant_id=tenant_id, kind='ocr', provider='tesseract',
+                    model=settings.ocr_languages, ocr_pages=1, cost_usd=0,
+                    request_key=f'ocr:{source_id}:{identity}:{page}').on_conflict_do_nothing(
+                        constraint='uq_usage_request'))
+
+        pieces = chunk_blocks(extract(path, path.suffix.lower(), on_ocr_page=metered_page))
+    if not pieces:
+        raise ValueError('No extractable text found. Upload a clearer scan or a document containing text.')
+    embedder = llm.embedder()
+    rows = []
+    for i in range(0, len(pieces), EMBED_BATCH):
+        batch = pieces[i:i + EMBED_BATCH]
+        with meter(tenant_id):
+            vectors = embedder.embed([embedding_text(filename, piece) for piece in batch])
+        rows += [Chunk(tenant_id=tenant_id, source_id=source_id, position=i + n, content=piece.content,
+                       heading=piece.heading, page=piece.page, embedding=vector)
+                 for n, (piece, vector) in enumerate(zip(batch, vectors, strict=True))]
+    # Deleted sources stay deleted; chunks and ready state are committed together.
+    with Session.begin() as db:
+        current = db.scalar(select(Source).where(Source.id == source_id, Source.tenant_id == tenant_id)
+                            .with_for_update())
+        if not current or current.file_path != file_path:
+            return
+        db.execute(delete(Chunk).where(Chunk.source_id == source_id, Chunk.tenant_id == tenant_id))
+        db.add_all(rows)
+        current.status, current.error = 'ready', None
+        milestone(db, 'first_knowledge_ready', tenant_id, 'knowledge')

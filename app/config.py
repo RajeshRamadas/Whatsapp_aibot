@@ -82,6 +82,10 @@ class Settings(BaseSettings):
     storage_endpoint_url: str | None = None
     storage_region: str = 'us-east-1'
     max_upload_mb: int = 15
+    ocr_languages: str = Field('eng+hin', max_length=100, pattern=r'^[a-z][a-z0-9_]*(\+[a-z][a-z0-9_]*)*$')
+    ocr_max_pages: int = Field(20, ge=1, le=100)
+    ocr_max_pixels: int = Field(20000000, ge=1000000, le=64000000)
+    ocr_timeout_seconds: int = Field(30, ge=1, le=120)
     media_max_bytes: int = Field(16777216, ge=1024, le=16777216)
     media_retention_days: int = Field(365, ge=1, le=3650)
     transcription_provider: Literal['disabled', 'openai'] = 'disabled'

@@ -1,6 +1,8 @@
 FROM python:3.12-slim
 WORKDIR /srv
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg poppler-utils util-linux tesseract-ocr tesseract-ocr-eng tesseract-ocr-hin \
+    && rm -rf /var/lib/apt/lists/*
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY alembic.ini ./alembic.ini

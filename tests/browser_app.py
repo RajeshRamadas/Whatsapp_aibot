@@ -8,13 +8,13 @@ import httpx
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 
-from app import whatsapp
-from app.api import auth, billing, templates
+from app import llm, whatsapp
+from app.api import auth, billing, knowledge, templates
 from app.api import whatsapp as whatsapp_api
 from app.config import settings
 from app.db import CampaignRecipient, Channel, Session, Template, now, uid
 from app.invoice_config import InvoiceIssuer
-from app.jobs.worker import dispatch_agent_reply, process_inbound
+from app.jobs.worker import dispatch_agent_reply, ingest_source, process_inbound
 from app.main import app
 from app.rate_limits import RateLimiter
 from app.services import campaign_delivery, media, media_intelligence
@@ -22,6 +22,29 @@ from app.services import templates as template_service
 from tests.test_billing import FakeBilling
 
 __all__ = ['app']
+
+
+class BrowserKnowledge:
+    def embed(self, texts, **kwargs):
+        return [[1.0, 0.0, 0.0] for _ in texts]
+
+    def complete(self, *args):
+        return 'Refunds accepted within 30 days. [1]'
+
+    def run(self, *args):
+        return llm.ChatResult(self.complete(), [])
+
+
+async def browser_ingestion(name, **kwargs):
+    assert name == 'ingest_source'
+    await ingest_source({'job_try': 3}, kwargs['source_id'], kwargs['tenant_id'])
+    return kwargs['_job_id']
+
+
+knowledge.enqueue = browser_ingestion
+llm.embedder = lambda: BrowserKnowledge()
+llm.chat_provider = lambda name: BrowserKnowledge()
+settings.ocr_languages = 'eng'  # The synthetic browser scan is English; no external AI is used.
 
 
 class BrowserBilling(FakeBilling):

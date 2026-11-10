@@ -8,6 +8,7 @@ import messages from '@/messages/en.json';
 
 export function KnowledgeManager({ workspaceId, canEdit }: { workspaceId: string; canEdit: boolean }) {
   const [sources, setSources] = useState<Source[]>([]);
+  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [dragging, setDragging] = useState(false);
@@ -20,6 +21,7 @@ export function KnowledgeManager({ workspaceId, canEdit }: { workspaceId: string
       setSources(data);
       setError('');
     } catch (cause) { setError(cause instanceof Error ? cause.message : messages.genericError); }
+    finally { setLoading(false); }
   }, [workspaceId]);
   useEffect(() => { void refresh(); }, [refresh]);
   const pending = sources.some(source => isPending(source.status));
@@ -80,8 +82,9 @@ export function KnowledgeManager({ workspaceId, canEdit }: { workspaceId: string
     {canEdit && <div onDragOver={event => event.preventDefault()} onDragEnter={event => { event.preventDefault(); setDragging(true); }}
       onDragLeave={() => setDragging(false)} onDrop={onDrop}
       className={'rounded-xl border-2 border-dashed p-6 text-center ' + (dragging ? 'border-accent' : 'border-border')}>
-      <p>{messages.dropFiles}</p>
-      <input ref={input} type="file" multiple className="sr-only" onChange={onFiles} aria-label={messages.selectFiles} />
+      <p>{messages.dropFiles}</p><p className="mt-2 text-sm text-muted">{messages.ocrHelp}</p>
+      <input ref={input} type="file" multiple accept=".pdf,.docx,.txt,.md,.csv,.xlsx,.json,.png,.jpg,.jpeg,.tif,.tiff,.webp"
+        className="sr-only" onChange={onFiles} aria-label={messages.selectFiles} />
       <Button type="button" disabled={busy} onClick={() => input.current?.click()}>{busy ? messages.uploading : messages.selectFiles}</Button>
     </div>}
     {error && <div role="alert" className="mt-4 text-red-700 dark:text-red-300">{error} <button type="button" className="underline" onClick={() => void refresh()}>{messages.retry}</button></div>}
@@ -89,11 +92,12 @@ export function KnowledgeManager({ workspaceId, canEdit }: { workspaceId: string
       <h2 className="text-lg font-semibold">{messages.uploadedSources}</h2>
       <Button type="button" variant="secondary" onClick={() => void refresh()}>{messages.refresh}</Button>
     </div>
-    {!sources.length && <p className="mt-4 text-muted">{messages.noSources}</p>}
+    {loading && <div role="status" className="mt-4"><p>{messages.loadingSources}</p><div aria-hidden="true" className="mt-2 h-20 rounded-xl border border-border bg-surface motion-safe:animate-pulse" /></div>}
+    {!loading && !error && !sources.length && <p className="mt-4 text-muted">{messages.noSources}</p>}
     <ul className="mt-4 grid gap-3">
       {sources.map(source => <li key={source.id} className="rounded-xl border border-border p-4">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="min-w-0 flex-1 break-all font-medium">{source.filename}</span>
+          <span className="w-full break-all font-medium sm:min-w-0 sm:w-auto sm:flex-1">{source.filename}</span>
           <Badge tone={statusTone(source.status)}>{source.status === 'ready' ? messages.ready : source.status === 'failed' ? messages.failed : messages.processing}</Badge>
           {canEdit && <Button type="button" variant="secondary" onClick={() => setConfirmId(source.id)}>{messages.deleteSource}</Button>}
         </div>

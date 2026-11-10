@@ -447,6 +447,34 @@ retries are exhausted. Empty/unparseable documents fail immediately.
 Reprocessing atomically replaces old chunks, avoiding duplicate search results.
 The worker and API must share the same configured object-storage backend.
 
+### Scanned knowledge files (T9.5)
+
+Knowledge uploads now accept PNG, JPEG, TIFF (including multiple frames) and WebP,
+and PDFs can mix selectable text and scanned pages. Pages without text use local
+Tesseract OCR; text pages retain their existing content. Both paths produce normal
+search chunks with original page numbers for citations. Blank pages add no chunks;
+an entirely unreadable file fails with recovery advice. OCR does not send documents
+to a cloud recognition service or require a new API key. Embeddings use the existing
+configured provider. Storage, recognition and embedding run without open DB sessions,
+and chunks plus the ready status are committed together.
+
+Worker hosts need `tesseract-ocr`, its configured language data, `poppler-utils` and
+`util-linux` (`prlimit`). The Docker image includes English and Hindi language data.
+`OCR_LANGUAGES=eng+hin` can be changed after installing corresponding language packs
+(for example `tesseract-ocr-tam` for `tam`). Missing language data is a visible failure,
+not a silent fallback. Defaults allow 20 recognized pages per file, 20 million image
+pixels and 30 seconds per native operation (`OCR_MAX_PAGES`, `OCR_MAX_PIXELS`,
+`OCR_TIMEOUT_SECONDS`). Native processes are limited to one thread and 512 MiB of
+address space; raster images are scaled to a 2400px longest edge, and recognition
+output is limited to 32,000 characters per page. Oversized or timed-out scans should
+be split or replaced with clearer copies. Ingestion jobs allow up to 30 minutes.
+
+Migration `0032_ocr_usage` adds `usage_events.ocr_pages`. Each successfully recognized
+page (including a blank result) is recorded once per source/content/language/page,
+so embedding retries do not duplicate OCR usage. Local OCR has no external provider
+charge (`cost_usd=0`); embedding usage is metered separately. Transcription remains
+disabled while the required real voice-note benchmark is pending.
+
 
 ### Durable WhatsApp inbound processing (T2.3)
 

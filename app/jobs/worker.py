@@ -46,17 +46,17 @@ async def sample_job(ctx: dict, tenant_id: str, job_id: str) -> str:
 async def ingest_source(ctx: dict, source_id: str, tenant_id: str) -> None:
     """Process an uploaded source; retry transient failures, fail on final attempt."""
     with Session() as db:
-        source = db.get(Source, source_id)
+        source = db.scalar(select(Source).where(Source.id == source_id, Source.tenant_id == tenant_id))
         if not source or source.tenant_id != tenant_id:
             return  # Deleted source or stale/cross-tenant job.
         if source.status == 'ready':
             return
     try:
-        await asyncio.to_thread(ingest.ingest, source_id)
+        await asyncio.to_thread(ingest.ingest, source_id, tenant_id)
         await asyncio.to_thread(publish_sync, tenant_id, 'source.updated', {'source_id': source_id})
     except Exception as exc:
         with Session.begin() as db:
-            source = db.get(Source, source_id)
+            source = db.scalar(select(Source).where(Source.id == source_id, Source.tenant_id == tenant_id))
             if source and source.tenant_id == tenant_id:
                 if isinstance(exc, ValueError) or ctx.get('job_try', 1) >= 3:
                     source.status, source.error = 'failed', str(exc)[:500]
@@ -319,8 +319,8 @@ class WorkerSettings:
                  cron(reconcile_analytics, hour=1, minute=10, second=0, timeout=600),
                  cron(dispatch_usage_alerts, second=25),
                  cron(reconcile_billing, hour=2, minute=0, second=0, timeout=600)]
-    functions = [sample_job, ingest_source, func(handle_message, timeout=600), cache_email_certificate,
-                 send_campaign_recipient]
+    functions = [sample_job, func(ingest_source, timeout=1800), func(handle_message, timeout=600),
+                 cache_email_certificate, send_campaign_recipient]
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
     max_jobs = 10
     job_timeout = 60

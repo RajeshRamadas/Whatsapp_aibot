@@ -14,5 +14,6 @@ describe('knowledge status helpers', () => {
   it('suggests relevant fixes', () => {
     expect(failureAdvice('No text extracted')).toBe('emptyFileAdvice');
     expect(failureAdvice('Unsupported format')).toBe('formatAdvice');
+    expect(failureAdvice('Text recognition took too long.')).toBe('ocrAdvice');
   });
 });
