@@ -160,3 +160,15 @@ def _conversation(review):
     from app.db import Message
     with Session() as db:
         return db.get(Message, review.message_id).conversation_id
+
+
+def test_widget_explicit_uncertainty_is_recorded_even_with_retrieved_sources(client, tenant, chats, monkeypatch):
+    monkeypatch.setattr(rag, 'retrieve', lambda *args: [rag.Match('Shipping policy only.', 'Policy.md', None, None)])
+    chats['openai'].tool_turns = [
+        lambda results, enabled: ('', [('offer_handoff', {})]),
+        lambda results, enabled: ('I do not have the refund rule. Our team can help.', []),
+    ]
+    review, _ = widget(client, tenant)
+    assert review.unanswered
+    with Session() as db:
+        assert not db.get(Conversation, _conversation(review)).handoff
