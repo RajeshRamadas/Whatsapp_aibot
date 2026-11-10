@@ -90,8 +90,10 @@ def report(db, campaign):
     counts = Counter({key: 0 for key in ('queued', 'sending', 'sent', 'delivered', 'read', 'failed',
                                         'suppressed', 'unknown', 'cancelled', 'replied', 'opt_outs')})
     total, billable, unconfirmed, tested = 0, 0, 0, False
+    test_state = None
     for state, is_test, count, replies, optouts, charged, unknown in groups:
         if is_test:
+            test_state = state
             tested = tested or state in accepted
             continue
         total += count
@@ -109,7 +111,7 @@ def report(db, campaign):
         'currency': campaign.currency,
         'estimated_max_cost': campaign.unit_price * total if campaign.unit_price is not None else None,
         'estimated_billable_cost': campaign.unit_price * billable if campaign.unit_price is not None else None,
-        'pricing_unconfirmed': unconfirmed, 'test_accepted': tested, 'results': dict(counts),
+        'pricing_unconfirmed': unconfirmed, 'test_accepted': tested, 'test_state': test_state, 'results': dict(counts),
         'preview': [{'contact_id': identity, 'text': render(campaign.snapshot['body'], values)}
                     for identity, values in preview]}
 

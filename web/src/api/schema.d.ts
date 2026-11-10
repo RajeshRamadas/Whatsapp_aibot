@@ -2282,6 +2282,10 @@ export interface components {
             opted_out_at: string | null;
             /** Billable */
             billable: boolean | null;
+            /** Name */
+            name: string | null;
+            /** Phone */
+            phone: string;
         };
         /** Reply */
         Reply: {
@@ -2314,6 +2318,8 @@ export interface components {
             pricing_unconfirmed: number;
             /** Test Accepted */
             test_accepted: boolean;
+            /** Test State */
+            test_state?: string | null;
             /** Results */
             results: {
                 [key: string]: number;
@@ -2493,6 +2499,21 @@ export interface components {
             template_id: string;
             /** Values */
             values?: string[];
+        };
+        /** TemplateView */
+        TemplateView: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Language */
+            language: string;
+            /** Category */
+            category: string;
+            /** Status */
+            status: string;
+            /** Body */
+            body: string | null;
         };
         /** TestMessage */
         TestMessage: {
@@ -5752,7 +5773,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["TemplateView"][];
                 };
             };
             /** @description Validation Error */
@@ -6875,6 +6896,7 @@ export interface operations {
             query?: {
                 limit?: number;
                 offset?: number;
+                outcome?: ("sent" | "delivered" | "read" | "failed" | "queued" | "sending" | "suppressed" | "unknown" | "cancelled" | "replied" | "opt_outs") | null;
             };
             header?: {
                 "X-Workspace-Id"?: string | null;

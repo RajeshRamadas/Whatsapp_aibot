@@ -6,7 +6,7 @@ export function csrfToken(cookie: string): string {
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const method = options.method ?? 'GET';
   const headers = new Headers(options.headers);
-  if (options.body) headers.set('Content-Type', 'application/json');
+  if (options.body && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json');
   if (!['GET', 'HEAD', 'OPTIONS'].includes(method.toUpperCase())) {
     headers.set('X-CSRF-Token', csrfToken(document.cookie));
   }

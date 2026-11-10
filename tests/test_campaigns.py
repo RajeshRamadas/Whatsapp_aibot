@@ -43,6 +43,7 @@ def test_preview_test_confirmation_schedule_and_cancel(client, draft):
     contact_id = campaign['preview'][0]['contact_id']
     test = client.post(path + '/test', headers=headers, json={'contact_id': contact_id, 'own_number': True})
     assert test.status_code == 202
+    assert client.get(path, headers=headers).json()['test_state'] == 'queued'
     again = client.post(path + '/test', headers=headers, json={'contact_id': contact_id, 'own_number': True})
     assert again.json() == test.json()
     with Session.begin() as db:
@@ -53,7 +54,11 @@ def test_preview_test_confirmation_schedule_and_cancel(client, draft):
     repeated = client.post(path + '/start', headers=headers, json={'confirm': True})
     assert datetime.fromisoformat(repeated.json()['scheduled_at']) == datetime.fromisoformat(when)
     assert client.get(BASE, headers=headers).json()[0]['id'] == campaign['id']
-    assert len(client.get(path + '/recipients', headers=headers).json()) == 2
+    results = client.get(path + '/recipients', headers=headers).json()
+    assert len(results) == 2 and all(row['name'] == 'Asha' and row['phone'] == '15550000001' for row in results)
+    assert len(client.get(path + '/recipients?outcome=sent', headers=headers).json()) == 1
+    assert client.get(path + '/recipients?outcome=replied', headers=headers).json() == []
+    assert client.get(path + '/recipients?outcome=invalid', headers=headers).status_code == 422
     assert client.post(path + '/cancel', headers=headers).json()['state'] == 'cancelled'
     assert client.post(path + '/start', headers=headers, json={'confirm': True}).status_code == 409
 

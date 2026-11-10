@@ -35,6 +35,15 @@ class TemplateSend(BaseModel):
     values: list[TextValue] = Field(default_factory=list, max_length=20)
 
 
+class TemplateView(BaseModel):
+    id: str
+    name: str
+    language: str
+    category: str
+    status: str
+    body: str | None
+
+
 def channel_for(principal, *, bound=True):
     with Session() as db:
         channel = whatsapp_channel(db, principal.tenant.id)
@@ -75,7 +84,7 @@ def bind(body: Binding, principal: Principal = Depends(require_role('admin'))):
     return {'waba_id': body.waba_id}
 
 
-@router.get('/whatsapp/templates')
+@router.get('/whatsapp/templates', response_model=list[TemplateView])
 def templates(approved: bool = False, limit: int = Query(100, ge=1, le=200), offset: int = Query(0, ge=0),
               principal: Principal = Depends(require_role('agent'))):
     with Session() as db:
