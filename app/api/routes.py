@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from . import (
     analytics,
     api_keys,
+    appointments,
     audit,
     auth,
     billing,
@@ -42,7 +43,8 @@ from .shared import UPLOADS as UPLOADS
 from .shared import origins as origins
 
 router = APIRouter()
-for module in (bot_messages, improvements, auth, audit, api_keys, workspaces, tenants, billing, channels, knowledge,
+for module in (appointments, bot_messages, improvements, auth, audit, api_keys, workspaces, tenants, billing, channels,
+               knowledge,
                onboarding, bot,
                jobs,
                chat, conversations, evals, events, inbox, invoices, leads, meta_signup, push, qa, templates, usage,
