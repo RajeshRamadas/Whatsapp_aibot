@@ -362,6 +362,9 @@ class Channel(Base):
     waba_id: Mapped[str | None] = mapped_column(String(32), unique=True)
     credentials_enc: Mapped[bytes | None] = mapped_column(LargeBinary)
     last_webhook_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    campaign_quality: Mapped[str] = mapped_column(String(16), default='UNKNOWN', server_default='UNKNOWN')
+    campaign_limit: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
+    campaign_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Template(Base):
@@ -375,6 +378,45 @@ class Template(Base):
     category: Mapped[str] = mapped_column(String(32))
     status: Mapped[str] = mapped_column(String(32))
     body: Mapped[str | None] = mapped_column(Text)
+
+
+class Campaign(Base):
+    __tablename__ = 'campaigns'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'), index=True)
+    channel_id: Mapped[str | None] = mapped_column(ForeignKey('channels.id', ondelete='SET NULL'))
+    template_id: Mapped[str | None] = mapped_column(ForeignKey('templates.id', ondelete='SET NULL'))
+    name: Mapped[str] = mapped_column(String(100))
+    state: Mapped[str] = mapped_column(String(16), default='draft')
+    scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    snapshot: Mapped[dict] = mapped_column(JSONB)
+    bindings: Mapped[list] = mapped_column(JSONB)
+    excluded: Mapped[int] = mapped_column(Integer, default=0)
+    unit_price: Mapped[Decimal | None] = mapped_column(Numeric(12, 6))
+    currency: Mapped[str] = mapped_column(String(3), default='INR')
+    reason: Mapped[str | None] = mapped_column(String(32))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class CampaignRecipient(Base):
+    __tablename__ = 'campaign_recipients'
+    __table_args__ = (UniqueConstraint('campaign_id', 'contact_id', 'is_test'),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'), index=True)
+    campaign_id: Mapped[str] = mapped_column(ForeignKey('campaigns.id', ondelete='CASCADE'), index=True)
+    contact_id: Mapped[str] = mapped_column(ForeignKey('contacts.id', ondelete='CASCADE'))
+    is_test: Mapped[bool] = mapped_column(Boolean, default=False)
+    values: Mapped[list] = mapped_column(JSONB)
+    state: Mapped[str] = mapped_column(String(16), default='queued')
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    next_attempt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    provider_id: Mapped[str | None] = mapped_column(String(128), unique=True)
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    replied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    opted_out_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    billable: Mapped[bool | None] = mapped_column(Boolean)
+    error_code: Mapped[str | None] = mapped_column(String(32))
 
 
 class WidgetTurn(Base):
