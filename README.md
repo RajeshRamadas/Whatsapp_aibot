@@ -920,3 +920,25 @@ desktop, accessible controls, error/retry/empty states and unchanged URLs/CSV ex
 Screenshot: [Hindi knowledge controls](docs/screenshots/t9-8-hindi-operations.png).
 Native-speaker script review and live-model language evaluation are still required
 before a pilot; automated tests verify contracts and UI behavior using fakes.
+
+### Product-managed appointments (T9.9a)
+
+Migration `0036_appointments` adds services, staff, explicit availability slots and
+bookings. Owners/admins configure resources under `/api/v1/appointments`; agents
+can read the catalog, availability and bookings, create five-minute holds, confirm,
+cancel, reschedule, and retry blocked reminders. Viewers have no appointment access.
+Catalogs are capped at 100 services/staff; date lists return up to 100 records in a
+range of at most 60 days. Dates must include an offset; times are stored in UTC.
+Each booking keeps its customer language, independently of the admin interface.
+Slot length is fixed when created, so later service-duration edits affect new slots.
+
+Staff-row locks reject overlapping availability; slot-row locks and a PostgreSQL
+partial unique index prevent competing holds/bookings. Expired holds are reclaimed
+when reserving again. Retries reuse the same reservation without extending its
+expiry. Rescheduling keeps the original booking until the replacement is confirmed
+and cancels it atomically. Resource IDs and conversations are checked within the
+request principal's workspace. Audits/events exclude customer names and phone numbers.
+
+Reminder settings are stored now; worker delivery and chat tools follow in T9.9b,
+with English/Hindi administration in T9.9c. Google Calendar OAuth and free/busy
+integration remain the separately ordered T9.9d follow-up. No new credentials.

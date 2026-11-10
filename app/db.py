@@ -632,3 +632,6 @@ class Invoice(Base):
     number: Mapped[str] = mapped_column(String(16), unique=True)
     issued_on: Mapped[date] = mapped_column(Date)
     snapshot: Mapped[dict] = mapped_column(JSONB)
+
+# Register domain tables without expanding this shared module further.
+from .models import appointments as _appointments  # noqa: E402, F401
