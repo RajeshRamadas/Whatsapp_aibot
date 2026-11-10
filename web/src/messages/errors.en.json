@@ -2,5 +2,8 @@
   "title": "We couldn’t load this page",
   "description": "Try loading the page again. If the problem continues, contact support.",
   "retry": "Try again",
-  "requestFailed": "Request failed"
+  "requestFailed": "Request failed",
+  "notFound": "Page not found",
+  "notFoundHelp": "This page is unavailable. Check the address or return to your workspace.",
+  "home": "Go to workspace"
 }

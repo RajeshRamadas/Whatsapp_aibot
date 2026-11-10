@@ -18,6 +18,6 @@ export default async function BotPage() {
   return <main id="main" className="mx-auto max-w-5xl p-4 sm:p-8">
     <h1 className="text-2xl font-semibold">{messages.botSettings}</h1>
     <p className="mt-2 text-muted">{messages.botSettingsDescription}</p>
-    <BotSettings workspaceId={active.id} />
+    <BotSettings key={active.id} workspaceId={active.id} />
   </main>;
 }

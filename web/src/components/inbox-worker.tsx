@@ -1,5 +1,5 @@
 'use client';
-import { useCopy } from '@/i18n/provider';
+import { useCopy, useLocale } from '@/i18n/provider';
 
 import { useEffect, useState } from 'react';
 import { useWorkspace } from '@/components/app-shell';
@@ -8,6 +8,7 @@ import { api } from '@/lib/api';
 
 export function InboxWorker() {
   const messages = useCopy('base');
+  const locale = useLocale();
   const workspace = useWorkspace();
   const [registration, setRegistration] = useState<ServiceWorkerRegistration>();
   const [publicKey, setPublicKey] = useState<string | null>(null);
@@ -19,13 +20,13 @@ export function InboxWorker() {
   useEffect(() => {
     let active = true;
     if ('serviceWorker' in navigator) {
-      void navigator.serviceWorker.register('/inbox-sw.js', { scope: '/dashboard/' })
+      void navigator.serviceWorker.register('/inbox-sw.js?locale=' + locale, { scope: '/dashboard/' })
         .then(() => navigator.serviceWorker.ready)
         .then(value => { if (active) setRegistration(value); })
         .catch(() => { if (active) setFeedback(messages.pushUnavailable); });
     }
     return () => { active = false; };
-  }, [messages.pushUnavailable]);
+  }, [messages.pushUnavailable, locale]);
 
   useEffect(() => {
     if (!registration || !workspace || !canAct || !('pushManager' in registration)) return;
