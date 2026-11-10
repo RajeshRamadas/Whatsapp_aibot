@@ -7,11 +7,13 @@ from sqlalchemy import select
 from app import rag
 from app.config import settings
 from app.db import (
+    AnswerReview,
     AuditLog,
     Conversation,
     EmailOutbox,
     InboundEvent,
     Membership,
+    Message,
     Session,
     Source,
     Tenant,
@@ -80,7 +82,12 @@ def test_failure_lists_omit_customer_data_and_record_webhook_rejections(client, 
         conversation = Conversation(id=uid(), tenant_id=tenant['tenant_id'], channel='web')
         db.add(conversation)
         db.flush()
+        reply = Message(conversation_id=conversation.id, role='assistant', content='private reply')
+        db.add(reply)
+        db.flush()
         db.add_all([
+            AnswerReview(tenant_id=tenant['tenant_id'], message_id=reply.id, question='private question',
+                         state='failed', error='secret provider details'),
             Source(tenant_id=tenant['tenant_id'], filename='private-name.pdf', kind='pdf', file_path='secret',
                    status='failed', error='secret phone 15551234567'),
             InboundEvent(tenant_id=tenant['tenant_id'], channel_message_id='secret-provider-id', status='failed',
@@ -93,10 +100,11 @@ def test_failure_lists_omit_customer_data_and_record_webhook_rejections(client, 
         ])
     response = client.get(BASE + '/failed-jobs')
     assert response.status_code == 200
-    assert {row['kind'] for row in response.json()['items']} == {'ingestion', 'whatsapp', 'widget', 'email', 'website'}
-    assert response.json()['total'] == 5
+    assert {row['kind'] for row in response.json()['items']} == {'ingestion', 'whatsapp', 'widget', 'email', 'website',
+                                                                  'answer_review'}
+    assert response.json()['total'] == 6
     assert next(row for row in response.json()['items'] if row['kind'] == 'email')['tenant_id'] is None
-    assert client.get(BASE + '/failed-jobs?limit=3&offset=2').json()['items'] == response.json()['items'][2:]
+    assert client.get(BASE + '/failed-jobs?limit=4&offset=2').json()['items'] == response.json()['items'][2:]
     for private in ('private', 'secret', '15551234567', 'payload', 'last_error'):
         assert private not in response.text
     assert client.post('/webhooks/whatsapp', content='private text').status_code == 401

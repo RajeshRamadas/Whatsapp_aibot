@@ -23,6 +23,7 @@ from ..services.channels import whatsapp_channel
 from ..services.email import deliver_one
 from ..services.email import validate_configuration as validate_email
 from ..services.events import publish_sync
+from ..services.improvements import process_one as process_improvement
 from ..services.inbox_push import deliver_waiting
 from ..services.templates import eligible_contact, render, send_payload, template_for_send
 from ..services.usage import reconcile, send_alerts
@@ -324,9 +325,15 @@ async def dispatch_websites(ctx):
             continue  # A short database lease allows redispatch after queue failures.
 
 
+@observed_job
+async def publish_improvement(ctx):
+    await asyncio.to_thread(process_improvement)
+
+
 class WorkerSettings:
     on_startup = startup
-    cron_jobs = [cron(dispatch_websites, second={0, 10, 20, 30, 40, 50}),
+    cron_jobs = [cron(publish_improvement, second=set(range(0, 60, 5)), timeout=600),
+                 cron(dispatch_websites, second={0, 10, 20, 30, 40, 50}),
                  cron(dispatch_agent_replies, second={0, 10, 20, 30, 40, 50}),
                  cron(dispatch_campaigns, second=set(range(60))),
                  cron(dispatch_email, second=set(range(60))),

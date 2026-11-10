@@ -63,8 +63,10 @@ def process_turn() -> bool:
         else:
             current.answer, current.sources, lead_fields = result.text, result.sources, result.lead_fields
         current.state = 'complete'
+        ai_answer = result if not (turn.handoff or conv.handoff or conv.status == 'closed') else None
         pairs = [('user', turn.message), ('assistant', current.answer)]
-        created = rag.save_exchange_rows(db, conv, pairs, sources=current.sources, lead_fields=lead_fields)
+        created = rag.save_exchange_rows(db, conv, pairs, sources=current.sources, lead_fields=lead_fields,
+                                         review_answer=ai_answer, widget_turn_id=turn.id)
     if created:
         notify_created(tenant.id, conversation.id)
     publish_sync(tenant.id, 'message.created', {'conversation_id': conversation.id})
