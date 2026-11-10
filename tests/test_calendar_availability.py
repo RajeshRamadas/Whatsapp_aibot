@@ -72,3 +72,12 @@ def test_fresh_busy_hours_shared_holds_and_no_calendar_fallback(client, tenant, 
                        json={**hold, 'slot_id': available[1]['id']}).status_code == 409
     client.delete(BASE + '/bindings/' + binding_id, headers=headers)
     assert client.post('/api/v1/appointments/bookings', headers=headers, json=hold).status_code == 201
+
+
+def test_legacy_indian_timezone_hours():
+    from app.services import calendar_availability as calendar
+    from datetime import datetime, timezone
+    from types import SimpleNamespace
+    tenant = SimpleNamespace(timezone='Asia/Calcutta', business_hours='{"0":["09:00","10:00"]}')
+    assert calendar.in_hours(tenant, datetime(2026, 11, 16, 3, 30, tzinfo=timezone.utc),
+                             datetime(2026, 11, 16, 4, 0, tzinfo=timezone.utc))
