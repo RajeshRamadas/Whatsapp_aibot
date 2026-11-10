@@ -182,11 +182,16 @@ def handle(tenant_id: str, message: dict) -> None:
         return
     conv = conversation_for(tenant_id, wa_user)
     from .services.media import prepare
-    attachments = prepare(tenant_id, message.get('parts', [message]))
+    from .services.media_intelligence import interpret
+    parts = message.get('parts', [message])
+    attachments = prepare(tenant_id, parts)
+    description = interpret(tenant_id, parts, attachments, vision=(tenant.bot_live and conv.status == 'bot'
+                            and not conv.handoff and within_hours(tenant, now()))) if attachments else ''
+    text = '\n'.join([part.get('text', '') for part in parts if part.get('text')]
+                     + ([description] if description else []))
     bind(tenant_id=tenant_id, conversation_id=conv.id)
     copy = copy_for(tenant)
     incoming = ('user', text or f"[{message['type']} message]")
-    parts = message.get('parts', [message])
     keywords = {'stop', 'बंद', *tenant.whatsapp_opt_out_keywords}
     consent = next((value for part in reversed(parts)
                     if (value := part.get('text', '').strip().casefold()) in keywords | {'start'}), None)
@@ -245,7 +250,8 @@ def handle(tenant_id: str, message: dict) -> None:
     if 'handoff-decline' in choices:
         reply(copy['declined'])
         return
-    if attachments and (not text or any(item['status'] != 'ready' for item in attachments)):
+    if attachments and (not text or any(item['status'] != 'ready' or
+            (item['kind'] in ('audio', 'image') and item.get('interpretation') != 'ready') for item in attachments)):
         message_id = send_text(phone_id, wa_user, copy['media_handoff'], tenant_id=tenant_id)
         save(incoming, ('assistant', copy['media_handoff']), channel_message_id=message_id, waiting=True)
         return

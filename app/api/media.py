@@ -27,6 +27,11 @@ class AttachmentView(BaseModel):
     mime_type: str | None = None
     size: int = 0
     details: dict | list | None = None
+    interpretation: str | None = None
+    transcript: str | None = None
+    description: str | None = None
+    language: str | None = None
+    audio_seconds: str | None = None
 
 
 class QueuedMedia(BaseModel):

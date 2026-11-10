@@ -1,5 +1,7 @@
 """ASGI app for browser CI with an isolated Razorpay fake."""
 import asyncio
+import io
+import wave
 from datetime import timedelta
 
 import httpx
@@ -8,12 +10,14 @@ from sqlalchemy import select
 
 from app import whatsapp
 from app.api import auth, billing, templates
+from app.api import whatsapp as whatsapp_api
 from app.config import settings
-from app.db import CampaignRecipient, Channel, Session, Template, now
+from app.db import CampaignRecipient, Channel, Session, Template, now, uid
 from app.invoice_config import InvoiceIssuer
+from app.jobs.worker import dispatch_agent_reply, process_inbound
 from app.main import app
 from app.rate_limits import RateLimiter
-from app.services import campaign_delivery
+from app.services import campaign_delivery, media, media_intelligence
 from app.services import templates as template_service
 from tests.test_billing import FakeBilling
 
@@ -59,15 +63,47 @@ class BrowserMeta:
 
 
 def browser_send(phone, payload, tenant_id, **kwargs):
-    identity = payload['biz_opaque_callback_data']
+    identity = payload.get('biz_opaque_callback_data') or uid()
     message_id = 'wamid.browser.' + identity
-    campaign_delivery.receipt({'phone_number_id': phone, 'id': message_id, 'status': 'read',
-                              'biz_opaque_callback_data': identity, 'pricing': {'billable': True}})
+    if payload.get('biz_opaque_callback_data'):
+        campaign_delivery.receipt({'phone_number_id': phone, 'id': message_id, 'status': 'read',
+                                  'biz_opaque_callback_data': identity, 'pricing': {'billable': True}})
     return httpx.Response(200, json={'messages': [{'id': message_id}]})
 
 
 templates.MetaSignup = template_service.MetaSignup = campaign_delivery.MetaSignup = BrowserMeta
 whatsapp.graph_message = browser_send
+
+
+def browser_media(*args):
+    data = io.BytesIO()
+    with wave.open(data, 'wb') as writer:
+        writer.setparams((1, 2, 16000, 0, 'NONE', 'not compressed'))
+        writer.writeframes(b'\0\0' * 16000)
+    return data.getvalue(), 'audio/wav'
+
+
+async def browser_inbound(name, **kwargs):
+    assert name == 'handle_message'
+    await asyncio.to_thread(process_inbound, kwargs['event_id'])
+    return kwargs['_job_id']
+
+
+media.download = browser_media
+media.upload = lambda *args: 'browser-media'
+media_intelligence.transcribe = lambda data: ('नमस्ते, आपके काम करने का समय क्या है?', 'hi')
+settings.transcription_provider = 'openai'
+whatsapp_api.enqueue = browser_inbound
+
+
+@app.middleware('http')
+async def media_worker_fixture(request, call_next):
+    response = await call_next(request)
+    if request.method == 'POST' and request.url.path.endswith('/media') and response.status_code == 202:
+        for _ in range(20):
+            if not await asyncio.to_thread(dispatch_agent_reply):
+                break
+    return response
 
 
 @app.middleware('http')

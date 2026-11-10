@@ -1,0 +1,12 @@
+{
+  "title": "Send an attachment", "file": "Image or document", "caption": "Attachment caption (optional)",
+  "help": "Images: JPEG/PNG, up to 5 MiB. Documents: PDF, text or Office files, up to 16 MiB. Workspace limits may be lower.",
+  "send": "Send attachment", "confirm": "Send this attachment to the customer?", "queued": "Attachment queued. Delivery status appears in the conversation.",
+  "uncertain": "Delivery could not be confirmed. Check the conversation before sending another copy.",
+  "error": "Could not queue the attachment. Try again.", "size": "The selected file exceeds the attachment size limit.",
+  "download": "Download attachment", "image": "Customer or agent image attachment", "audio": "Voice note",
+  "transcript": "Voice transcript", "description": "Image description", "details": "Location or contact card",
+  "pending": "Attachment is being prepared.", "unavailable": "Attachment is unavailable or expired.",
+  "noTranscript": "No automatic interpretation is available. An agent can review the original attachment.",
+  "tooLong": "Voice notes over five minutes are sent to an agent without transcription."
+}

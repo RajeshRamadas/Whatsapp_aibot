@@ -1915,6 +1915,16 @@ export interface components {
             details?: {
                 [key: string]: unknown;
             } | unknown[] | null;
+            /** Interpretation */
+            interpretation?: string | null;
+            /** Transcript */
+            transcript?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Language */
+            language?: string | null;
+            /** Audio Seconds */
+            audio_seconds?: string | null;
         };
         /** BillingDetails */
         BillingDetails: {

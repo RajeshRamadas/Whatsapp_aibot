@@ -106,6 +106,10 @@ def prepare(tenant_id, parts):
                 storage().put(attachment['key'], data)
             except (ValueError, UnicodeError, KeyError):
                 attachment['status'] = 'failed'
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code in (408, 429) or exc.response.status_code >= 500:
+                    raise
+                attachment['status'] = 'failed'
             with Session.begin() as db:
                 event = db.scalar(select(InboundEvent).where(InboundEvent.tenant_id == tenant_id,
                                   InboundEvent.channel_message_id == part['id']))
@@ -120,12 +124,8 @@ def send(phone, recipient, tenant_id, attachment, data, caption):
     from ..whatsapp import graph_message
     storage().put(attachment['key'], data)
     attachment['status'] = 'ready'
-    response = httpx.post(f'https://graph.facebook.com/{settings.whatsapp_graph_version}/{phone}/media',
-        headers={'Authorization': f'Bearer {access_token(phone, tenant_id)}'},
-        data={'messaging_product': 'whatsapp', 'type': attachment['mime_type']},
-        files={'file': (attachment['filename'], data, attachment['mime_type'])}, timeout=60)
-    response.raise_for_status()
-    content = {'id': response.json()['id']}
+    identity = upload(phone, tenant_id, attachment, data)
+    content = {'id': identity}
     if caption:
         content['caption'] = caption
     if attachment['kind'] == 'document':
@@ -133,6 +133,15 @@ def send(phone, recipient, tenant_id, attachment, data, caption):
     result = graph_message(phone, {'to': recipient, 'type': attachment['kind'], attachment['kind']: content}, tenant_id)
     messages = result.json().get('messages') or []
     return messages[0].get('id') if messages else None
+
+
+def upload(phone, tenant_id, attachment, data):
+    response = httpx.post(f'https://graph.facebook.com/{settings.whatsapp_graph_version}/{phone}/media',
+        headers={'Authorization': f'Bearer {access_token(phone, tenant_id)}'},
+        data={'messaging_product': 'whatsapp', 'type': attachment['mime_type']},
+        files={'file': (attachment['filename'], data, attachment['mime_type'])}, timeout=60)
+    response.raise_for_status()
+    return response.json()['id']
 
 
 def expire():

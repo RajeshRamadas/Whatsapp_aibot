@@ -776,7 +776,7 @@ Tick each task in the PR that completes it.
 | M6 | T6.1 ☐ · T6.2 ☐ · T6.3 ☐ · T6.4 ☐ · T6.5 ☐ | |
 | M7 | T7.1 ☐ · T7.2 ☐ · T7.3 ☐ · T7.4 ☐ · T7.5 ☑ | |
 | M8 | T8.1 ☐ · T8.2 ☑ · T8.3 ☑ · T8.4 ☐ · T8.5 ☐ | T8.4 code ready; live SES/DNS staging check pending. |
-| M9 | T9.1 ☑ · T9.2a ☑ · T9.2b ☑ · T9.3 ☑ · T9.4a ☑ · T9.4b ☐ | T9.4 split to keep each PR within the review size limit. |
+| M9 | T9.1 ☑ · T9.2a ☑ · T9.2b ☑ · T9.3 ☑ · T9.4a ☑ · T9.4b ☐ | T9.4b code ready; real Indian-language speech evaluation and final provider selection pending. |
 
 ## 7. Human decisions needed before certain tasks
 
@@ -788,4 +788,4 @@ Tick each task in the PR that completes it.
 | T7.3 | Accountant review of the invoice format and SAC code | DESIGN §9 |
 | T8.4 | SES Mumbai; notifications@marketingadda.com. Staging/DNS verification pending. | INTEGRATIONS EM-1 |
 | T8.5 | Hosting provider and region | REQUIREMENTS §10.6 |
-| T9.4 | Transcription provider (after measuring on real voice notes) | INTEGRATIONS STT-1 |
+| T9.4b | OpenAI candidate adapter provided, disabled by default. Measure real Indian-language voice notes before final provider selection/production enablement. | INTEGRATIONS STT-1 |
