@@ -183,3 +183,15 @@ async def website_worker_fixture(request, call_next):
         for identity, tenant_id in sites:
             await website_crawl.crawl(identity, tenant_id)
     return response
+
+
+from app.services.improvements import process_one as publish_correction  # noqa: E402
+
+
+@app.middleware('http')
+async def improvement_worker_fixture(request, call_next):
+    response = await call_next(request)
+    if (request.method == 'POST' and request.url.path.startswith('/api/v1/improvements/')
+            and request.url.path.endswith('/answer') and response.status_code == 202):
+        await asyncio.to_thread(publish_correction)
+    return response

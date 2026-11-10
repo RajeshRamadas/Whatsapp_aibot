@@ -838,4 +838,27 @@ worker embeds it outside API requests/DB sessions, then publishes to curated Q&A
 atomically. Retries use bounded backoff; interrupted jobs recover after 20 minutes.
 Repeat submissions are idempotent; editing a prior correction updates its Q&A.
 Deleting a conversation removes its reviews. Drafts contain private text and are
-never logged; audits contain IDs only. No new provider/settings. UI follows in T9.7b.
+never logged; audits contain IDs only. No new provider/settings.
+
+### Improve answers UI (T9.7b)
+
+Owners/admins open **Knowledge → Improve answers**, or use the link from Analytics.
+Filter by UTC date, channel, open/resolved/dismissed status and review reason.
+The summary shows recorded AI replies, unanswered signals, current votes, satisfaction
+and top questions. Triage filters apply to the queue; date/channel filters also
+apply to the summary. Reply timestamps use IST. The view polls every five seconds.
+
+Expand a bot reply to inspect its answer and sources. **Add a Q&A answer** opens
+an editable question and blank approved-answer form. Saving queues publication;
+queued/processing states prevent conflicting edits. Failed jobs retain the draft
+for retry, and resolved items can edit their existing Q&A. Dismiss/reopen changes
+triage status while preserving vote history. Publishing changes future bot knowledge
+and sends no customer message. All text is scoped to owners/admins; viewers/agents
+cannot enter this view. Models can report missing coverage on web replies as well
+as WhatsApp, even when retrieval returned sources.
+
+The synthetic browser fixture uses generic refund/hours questions, never customer
+history. Seed it with `python -m scripts.seed_improvements_e2e` after the other
+browser fixtures in an isolated test database. Browser coverage checks analytics
+entry, metrics, publication, FAQ retrieval, filtering/dismissal, reader protection,
+320px layout and axe. [Demo screenshot](docs/screenshots/t9-7-improve-answers.png).

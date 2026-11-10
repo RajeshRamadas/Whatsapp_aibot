@@ -156,7 +156,14 @@ def _answer(tenant, conversation_id, question, *, whatsapp):
     captured = {}
     choices = []
     uncertain = False
-    tools = []
+    def offer_handoff(args):
+        nonlocal uncertain
+        uncertain = True
+        return {'accepted': True}
+
+    tools = [llm.Tool('offer_handoff', 'Report that the knowledge cannot answer and human help is needed',
+                     {'type': 'object', 'additionalProperties': False}, offer_handoff)]
+    prompt += '\n\nUse offer_handoff when the knowledge cannot answer the question. Do not invent missing facts.'
     if whatsapp:
         prompt += (
             '\n\nWhatsApp: reply in the customer’s language and script, or the workspace default if unclear. '
@@ -170,19 +177,12 @@ def _answer(tenant, conversation_id, question, *, whatsapp):
             choices[:] = [label.strip() for label in args['choices'] if label.strip()]
             return {'accepted': True}
 
-        def offer_handoff(args):
-            nonlocal uncertain
-            uncertain = True
-            return {'accepted': True}
-
         tools.extend([
             llm.Tool('offer_choices', 'Show selectable next steps', {
                 'type': 'object', 'required': ['choices'], 'additionalProperties': False,
                 'properties': {'choices': {'type': 'array', 'minItems': 2, 'maxItems': 10, 'uniqueItems': True,
                                            'items': {'type': 'string', 'minLength': 1, 'maxLength': 24}}},
             }, offer_choices),
-            llm.Tool('offer_handoff', 'Offer human help when an answer is unavailable',
-                     {'type': 'object', 'additionalProperties': False}, offer_handoff),
         ])
     if tenant.lead_fields:
         properties = {key: {'type': 'string', 'minLength': 1, 'maxLength': 500} for key in tenant.lead_fields}
