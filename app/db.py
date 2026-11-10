@@ -73,6 +73,25 @@ class Tenant(Base):
     suspended: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text('false'))
 
 
+class Website(Base):
+    __tablename__ = 'websites'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'), index=True)
+    url: Mapped[str] = mapped_column(Text)
+    max_pages: Mapped[int] = mapped_column(Integer, default=1)
+    depth: Mapped[int] = mapped_column(Integer, default=0)
+    schedule: Mapped[str] = mapped_column(String(12), default='manual')
+    status: Mapped[str] = mapped_column(String(16), default='queued')
+    error: Mapped[str | None] = mapped_column(Text)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    generation: Mapped[str | None] = mapped_column(String(36))
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    next_run: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=now, index=True)
+    last_success: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    __table_args__ = (UniqueConstraint('tenant_id', 'url', name='uq_website_url'),)
+
+
 class Source(Base):
     __tablename__ = 'sources'
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
@@ -82,7 +101,12 @@ class Source(Base):
     status: Mapped[str] = mapped_column(String(30), default='queued')
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     file_path: Mapped[str] = mapped_column(Text)
+    website_id: Mapped[str | None] = mapped_column(ForeignKey('websites.id', ondelete='CASCADE'), index=True)
+    url: Mapped[str | None] = mapped_column(Text)
+    checksum: Mapped[str | None] = mapped_column(String(64))
+    crawl_depth: Mapped[int | None] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    __table_args__ = (UniqueConstraint('website_id', 'url', name='uq_website_page'),)
 
 
 class Chunk(Base):

@@ -26,6 +26,7 @@ from ..services.events import publish_sync
 from ..services.inbox_push import deliver_waiting
 from ..services.templates import eligible_contact, render, send_payload, template_for_send
 from ..services.usage import reconcile, send_alerts
+from ..services.website_crawl import crawl
 from ..services.whatsapp_copy import copy_for
 from ..services.widget_turns import process_turn
 from .queue import enqueue
@@ -307,6 +308,11 @@ async def startup(ctx):
     validate_email()
 
 
+@observed_job
+async def crawl_website(ctx, website_id, tenant_id):
+    await crawl(website_id, tenant_id)
+
+
 class WorkerSettings:
     on_startup = startup
     cron_jobs = [cron(dispatch_agent_replies, second={0, 10, 20, 30, 40, 50}),
@@ -320,7 +326,7 @@ class WorkerSettings:
                  cron(dispatch_usage_alerts, second=25),
                  cron(reconcile_billing, hour=2, minute=0, second=0, timeout=600)]
     functions = [sample_job, func(ingest_source, timeout=1800), func(handle_message, timeout=600),
-                 cache_email_certificate, send_campaign_recipient]
+                 cache_email_certificate, send_campaign_recipient, func(crawl_website, timeout=3600)]
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
     max_jobs = 10
     job_timeout = 60

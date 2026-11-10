@@ -756,3 +756,26 @@ within the actual captured total, so review and map the intended tax-inclusive
 provider plan IDs before enabling checkout. Historical charges require a
 separate accounting review. Have an accountant confirm any e-invoicing,
 signature, credit note and retention requirements before production use.
+
+### Website crawling backend (T9.6a)
+
+Migration `0033_websites` stores website crawl jobs, schedules and page checksums.
+The worker supports single-page or same-host public HTTPS crawling on port 443,
+with up to 50 pages per website and depth 0–3. Plan defaults reserve 0/50/200 pages
+for Starter/Growth/Business across all websites; `CRAWL_PAGE_CAP` caps each workspace.
+Existing custom `crawl_pages` plan limits are preserved by the migration.
+
+The crawler identifies itself as `MarketingAddaKnowledgeBot/1.0`, honors robots.txt
+and noindex, and waits at least one second between requests to a host across all
+workers/workspaces. Robots delays above 30 seconds require another source. Redis
+is required for this shared pacing. DNS answers and every redirect must remain
+public; connections pin the validated IP while retaining hostname TLS verification
+and configured environment proxies. Downloads are limited to 1 MiB and extracted
+text to 100,000 characters per page. This fetcher executes no JavaScript.
+
+Main text retains headings and removes navigation, scripts and footers. Only
+changed text is embedded; missing/private/noindex pages lose their indexed chunks.
+Transient errors retry five times with backoff, jitter and Retry-After. Publication
+checks workspace state and a run token, so deleted or replaced runs cannot publish.
+Schedules record the next daily/weekly run; API controls, dispatch and UI follow
+in T9.6b. No live website or model call is required by the offline tests.
