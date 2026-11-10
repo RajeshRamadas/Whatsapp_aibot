@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, StrictBool
 from sqlalchemy import case, func, literal, select, union_all
 
 from ..db import (
+    AnswerReview,
     Conversation,
     EmailOutbox,
     InboundEvent,
@@ -63,7 +64,7 @@ class PlatformTenants(BaseModel):
 class FailedJob(BaseModel):
     id: str
     tenant_id: str | None
-    kind: Literal['ingestion', 'whatsapp', 'widget', 'email', 'website']
+    kind: Literal['ingestion', 'whatsapp', 'widget', 'email', 'website', 'answer_review']
     received_at: datetime
 
 
@@ -148,6 +149,8 @@ def failed_jobs(limit: int = Query(25, ge=1, le=100), offset: int = Query(0, ge=
         .where(InboundEvent.status == 'failed'),
         select(WidgetTurn.id, Conversation.tenant_id, literal('widget'), WidgetTurn.created_at)
         .join(Conversation, Conversation.id == WidgetTurn.conversation_id).where(WidgetTurn.state == 'failed'),
+        select(AnswerReview.id, AnswerReview.tenant_id, literal('answer_review'), AnswerReview.created_at)
+        .where(AnswerReview.state == 'failed'),
         select(Website.id, Website.tenant_id, literal('website'), Website.created_at)
         .where(Website.status == 'failed'),
         select(EmailOutbox.id, literal(None), literal('email'), EmailOutbox.created_at)

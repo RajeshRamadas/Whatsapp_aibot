@@ -4,6 +4,57 @@
  */
 
 export interface paths {
+    "/api/v1/improvements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Reviews */
+        get: operations["reviews_api_v1_improvements_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/improvements/{review_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Resolve */
+        patch: operations["resolve_api_v1_improvements__review_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/improvements/{review_id}/answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Correct */
+        post: operations["correct_api_v1_improvements__review_id__answer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/signup": {
         parameters: {
             query?: never;
@@ -2136,6 +2187,13 @@ export interface components {
             /** Marketing Eligible */
             marketing_eligible: boolean;
         };
+        /** Correction */
+        Correction: {
+            /** Question */
+            question: string;
+            /** Answer */
+            answer: string;
+        };
         /** CreateTenant */
         CreateTenant: {
             /** Name */
@@ -2208,7 +2266,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "ingestion" | "whatsapp" | "widget" | "email" | "website";
+            kind: "ingestion" | "whatsapp" | "widget" | "email" | "website" | "answer_review";
             /**
              * Received At
              * Format: date-time
@@ -2549,6 +2607,80 @@ export interface components {
              */
             email: string;
         };
+        /** Resolution */
+        Resolution: {
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "open" | "dismissed";
+        };
+        /** ReviewList */
+        ReviewList: {
+            /** Items */
+            items: components["schemas"]["ReviewView"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            summary: components["schemas"]["ReviewSummary"];
+        };
+        /** ReviewSummary */
+        ReviewSummary: {
+            /** Questions */
+            questions: number;
+            /** Unanswered */
+            unanswered: number;
+            /** Positive */
+            positive: number;
+            /** Negative */
+            negative: number;
+            /** Satisfaction */
+            satisfaction: number | null;
+            /** Top Questions */
+            top_questions: components["schemas"]["TopQuestion"][];
+        };
+        /** ReviewView */
+        ReviewView: {
+            /** Id */
+            id: string;
+            /** Question */
+            question: string;
+            /** Answer */
+            answer: string;
+            /** Unanswered */
+            unanswered: boolean;
+            /** Feedback */
+            feedback: ("up" | "down") | null;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "open" | "queued" | "processing" | "failed" | "resolved" | "dismissed";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Conversation Id */
+            conversation_id: string;
+            /** Channel */
+            channel: string;
+            /** Sources */
+            sources: {
+                [key: string]: unknown;
+            }[];
+            /** Draft Question */
+            draft_question: string | null;
+            /** Draft Answer */
+            draft_answer: string | null;
+            /** Qa Pair Id */
+            qa_pair_id: string | null;
+            /** Error */
+            error: string | null;
+        };
         /** RoleInput */
         RoleInput: {
             /**
@@ -2761,6 +2893,13 @@ export interface components {
              */
             avatar_url: string;
         };
+        /** TopQuestion */
+        TopQuestion: {
+            /** Question */
+            question: string;
+            /** Count */
+            count: number;
+        };
         /** TurnInput */
         TurnInput: {
             /**
@@ -2959,6 +3098,122 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    reviews_api_v1_improvements_get: {
+        parameters: {
+            query?: {
+                from_date?: string | null;
+                to_date?: string | null;
+                channel?: ("web" | "whatsapp") | null;
+                state?: "open" | "resolved" | "dismissed" | "all";
+                reason?: "attention" | "unanswered" | "down" | "all";
+                limit?: number;
+                offset?: number;
+            };
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolve_api_v1_improvements__review_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                review_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Resolution"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    correct_api_v1_improvements__review_id__answer_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                review_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Correction"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     signup_api_v1_auth_signup_post: {
         parameters: {
             query?: never;

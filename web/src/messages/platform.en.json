@@ -5,7 +5,7 @@
   "logout": "Log out",
   "tenants": "Workspaces",
   "jobs": "Dead-letter jobs",
-  "jobHelp": "Terminal failures from document ingestion, WhatsApp processing, website replies, website crawling and email delivery. Customer content and raw error text are excluded.",
+  "jobHelp": "Terminal failures from document ingestion, WhatsApp processing, website replies, website crawling, Q&A publication and email delivery. Customer content and raw error text are excluded.",
   "webhooks": "Webhook failures",
   "webhookHelp": "Rejected or failed WhatsApp, Razorpay and email webhook requests. Records contain the provider, time and HTTP status only.",
   "loading": "Loading records\u2026",
@@ -42,5 +42,6 @@
   "razorpay": "Razorpay",
   "httpStatus": "HTTP status",
   "time": "Received (UTC)",
-  "website": "Website crawling"
+  "website": "Website crawling",
+  "answer_review": "Q&A publication"
 }

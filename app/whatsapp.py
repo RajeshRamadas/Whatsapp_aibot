@@ -207,11 +207,11 @@ def handle(tenant_id: str, message: dict) -> None:
     def save(*pairs, **kwargs):
         rag.save_exchange(conv, *pairs, attachments=attachments, **kwargs)
 
-    def reply(body, options=None, sources=None, lead_fields=None):
+    def reply(body, options=None, sources=None, lead_fields=None, review_answer=None):
         interactive = interactive_payload(body, options, copy)
         message_id = send_text(phone_id, wa_user, body, tenant_id=tenant_id, interactive=interactive)
         save(incoming, ('assistant', body), channel_message_id=message_id,
-                          sources=sources, lead_fields=lead_fields)
+                          sources=sources, lead_fields=lead_fields, review_answer=review_answer)
 
     if consent is not None:
         with Session.begin() as db:
@@ -291,7 +291,7 @@ def handle(tenant_id: str, message: dict) -> None:
         if len(options) < 3:
             options.append(('handoff', copy['team']))
         body = answer.text or copy['error']
-    reply(format_reply(body, sources, copy, greeting), options, sources, answer.lead_fields)
+    reply(format_reply(body, sources, copy, greeting), options, sources, answer.lead_fields, answer)
 
 
 DELIVERY_RANK = {'sent': 1, 'delivered': 2, 'read': 3}

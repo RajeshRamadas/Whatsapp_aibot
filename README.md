@@ -813,3 +813,29 @@ Browser coverage uses local static website/model fakes and checks crawl → cita
 → refresh → schedule → delete, reader permissions, 320-pixel layout and axe.
 Run `python -m scripts.seed_websites_e2e` after the other browser seed scripts in
 an isolated test database. [Website controls screenshot](docs/screenshots/t9-6-websites.png).
+
+### Improve answers backend (T9.7a)
+
+Migration `0034_answer_reviews` records live AI replies from WhatsApp, the widget
+and the legacy web chat. Bot previews, human/quota notices and failed generation
+are excluded. A reply needs attention when it has no retrieved knowledge, the
+model explicitly offered a handoff, or its widget vote is down. This is a review
+signal rather than a measured accuracy score. Historical replies are not guessed
+or backfilled because older turns lack a reliable message association.
+
+Owner/admin-only `GET /api/v1/improvements` returns paginated reviews, top ten
+questions (case/whitespace normalized), unanswered counts and current widget votes.
+Satisfaction is positive / (positive + negative) × 100, or null without votes.
+One current vote counts per answer; changing it replaces the previous rating.
+Date/channel filters cover 1–90 UTC days; triage filters do not change the summary.
+Dismissal/resolution preserves historical metrics. Only recorded AI replies enter
+these reports; no customer identifiers are included. Question/reply text is private
+to owners/admins, unlike the existing aggregate analytics overview.
+
+`PATCH /{id}` reopens/dismisses a review. `POST /{id}/answer` queues an explicitly
+human-written question (≤1,000 characters) and answer (≤6,000). The existing arq
+worker embeds it outside API requests/DB sessions, then publishes to curated Q&A
+atomically. Retries use bounded backoff; interrupted jobs recover after 20 minutes.
+Repeat submissions are idempotent; editing a prior correction updates its Q&A.
+Deleting a conversation removes its reviews. Drafts contain private text and are
+never logged; audits contain IDs only. No new provider/settings. UI follows in T9.7b.

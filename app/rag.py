@@ -13,7 +13,7 @@ from sqlalchemy import func, literal_column, or_, select
 
 from . import llm
 from .config import settings
-from .db import Chunk, Conversation, Message, QAPair, Session, Source, Tenant, now
+from .db import AnswerReview, Chunk, Conversation, Message, QAPair, Session, Source, Tenant, now
 from .ingest import source_label
 from .observability import bind
 from .rate_limits import RateLimiter
@@ -208,7 +208,8 @@ def _answer(tenant, conversation_id, question, *, whatsapp):
 
 
 def save_exchange_rows(db, conversation, pairs, channel_message_id=None, sources=None, lead_fields=None,
-                       attachments=None):
+                       attachments=None, review_answer=None, widget_turn_id=None):
+    question = next((text for role, text in reversed(pairs) if role == 'user'), None)
     if any(role == 'user' for role, _ in pairs):
         record(db, 'first_customer_conversation', conversation.tenant_id)
     lead_created = False
@@ -217,13 +218,19 @@ def save_exchange_rows(db, conversation, pairs, channel_message_id=None, sources
     timestamp = now()
     for role, content in pairs:
         outbound = role in ('assistant', 'agent', 'note')
-        db.add(Message(conversation_id=conversation.id, role=role, content=content,
+        message = Message(conversation_id=conversation.id, role=role, content=content,
                        direction='outbound' if outbound else 'inbound',
                        sources=(sources or []) if role == 'assistant' else [],
                        attachments=(attachments or []) if role == 'user' else [],
                        kind='note' if role == 'note' else 'text',
                        channel_message_id=channel_message_id if outbound else None,
-                       delivery_status='sent' if outbound and channel_message_id else None))
+                       delivery_status='sent' if outbound and channel_message_id else None)
+        db.add(message)
+        if role == 'assistant' and review_answer is not None and question is not None:
+            db.flush()
+            db.add(AnswerReview(tenant_id=conversation.tenant_id, message_id=message.id,
+                widget_turn_id=widget_turn_id, question=question,
+                unanswered=review_answer.uncertain or not review_answer.sources))
     conv = conversation
     if conv and pairs:
         conv.last_message_at = timestamp
@@ -235,7 +242,8 @@ def save_exchange_rows(db, conversation, pairs, channel_message_id=None, sources
 
 def save_exchange(conversation: Conversation, *pairs: tuple[str, str], create: bool = False,
                   channel_message_id: str | None = None, sources: list[dict] | None = None,
-                  lead_fields: dict | None = None, waiting: bool = False, attachments: list | None = None) -> None:
+                  lead_fields: dict | None = None, waiting: bool = False, attachments: list | None = None,
+                  review_answer: Answer | None = None, widget_turn_id: str | None = None) -> None:
     lead_created = False
     with Session.begin() as db:
         if create:
@@ -244,7 +252,8 @@ def save_exchange(conversation: Conversation, *pairs: tuple[str, str], create: b
         current = conversation if create else db.get(Conversation, conversation.id, with_for_update=waiting)
         if waiting and current.status == 'bot':
             current.status, current.handoff = 'waiting', True
-        lead_created = save_exchange_rows(db, current, pairs, channel_message_id, sources, lead_fields, attachments)
+        lead_created = save_exchange_rows(db, current, pairs, channel_message_id, sources, lead_fields, attachments,
+                                           review_answer, widget_turn_id)
     if lead_created:
         notify_created(conversation.tenant_id, conversation.id)
     if pairs:

@@ -461,6 +461,25 @@ class WidgetTurn(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
+class AnswerReview(Base):
+    __tablename__ = 'answer_reviews'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'), index=True)
+    message_id: Mapped[int] = mapped_column(ForeignKey('messages.id', ondelete='CASCADE'), unique=True)
+    widget_turn_id: Mapped[str | None] = mapped_column(ForeignKey('widget_turns.id', ondelete='SET NULL'), unique=True)
+    question: Mapped[str] = mapped_column(Text)
+    unanswered: Mapped[bool] = mapped_column(Boolean, default=False)
+    state: Mapped[str] = mapped_column(String(16), default='open')
+    draft_question: Mapped[str | None] = mapped_column(Text)
+    draft_answer: Mapped[str | None] = mapped_column(Text)
+    qa_pair_id: Mapped[str | None] = mapped_column(ForeignKey('qa_pairs.id', ondelete='SET NULL'))
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    next_attempt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
+    error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
+
+
 class Plan(Base):
     __tablename__ = 'plans'
     id: Mapped[str] = mapped_column(String(20), primary_key=True)
