@@ -21,7 +21,8 @@ from tests.test_media import no_session_io as no_session_io
 
 @pytest.mark.parametrize('url', ['http://example.com/', 'https://localhost/', 'https://127.0.0.1/',
     'https://[::1]/', 'https://169.254.169.254/', 'https://[::ffff:127.0.0.1]/',
-    'https://user:secret@example.com/', 'https://example.com:8080/', 'https://2130706433/'])
+    'https://user:secret@example.com/', 'https://example.com:8080/', 'https://2130706433/',
+    'https://[64:ff9b::7f00:1]/', 'https://[64:ff9b:1::a00:1]/', 'https://168.63.129.16/'])
 def test_rejects_nonpublic_urls(url):
     with pytest.raises(fetch.FetchError):
         fetch.canonical(url)

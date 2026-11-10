@@ -149,3 +149,37 @@ async def error_boundary_fixture(request, call_next):
     if request.url.path == '/api/v1/workspaces' and request.cookies.get('error_boundary_fixture'):
         return JSONResponse(None)  # Exercise a real Next.js server-render failure without production test routes.
     return await call_next(request)
+
+
+# Browser-only static website responses exercise the real parser and crawl publication.
+from app.db import Website  # noqa: E402
+from app.services import website_crawl  # noqa: E402
+
+
+class BrowserWebsite:
+    interval = 1
+
+    async def get(self, url, **kwargs):
+        path = httpx.URL(url).path
+        body = ('User-agent: *\nDisallow: /private' if path == '/robots.txt' else
+                '<main><h1>Refunds</h1><p>Refunds accepted within 30 days.</p></main>' if path.endswith('/refunds') else
+                '<nav>Menu</nav><main><h1>Help centre</h1><p>Refund and shipping policy.</p>'
+                '<a href="/knowledge/refunds">Refunds</a></main><footer>Footer noise</footer>')
+        return url, 200, body, {'content-type': 'text/html'}
+
+    async def close(self):
+        pass
+
+
+website_crawl.Fetcher = BrowserWebsite
+
+
+@app.middleware('http')
+async def website_worker_fixture(request, call_next):
+    response = await call_next(request)
+    if request.method == 'POST' and request.url.path.startswith('/api/v1/websites') and response.status_code == 202:
+        with Session() as db:
+            sites = db.execute(select(Website.id, Website.tenant_id).where(Website.status == 'queued')).all()
+        for identity, tenant_id in sites:
+            await website_crawl.crawl(identity, tenant_id)
+    return response
