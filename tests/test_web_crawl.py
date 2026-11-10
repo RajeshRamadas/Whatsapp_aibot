@@ -187,3 +187,31 @@ def test_budget_retry_exhaustion_and_weekly_schedule(client, tenant):
         site = db.get(Website, identity)
         assert site.status == 'ready' and site.last_success
         assert 6.99 < (site.next_run - now()).total_seconds() / 86400 <= 7
+
+
+@pytest.mark.parametrize('status,body', [(404, ''), (200, '<meta name="robots" content="noindex"><p>Private</p>')])
+def test_redirected_missing_or_noindex_page_loses_existing_chunks(client, tenant, monkeypatch, status, body):
+    with Session.begin() as db:
+        db.get(Plan, 'starter').limits = {'crawl_pages': 1}
+        site = Website(tenant_id=tenant['tenant_id'], url='https://example.com/start')
+        db.add(site)
+        db.flush()
+        identity = site.id
+        source = Source(tenant_id=tenant['tenant_id'], website_id=identity, url='https://example.com/final',
+                        filename='Public policy', kind='url', file_path='web:', status='ready')
+        db.add(source)
+        db.flush()
+        db.add(Chunk(tenant_id=tenant['tenant_id'], source_id=source.id, position=0, content='Old policy',
+                     embedding=[1, 0, 0]))
+    class Redirected:
+        async def get(self, url, **kwargs):
+            if url.endswith('/robots.txt'):
+                return url, 404, '', {}
+            return 'https://example.com/final', status, body, {'content-type': 'text/html'}
+        async def close(self):
+            pass
+    monkeypatch.setattr(crawl, 'Fetcher', Redirected)
+    asyncio.run(crawl.crawl(identity, tenant['tenant_id']))
+    with Session() as db:
+        assert db.get(Website, identity).status == 'failed'
+        assert db.scalar(select(Source.id)) is None and db.scalar(select(Chunk.id)) is None

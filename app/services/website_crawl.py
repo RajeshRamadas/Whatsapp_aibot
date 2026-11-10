@@ -67,11 +67,11 @@ def claim(identity, tenant_id):
         return site
 
 
-def remove(snapshot, url):
+def remove(snapshot, url, *aliases):
     with Session.begin() as db:
         scoped(db, snapshot, lock=True)
         db.execute(delete(Source).where(Source.tenant_id == snapshot.tenant_id,
-                                        Source.website_id == snapshot.id, Source.url == url))
+                                        Source.website_id == snapshot.id, Source.url.in_((url, *aliases))))
 
 
 def publish(snapshot, url, requested, depth, blocks):
@@ -159,6 +159,9 @@ async def crawl(identity, tenant_id):
             scoped(db, snapshot)
             known = db.execute(select(Source.url, Source.crawl_depth).where(
                 Source.tenant_id == tenant_id, Source.website_id == identity)).all()
+        for url, _ in known:
+            if not rules.can_fetch(url, AGENT):
+                await asyncio.to_thread(remove, snapshot, url)
         queue = [(-1, 0, snapshot.url), *[(0, depth or 0, url) for url, depth in known]]
         heapq.heapify(queue)
         seen, successful, attempts = set(), 0, 0
@@ -177,7 +180,7 @@ async def crawl(identity, tenant_id):
             attempts += 1
             final, status, body, headers = await fetcher.get(url, allowed=lambda target: rules.can_fetch(target, AGENT))
             if status in (401, 403, 404, 410):
-                await asyncio.to_thread(remove, snapshot, url)
+                await asyncio.to_thread(remove, snapshot, url, final)
                 if url == snapshot.url:
                     raise FetchError('The starting page is missing or requires private access.')
                 continue
@@ -192,13 +195,13 @@ async def crawl(identity, tenant_id):
             seen.add(final)
             mime = headers.get('content-type', '').split(';')[0].lower()
             if mime not in ('text/html', 'application/xhtml+xml', 'text/plain'):
-                await asyncio.to_thread(remove, snapshot, url)
+                await asyncio.to_thread(remove, snapshot, url, final)
                 if url == snapshot.url:
                     raise FetchError('The starting page must provide HTML or plain text.')
                 continue
             blocks, links = extract(body, final, host)
             if not blocks or 'noindex' in headers.get('x-robots-tag', '').lower():
-                await asyncio.to_thread(remove, snapshot, url)
+                await asyncio.to_thread(remove, snapshot, url, final)
                 if url == snapshot.url:
                     raise FetchError('The starting page has no indexable public text.')
                 continue

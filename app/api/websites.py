@@ -85,6 +85,13 @@ def record(db, principal, action, site):
           actor_type='user' if principal.user else 'api_key')
 
 
+def view(db, site):
+    result = WebsiteView.model_validate(site)
+    result.pages = db.scalar(select(func.count()).select_from(Source).where(
+        Source.tenant_id == site.tenant_id, Source.website_id == site.id))
+    return result
+
+
 @router.get('', response_model=WebsiteList)
 def websites(limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0),
              principal: Principal = Depends(require_role('admin'))):
@@ -111,7 +118,7 @@ def create(body: WebsiteInput, principal: Principal = Depends(require_role('admi
         db.add(site)
         db.flush()
         record(db, principal, 'website.created', site)
-        return WebsiteView.model_validate(site)
+        return view(db, site)
 
 
 @router.post('/{website_id}/refresh', response_model=WebsiteView, status_code=202)
@@ -125,7 +132,7 @@ def refresh(website_id: UUID, principal: Principal = Depends(require_role('admin
         if site.status != 'queued':
             site.status, site.error, site.attempts, site.next_run = 'queued', None, 0, now()
             record(db, principal, 'website.refreshed', site)
-        return WebsiteView.model_validate(site)
+        return view(db, site)
 
 
 @router.patch('/{website_id}', response_model=WebsiteView)
@@ -138,7 +145,7 @@ def schedule(website_id: UUID, body: Cadence, principal: Principal = Depends(req
             days = {'daily': 1, 'weekly': 7}.get(body.schedule)
             site.next_run = now() + timedelta(days=days) if days else None
         record(db, principal, 'website.scheduled', site)
-        return WebsiteView.model_validate(site)
+        return view(db, site)
 
 
 @router.delete('/{website_id}', status_code=204)
