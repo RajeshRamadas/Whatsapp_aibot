@@ -18,6 +18,7 @@ from ..db import (
     UsageEvent,
     User,
     WebhookFailure,
+    Website,
     WidgetTurn,
     now,
 )
@@ -62,7 +63,7 @@ class PlatformTenants(BaseModel):
 class FailedJob(BaseModel):
     id: str
     tenant_id: str | None
-    kind: Literal['ingestion', 'whatsapp', 'widget', 'email']
+    kind: Literal['ingestion', 'whatsapp', 'widget', 'email', 'website']
     received_at: datetime
 
 
@@ -147,6 +148,8 @@ def failed_jobs(limit: int = Query(25, ge=1, le=100), offset: int = Query(0, ge=
         .where(InboundEvent.status == 'failed'),
         select(WidgetTurn.id, Conversation.tenant_id, literal('widget'), WidgetTurn.created_at)
         .join(Conversation, Conversation.id == WidgetTurn.conversation_id).where(WidgetTurn.state == 'failed'),
+        select(Website.id, Website.tenant_id, literal('website'), Website.created_at)
+        .where(Website.status == 'failed'),
         select(EmailOutbox.id, literal(None), literal('email'), EmailOutbox.created_at)
         .where(EmailOutbox.status == 'failed'),
     ).subquery()

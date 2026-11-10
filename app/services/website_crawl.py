@@ -53,13 +53,16 @@ def claim(identity, tenant_id):
         tenant = db.scalar(select(Tenant).where(Tenant.id == tenant_id).with_for_update())
         site = db.scalar(select(Website).where(Website.id == identity, Website.tenant_id == tenant_id)
                          .with_for_update())
-        if not site or site.status != 'queued':
+        if not site or site.status != 'queued' or (site.next_run and site.next_run > now()):
             return None
         if (not tenant or tenant.suspended or not entitled(db, tenant, now()) or
                 not 1 <= site.max_pages <= 50 or not 0 <= site.depth <= 3 or
                 reserved(db, tenant_id) > budget(db, tenant)):
             site.status, site.error, site.next_run = 'failed', 'Website page budgets exceed the current plan.', None
             return None
+        if db.scalar(select(Website.id).where(Website.tenant_id == tenant_id,
+                Website.status == 'running', Website.id != identity).limit(1)):
+            return None  # One active crawl per workspace; its other queued sites remain durable.
         site.status, site.started_at, site.generation = 'running', now(), uid()
         return site
 
