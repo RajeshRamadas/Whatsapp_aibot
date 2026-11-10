@@ -124,5 +124,6 @@
   "toneNeutral": "Neutral",
   "toneFriendly": "Friendly",
   "toneFormal": "Formal",
-  "pageLabel": "p."
+  "pageLabel": "p.",
+  "skipContent": "Skip to main content"
 }

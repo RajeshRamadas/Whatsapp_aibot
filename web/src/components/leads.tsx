@@ -148,7 +148,7 @@ export function Leads({ workspace }: { workspace: Workspace }) {
   const cards = (items: Lead[]) => items.map(lead =>
     <LeadCard key={lead.id} lead={lead} owners={owners} editable={editable} save={save} />);
   const visible = rows?.slice(0, size) ?? [];
-  return <main className="min-w-0 space-y-4 p-4">
+  return <main id="main" tabIndex={-1} className="min-w-0 space-y-4 p-4">
     <h1 className="text-2xl font-semibold">{messages.leads}</h1>
     <div className="flex flex-wrap gap-2">
       <button className={control} aria-pressed={!board} onClick={() => setBoard(false)}>{copy.list}</button>

@@ -111,7 +111,7 @@ function WorkspaceBilling({ id }: { id: string }) {
     }
   }
 
-  return <main className="mx-auto max-w-6xl space-y-5 p-4 sm:p-8">
+  return <main id="main" tabIndex={-1} className="mx-auto max-w-6xl space-y-5 p-4 sm:p-8">
     <h1 className="text-2xl font-semibold">{copy.billing}</h1>
     <UsageMeter workspaceId={id} manage revision={revision} />
     {loadError && <div role="alert">
