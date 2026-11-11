@@ -1027,7 +1027,20 @@ of platform subscription billing. Owners/admins save an encrypted merchant conne
 test it. Live keys require explicit live-mode approval. Agents approve a customer conversation,
 amount in INR paise (₹1–₹10 lakh), purpose and expiry (5 minutes–30 days); approval keys prevent
 accidental duplicate dues. The bot will only send approved amounts. Payment does not change
-an appointment's booking state. Worker creation, signed webhooks and admin UI follow in stacked PRs.
+an appointment's booking state. The worker creates links with a stable unique reference, disables Razorpay SMS/email notifications
+and never accepts partial payments. After an uncertain POST, it reconciles by reference without
+posting again. A crash before the actual POST can therefore require merchant review; this avoids
+creating duplicate links. Five retries honor Retry-After and use backoff with jitter.
+
+Register `/api/backend/payments/webhook/<connection-id>` in that merchant account for
+`payment_link.paid`, `payment_link.cancelled`, `payment_link.expired` and `payment_link.partially_paid`.
+Use the same webhook secret entered in the connection. Signatures are checked before JSON parsing.
+Verified captured payments must match the approved amount, INR currency, reference and workspace.
+Duplicate and out-of-order events cannot send a second receipt or undo a paid state.
+Raw verified payloads are encrypted and removed after 14 days; deduplication records remain.
+Disconnect removes API credentials; the encrypted webhook secret remains to recognize payments
+on existing links. Revoke old API keys in the merchant dashboard when appropriate.
+Chat notices and the admin UI follow in stacked PRs.
 
 `MASTER_KEY` is required for credential storage. `PAYMENT_LINK_REQUESTS_PER_MINUTE` defaults
 to 60 per workspace. Optional WhatsApp utility receipt templates must have three variables

@@ -44,5 +44,7 @@
   "time": "प्राप्त समय (UTC)",
   "website": "वेबसाइट क्रॉल",
   "answer_review": "प्रश्नोत्तर प्रकाशन",
-  "google_calendar": "Google कैलेंडर"
+  "google_calendar": "Google कैलेंडर",
+  "payment_link": "ग्राहक भुगतान लिंक",
+  "payment_webhook": "ग्राहक भुगतान वेबहुक"
 }
