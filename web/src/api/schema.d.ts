@@ -3110,6 +3110,25 @@ export interface components {
             /** Allowed Origins */
             allowed_origins?: string[];
         };
+        /** CreatedKey */
+        CreatedKey: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Key Prefix */
+            key_prefix: string;
+            /** Scopes */
+            scopes: string[];
+            /** Last Used At */
+            last_used_at: string | null;
+            /** Revoked At */
+            revoked_at: string | null;
+            /** Expires At */
+            expires_at: string | null;
+            /** Key */
+            key: string;
+        };
         /** Credentials */
         Credentials: {
             /**
@@ -3309,6 +3328,23 @@ export interface components {
             scopes?: ("knowledge:read" | "knowledge:write" | "conversations:read" | "conversations:write" | "messages:send" | "contacts:read" | "contacts:write" | "leads:read" | "leads:write" | "evals:read" | "evals:write")[] | null;
             /** Expires In Days */
             expires_in_days?: number | null;
+        };
+        /** KeyView */
+        KeyView: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Key Prefix */
+            key_prefix: string;
+            /** Scopes */
+            scopes: string[];
+            /** Last Used At */
+            last_used_at: string | null;
+            /** Revoked At */
+            revoked_at: string | null;
+            /** Expires At */
+            expires_at: string | null;
         };
         /** Labels */
         Labels: {
@@ -6678,7 +6714,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["KeyView"][];
                 };
             };
             /** @description Validation Error */
@@ -6714,7 +6750,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["CreatedKey"];
                 };
             };
             /** @description Validation Error */

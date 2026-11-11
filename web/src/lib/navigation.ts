@@ -9,6 +9,7 @@ export const pages = [
   { key: 'campaigns', path: '/dashboard/campaigns', roles: ['owner', 'admin'] },
   { key: 'appointments', path: '/dashboard/appointments', roles: ['owner', 'admin', 'agent'] },
   { key: 'payments', path: '/dashboard/payments', roles: ['owner', 'admin', 'agent'] },
+  { key: 'developer', path: '/dashboard/developer', roles: ['owner', 'admin'] },
   { key: 'team', path: '/dashboard/team', roles: ['owner', 'admin'] },
   { key: 'billing', path: '/dashboard/billing', roles: ['owner'] },
 ] as const;

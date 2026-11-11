@@ -1173,3 +1173,7 @@ updates also return `202` operation records. Poll `GET /api/v1/public/operations
 for completion. The arq worker must run: its durable public-operation dispatcher
 handles storage/embeddings with three attempts, clears finished payloads, expires
 24-hour replay records and removes finished operation metadata after 30 days.
+Owners/admins can manage granular expiring keys in **Dashboard → Developer API**
+(English/Hindi), save a new secret once, and revoke it. See the complete
+[public API guide](docs/PUBLIC_API.md) for resources, scopes, retries and examples,
+and the [generated OpenAPI contract](docs/public-api.openapi.json).

@@ -1,9 +1,9 @@
 """Workspace API-key management. Raw secrets are returned only on creation."""
 import secrets
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import select
 
@@ -39,10 +39,25 @@ def view(key: ApiKey) -> dict:
             'revoked_at': key.revoked_at, 'expires_at': key.expires_at}
 
 
-@router.post('', status_code=201)
-def create_key(body: KeyInput, principal: Principal = Depends(require_role('admin'))):
+class KeyView(BaseModel):
+    id: str
+    name: str
+    key_prefix: str
+    scopes: list[str]
+    last_used_at: datetime | None
+    revoked_at: datetime | None
+    expires_at: datetime | None
+
+
+class CreatedKey(KeyView):
+    key: str
+
+
+@router.post('', status_code=201, response_model=CreatedKey)
+def create_key(body: KeyInput, response: Response, principal: Principal = Depends(require_role('admin'))):
     if principal.user is None:
         raise HTTPException(403, 'A user session is required to manage API keys')
+    response.headers['Cache-Control'] = 'no-store'
     secret = 'sk_live_' + secrets.token_urlsafe(32)
     key = ApiKey(id=uid(), tenant_id=principal.tenant.id, name=body.name,
                  key_prefix=secret[:20], key_hash=sha(secret), scopes=body.scopes or [body.scope],
@@ -54,7 +69,7 @@ def create_key(body: KeyInput, principal: Principal = Depends(require_role('admi
     return {**view(key), 'key': secret}
 
 
-@router.get('')
+@router.get('', response_model=list[KeyView])
 def list_keys(principal: Principal = Depends(require_role('admin'))):
     with Session() as db:
         keys = db.scalars(select(ApiKey).where(ApiKey.tenant_id == principal.tenant.id)
