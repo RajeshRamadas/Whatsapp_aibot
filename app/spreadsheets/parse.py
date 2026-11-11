@@ -10,7 +10,8 @@ from openpyxl import load_workbook
 
 from ..config import settings
 
-NUMBER = re.compile(r'^[+-]?(?:[0-9]+|[0-9]{1,3}(?:,[0-9]{3})+|[0-9]{1,2}(?:,[0-9]{2})*,[0-9]{3})(?:\.[0-9]+)?$')
+NUMBER = re.compile(r'^[+-]?(?:[0-9]+|[0-9]{1,3}(?:,[0-9]{3})+|[0-9]{1,2}(?:,[0-9]{2})*,[0-9]{3})'
+                    r'(?:\.[0-9]+)?(?:[eE][+-]?[0-9]{1,3})?$')
 
 
 @dataclass
@@ -77,6 +78,9 @@ def sheet(title, records, budget):
                 else f'Column {i + 1}'} for i, v in enumerate(headers)]
     rows = []
     for record in records:
+        budget[0] += 1
+        if budget[0] > settings.spreadsheet_max_rows:
+            raise ValueError('This spreadsheet exceeds the row limit. Trim unused or blank rows before upload.')
         if len(record) > len(headers) and any(v not in (None, '') for v in record[len(headers):]):
             raise ValueError('A spreadsheet row has more values than its header. Add a complete header row.')
         values = [None if v is None or v == '' else v for v in record[:len(headers)]]
@@ -85,7 +89,6 @@ def sheet(title, records, budget):
             continue
         if any(len(str(v)) > 2000 or '\x00' in str(v) for v in values if v is not None):
             raise ValueError('Spreadsheet cells must contain at most 2000 characters and no null characters.')
-        budget[0] += 1
         budget[1] += len(values)
         if budget[0] > settings.spreadsheet_max_rows or budget[1] > 250000:
             raise ValueError('This spreadsheet exceeds the configured row or 250000-cell import limit.')

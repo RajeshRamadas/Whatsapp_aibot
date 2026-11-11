@@ -122,3 +122,18 @@ def test_reimport_queue_failure_can_be_retried(client, tenant, table, monkeypatc
     monkeypatch.setattr(spreadsheets, 'enqueue', knowledge.enqueue)
     assert client.post(path, headers=tenant['headers']).status_code == 202
     assert client.get('/api/v1/tables', headers=tenant['headers']).json()['sources'][0]['status'] == 'ready'
+
+
+def test_unsupported_sql_and_comments_do_not_leak_into_logs_or_statements(client, tenant, table, caplog):
+    with pytest.raises(query.QueryError):
+        query.guarded("DO 'private-sensitive-content'", table, tenant['tenant_id'], 100)
+    assert 'private-sensitive-content' not in caplog.text
+    statement, _ = query.guarded(f'SELECT c1 FROM {table.table_name} /* private-comment */',
+                                  table, tenant['tenant_id'], 100)
+    assert 'private-comment' not in statement
+
+
+def test_nonfinite_cast_results_fail_safely(client, tenant, table):
+    with pytest.raises(query.QueryError, match='unsupported_result'):
+        query.execute(tenant['tenant_id'], table.id,
+                      f"SELECT CAST('NaN' AS DOUBLE PRECISION) FROM {table.table_name} LIMIT 1", admin=True)

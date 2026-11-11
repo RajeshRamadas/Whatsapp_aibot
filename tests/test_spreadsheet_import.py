@@ -144,3 +144,12 @@ def test_workbook_currency_format_is_preserved_as_a_unit(tmp_path):
     book.save(path)
     data = parse.parse(path)[0]
     assert data.columns[0]['currency'] == '₹' and data.rows == [[Decimal('3500000')]]
+    assert parse.number(1e-6) == Decimal('0.000001')
+
+
+def test_blank_records_also_obey_the_import_scan_limit(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, 'spreadsheet_max_rows', 2)
+    path = tmp_path / 'data.csv'
+    path.write_text('Name\n\n\n\nA\n')
+    with pytest.raises(ValueError, match='row limit'):
+        parse.parse(path)
