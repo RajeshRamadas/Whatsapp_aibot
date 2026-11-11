@@ -289,7 +289,8 @@ def func_prefix(reference):
 
 def maintain():
     with Session.begin() as db:
-        db.execute(update(Call).where(Call.expires_at <= now())
+        db.execute(update(Call).where(Call.expires_at <= now(),
+            Call.inputs_enc.is_not(None) | Call.result_enc.is_not(None) | Call.code_hash.is_not(None))
                    .values(inputs_enc=None, result_enc=None, code_hash=None))
         db.execute(update(Call).where(Call.state == 'running', Call.expires_at <= now())
                    .values(state='unknown', last_error='execution_interrupted'))

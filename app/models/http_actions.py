@@ -1,7 +1,7 @@
 """Versioned action definitions and encrypted, conversation-bound execution records."""
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, LargeBinary, String, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, LargeBinary, String, UniqueConstraint, or_
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -47,4 +47,6 @@ class HttpActionCall(Base):
     last_error: Mapped[str | None] = mapped_column(String(40))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    __table_args__ = (UniqueConstraint('tenant_id', 'dedupe_key', name='uq_http_action_call'),)
+    __table_args__ = (UniqueConstraint('tenant_id', 'dedupe_key', name='uq_http_action_call'),
+        Index('ix_http_action_calls_expiring', expires_at,
+              postgresql_where=or_(inputs_enc.is_not(None), result_enc.is_not(None), code_hash.is_not(None))))
