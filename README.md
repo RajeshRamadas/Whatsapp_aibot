@@ -984,3 +984,15 @@ have English/Hindi copy; interface changes preserve drafts and do not change the
 customer language. Staff can choose each customer's language on the hold form.
 Screenshot: [Appointments](docs/screenshots/t9-9-appointments.png).
 Google Calendar connection is the separately ordered T9.9d task. No new credentials.
+
+### Google Calendar (T9.9d, connection foundation)
+
+Optional Google OAuth uses Calendar v3 with calendar-list read, event write and event free/busy scopes.
+Create a Google Cloud OAuth web app, enable Calendar API, and register
+`https://marketingadda.com/api/backend/google-calendar/callback` exactly. Set the three
+`GOOGLE_CALENDAR_*` OAuth settings and `MASTER_KEY` through environment settings.
+Only a signed-in owner/admin can authorize an account; access and refresh tokens are encrypted.
+The arq worker exchanges codes, refreshes tokens early and lists writable calendars.
+Failures retry up to five times, honor Retry-After and expose safe status codes.
+Disconnect revokes credentials; previously created Google events remain until explicitly cancelled.
+No Google app exists yet: live OAuth verification remains pending. Availability and event synchronization follow in stacked PRs.

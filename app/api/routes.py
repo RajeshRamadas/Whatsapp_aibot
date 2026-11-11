@@ -17,6 +17,7 @@ from . import (
     email_feedback,
     evals,
     events,
+    google_calendar,
     improvements,
     inbox,
     invoices,
@@ -43,7 +44,8 @@ from .shared import UPLOADS as UPLOADS
 from .shared import origins as origins
 
 router = APIRouter()
-for module in (appointments, bot_messages, improvements, auth, audit, api_keys, workspaces, tenants, billing, channels,
+for module in (google_calendar, appointments, bot_messages, improvements, auth, audit, api_keys,
+    workspaces, tenants, billing, channels,
                knowledge,
                onboarding, bot,
                jobs,
