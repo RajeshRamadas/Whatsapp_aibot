@@ -1168,3 +1168,8 @@ access dashboard endpoints. Quotas use the plan's `api_requests_per_minute` limi
 falling back to `PUBLIC_API_DEFAULT_REQUESTS_PER_MINUTE`; Redis outages fail closed.
 `PUBLIC_API_MAX_BODY_BYTES` bounds public JSON requests. Configure `MASTER_KEY`
 for authenticated pagination cursors.
+Public source creation accepts JSON text/Markdown documents; Q&A creation and
+updates also return `202` operation records. Poll `GET /api/v1/public/operations/{id}`
+for completion. The arq worker must run: its durable public-operation dispatcher
+handles storage/embeddings with three attempts, clears finished payloads, expires
+24-hour replay records and removes finished operation metadata after 30 days.
