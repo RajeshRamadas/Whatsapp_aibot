@@ -1160,3 +1160,11 @@ workspace immediately. Switching hides and resets the old workspace's page, wait
 inbox cache removal, then loads the selected workspace's role and data. Private content is also
 unmounted before logout is sent, preventing late snapshot writes during sign-out. Workspace APIs
 continue to validate membership and return 404 for another workspace's records.
+
+Public integrations use the additive `/api/v1/public` API; `/api/v1/public/docs`
+serves its OpenAPI reference. Explicit resource scopes are accepted when creating
+workspace API keys (`scopes` instead of the legacy `scope`). These keys cannot
+access dashboard endpoints. Quotas use the plan's `api_requests_per_minute` limit,
+falling back to `PUBLIC_API_DEFAULT_REQUESTS_PER_MINUTE`; Redis outages fail closed.
+`PUBLIC_API_MAX_BODY_BYTES` bounds public JSON requests. Configure `MASTER_KEY`
+for authenticated pagination cursors.

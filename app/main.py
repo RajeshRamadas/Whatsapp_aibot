@@ -14,6 +14,7 @@ from .api.routes import UPLOADS, origins, router
 from .db import Session, Tenant, WebhookFailure, init_db, uid
 from .jobs.queue import close_pool
 from .observability import configure, correlation, identifier
+from .public_api import app as public_api
 from .services.analytics import signup_started
 from .services.campaigns import CampaignError
 from .services.crypto import validate_configuration
@@ -64,6 +65,7 @@ async def tenant_cors(request: Request, call_next):
 
 
 app.include_router(router)
+app.mount('/api/v1/public', public_api)
 
 
 @app.middleware('http')

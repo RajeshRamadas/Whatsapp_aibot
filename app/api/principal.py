@@ -49,6 +49,8 @@ def current_principal(
                 raise HTTPException(403, 'Workspace suspended. Contact support.')
             key.last_used_at = now()
             scopes = key.scopes
+            if any(scope not in LEVELS for scope in scopes):
+                raise HTTPException(403, 'This scoped key is limited to the public API')
         if legacy:
             response.headers['Warning'] = '299 - "X-Admin-Key is deprecated; use Authorization: Bearer"'
         role = max(scopes, key=lambda item: LEVELS[item]) if scopes else 'viewer'

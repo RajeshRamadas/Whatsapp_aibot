@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     inbox_vapid_private_key: str | None = None
     inbox_vapid_subject: str | None = None
     inbox_vapid_public_key: str | None = None
+    public_api_default_requests_per_minute: int = Field(60, ge=1, le=6000)
+    public_api_max_body_bytes: int = Field(1048576, ge=1024, le=10485760)
     auth_cookie_secure: bool = True
     totp_issuer: str = Field('MarketingAdda', min_length=1, max_length=64)
     environment: str = 'development'
