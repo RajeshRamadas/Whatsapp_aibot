@@ -8,6 +8,7 @@ import { WebsiteSources } from '@/components/website-sources';
 
 import { ImproveAnswers } from '@/components/improve-answers';
 
+import { SpreadsheetTables } from '@/components/spreadsheet-tables';
 import { KnowledgeManager } from '@/components/knowledge-manager';
 
 
@@ -17,7 +18,8 @@ function WorkspaceKnowledge({ workspace, initialView }: { workspace: Workspace; 
   const improvements = useCopy('improvements');
   const messages = useCopy('base');
   const faq = useCopy('faq');
-  const [tab, setTab] = useState(initialView === 'improve' ? 'improve' : 'documents');
+  const sheets = useCopy('spreadsheets');
+  const [tab, setTab] = useState(['improve', 'tables'].includes(initialView) ? initialView : 'documents');
   const canEdit = workspace.role === 'admin' || workspace.role === 'owner';
   return <main id="main" className="mx-auto max-w-5xl p-4 sm:p-8">
     <h1 className="text-2xl font-semibold">{messages.knowledge}</h1>
@@ -27,13 +29,15 @@ function WorkspaceKnowledge({ workspace, initialView }: { workspace: Workspace; 
         <button className="min-h-11 rounded border border-border px-3 aria-pressed:bg-border"
           aria-pressed={tab === 'documents'} onClick={() => setTab('documents')}>{faq.documents}</button>
         <button className="min-h-11 rounded border border-border px-3 aria-pressed:bg-border"
+          aria-pressed={tab === 'tables'} onClick={() => setTab('tables')}>{sheets.title}</button>
+        <button className="min-h-11 rounded border border-border px-3 aria-pressed:bg-border"
           aria-pressed={tab === 'faq'} onClick={() => setTab('faq')}>{faq.title}</button>
         <button className="min-h-11 rounded border border-border px-3 aria-pressed:bg-border"
           aria-pressed={tab === 'websites'} onClick={() => setTab('websites')}>{websites.title}</button>
         <button className="min-h-11 rounded border border-border px-3 aria-pressed:bg-border"
           aria-pressed={tab === 'improve'} onClick={() => setTab('improve')}>{improvements.title}</button>
       </div>
-      {tab === 'improve' ? <ImproveAnswers workspaceId={workspace.id} /> : tab === 'websites' ? <WebsiteSources workspaceId={workspace.id} /> : tab === 'faq' ? <FaqManager workspaceId={workspace.id} />
+      {tab === 'tables' ? <SpreadsheetTables workspaceId={workspace.id} /> : tab === 'improve' ? <ImproveAnswers workspaceId={workspace.id} /> : tab === 'websites' ? <WebsiteSources workspaceId={workspace.id} /> : tab === 'faq' ? <FaqManager workspaceId={workspace.id} />
         : <KnowledgeManager workspaceId={workspace.id} canEdit />}
     </> : <p className="mt-3 text-muted">{messages.knowledgeAdminOnly}</p>}
   </main>;

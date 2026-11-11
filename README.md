@@ -1223,8 +1223,9 @@ queries until an owner/admin reviews them. Mixed numeric/text columns stay text;
 XLSX formulas/error cells must be replaced with values. Imports are bounded to
 `SPREADSHEET_MAX_ROWS`, 60 columns, 12 sheets, 250000 cells and 50 MB expanded XLSX.
 Source deletion removes data transactionally; an hourly worker sweep clears orphan
-tables and deleted-tenant schemas/roles. Table queries and controls follow in the
-remaining T10.4 stack.
+tables and deleted-tenant schemas/roles. Owners/admins review and enable tables in **Knowledge → Exact spreadsheet answers**
+(English/Hindi). CSV/XLSX chunks are excluded from customer retrieval; older uploads
+need reprocessing through this screen before they can supply exact answers.
 
 Owners/admins can inspect `/api/v1/tables`, preview a table at `/{id}/preview`,
 PATCH `/{id}` to enable/pause, and POST `/{id}/query` with a `sql` SELECT.
@@ -1237,3 +1238,8 @@ also uses the isolated SELECT-only role, a read-only transaction,
 `SPREADSHEET_QUERY_TIMEOUT_MS` and `SPREADSHEET_QUERY_ROW_LIMIT`. Results are bounded
 to 32 KB and report truncation; aggregates run across the full table. Query logs
 contain only status/count/duration metadata, without SQL or cell values.
+
+The bot discovers enabled spreadsheet schemas and answers through the guarded
+`query_table` tool with filename/sheet citations. See the
+[spreadsheet guide](docs/SPREADSHEET_ANSWERS.md) for data preparation, supported SQL,
+upgrade steps, permissions and exact count examples.

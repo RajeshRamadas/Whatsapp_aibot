@@ -1,5 +1,6 @@
 """A small SQL subset, a tenant-only role, read-only transactions and bounded results."""
 import json
+import math
 import re
 import time
 from datetime import date, datetime
@@ -44,7 +45,7 @@ def guarded(sql, table, tenant_id, row_limit):
     if not isinstance(sql, str) or not 1 <= len(sql) <= 4000:
         raise QueryError('invalid_query')
     try:
-        statements = sqlglot.parse(sql, read='postgres', error_level=ErrorLevel.RAISE)
+        statements = sqlglot.parse(sql, read='postgres', error_level=ErrorLevel.RAISE, error_message_context=0)
         tree = statements[0] if len(statements) == 1 else None
         nodes = list(tree.walk()) if isinstance(tree, exp.Select) else []
         if (not nodes or len(nodes) > 300 or any(type(n) not in ALLOWED for n in nodes)
@@ -110,7 +111,7 @@ def guarded(sql, table, tenant_id, row_limit):
             parameters[name] = (literal.this if literal.is_string else
                                 int(literal.this) if literal.is_int else Decimal(literal.this))
             literal.replace(exp.Placeholder(this=name))
-        statement = re.sub(r'%\((p[0-9]+)\)s', r':\1', tree.sql(dialect='postgres'))
+        statement = re.sub(r'%\((p[0-9]+)\)s', r':\1', tree.sql(dialect='postgres', comments=False))
         return statement, parameters
     except QueryError:
         raise
@@ -119,6 +120,9 @@ def guarded(sql, table, tenant_id, row_limit):
 
 
 def scalar(value):
+    if (isinstance(value, float) and not math.isfinite(value)
+            or isinstance(value, Decimal) and not value.is_finite()):
+        raise QueryError('unsupported_result')
     if isinstance(value, Decimal):
         return str(value)
     return value.isoformat() if isinstance(value, (date, datetime)) else value

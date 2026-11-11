@@ -69,6 +69,7 @@ jobs:
           set +a
           python -m scripts.seed_inbox_e2e
           python -m scripts.seed_platform_e2e
+          python -m scripts.seed_spreadsheets_e2e
           python -m scripts.seed_http_actions_e2e
           python -m scripts.seed_webhooks_e2e
           python -m scripts.seed_public_api_e2e
