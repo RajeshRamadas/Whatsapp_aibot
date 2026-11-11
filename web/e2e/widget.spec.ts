@@ -30,7 +30,7 @@ test('embedded widget survives an offline send and reload', async ({ page, conte
       await route.fulfill({ status: 202, headers, json: { id: 'turn', conversation_id: 'conv', state: 'queued' } });
     } else if (path.endsWith('/turns/turn')) {
       await route.fulfill({ headers, json: { id: 'turn', conversation_id: 'conv', state: 'complete',
-        answer: 'We open at nine.', sources: [{ filename: 'Hours.pdf' }], feedback: null } });
+        answer: 'We open at nine. Pay: https://rzp.io/i/widget-demo. javascript:alert(1)', sources: [{ filename: 'Hours.pdf' }], feedback: null } });
     } else if (path.endsWith('/feedback')) {
       await route.fulfill({ headers, json: { feedback: 'up' } });
     } else {
@@ -54,6 +54,8 @@ test('embedded widget survives an offline send and reload', async ({ page, conte
   });
   await expect(page.getByText('We open at nine.')).toBeVisible();
   expect(queued).toBe(1);
+  await expect(page.getByRole('link', { name: 'https://rzp.io/i/widget-demo', exact: true })).toHaveAttribute('href', 'https://rzp.io/i/widget-demo');
+  expect(await page.locator('a[href^="javascript:"]').count()).toBe(0);
   await page.getByText('Sources (1)', { exact: true }).click();
   await expect(page.getByText('Hours.pdf')).toBeVisible();
   await page.getByRole('button', { name: 'Helpful answer', exact: true }).click();

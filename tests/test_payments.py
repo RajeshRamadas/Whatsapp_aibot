@@ -81,6 +81,7 @@ def test_payment_validation_roles_and_tenant_isolation(client, tenant, merchant)
     foreign = {'Authorization': 'Bearer ' + other['admin_key']}
     assert client.get(BASE + '/connections', headers=foreign).json() == []
     assert client.get(BASE + '/requests', headers=foreign).json() == []
+    assert client.get(BASE + '/catalog', headers=foreign).json()['connections'] == []
     assert client.post(BASE + '/requests', headers=foreign, json=body).status_code == 404
     routes = [('POST', '/connections/' + c['id'] + '/test', None),
               ('DELETE', '/connections/' + c['id'], {'confirm': True}),
@@ -89,7 +90,8 @@ def test_payment_validation_roles_and_tenant_isolation(client, tenant, merchant)
         assert client.request(method, BASE + path, headers=foreign, json=payload).status_code == 404
         assert client.request(method, BASE + path, json=payload).status_code == 401
     for method, path, payload in routes + [('GET', '/connections', None), ('POST', '/connections', SECRETS),
-                                          ('GET', '/requests', None), ('POST', '/requests', body)]:
+                                          ('GET', '/requests', None), ('GET', '/catalog', None),
+                                          ('POST', '/requests', body)]:
         key = uid()
         with Session.begin() as db:
             db.add(ApiKey(tenant_id=tenant['tenant_id'], key_hash=hash_token(key), key_prefix=key[:8],
@@ -100,3 +102,12 @@ def test_payment_validation_roles_and_tenant_isolation(client, tenant, merchant)
     assert client.post(BASE + '/connections/invalid/test', headers=headers).status_code == 422
     assert client.request('DELETE', BASE + '/connections/' + c['id'], headers=headers,
                           json={'confirm': False}).status_code == 422
+
+
+def test_payment_catalog_is_scoped_and_does_not_expose_credentials(client, tenant, merchant):
+    connection, _, _ = merchant
+    response = client.get(BASE + '/catalog', headers=tenant['headers'])
+    assert response.status_code == 200 and response.json()['connections'][0]['id'] == connection['id']
+    assert 'key_last4' not in response.text and 'merchant-secret' not in response.text
+    assert client.get(BASE + '/catalog').status_code == 401
+    assert client.get(BASE + '/catalog', params={'unused': 'ignored'}, headers=tenant['headers']).status_code == 200

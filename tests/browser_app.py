@@ -252,3 +252,62 @@ async def calendar_worker_fixture(request, call_next):
                     and not await asyncio.to_thread(google_jobs.process_one)):
                 break
     return response
+
+
+# Merchant payment operations stay inside this test-only ASGI app.
+import hashlib  # noqa: E402
+import hmac  # noqa: E402
+import json  # noqa: E402
+
+from app.integrations.payment_links import Razorpay as PaymentRazorpay  # noqa: E402
+from app.models.payments import PaymentRequest  # noqa: E402
+from app.services import payment_notifications, payment_processing  # noqa: E402
+
+_payment_links = {}
+
+
+def browser_payments(self, method, path='', **kwargs):
+    if method == 'POST' and not path:
+        value = {**kwargs['payload'], 'id': 'plink_' + kwargs['payload']['reference_id'].replace('-', ''),
+                 'short_url': 'https://rzp.io/i/browser-demo', 'status': 'created', 'amount_paid': 0}
+        _payment_links[value['id']] = value
+        return value.copy()
+    if path:
+        value = _payment_links[path.split('/')[1]]
+        if path.endswith('/cancel'):
+            value['status'] = 'cancelled'
+        return value.copy()
+    reference = kwargs.get('params', {}).get('reference_id')
+    return {'items': [v.copy() for v in _payment_links.values() if reference and v['reference_id'] == reference]}
+
+
+PaymentRazorpay.request = browser_payments
+
+
+@app.post('/api/v1/_test/payments/{identity}/paid', include_in_schema=False)
+async def capture_browser_payment(identity: str):
+    with Session() as db:
+        row = db.get(PaymentRequest, identity)
+        connection_id, provider_id = row.connection_id, row.provider_id
+    remote = _payment_links[provider_id]
+    remote.update(status='paid', amount_paid=remote['amount'])
+    raw = json.dumps({'event': 'payment_link.paid', 'payload': {'payment_link': {'entity': remote},
+        'payment': {'entity': {'id': 'pay_browser123', 'amount': remote['amount'], 'currency': 'INR',
+                              'status': 'captured'}}}}).encode()
+    signature = hmac.new(b'browser-payment-webhook-secret', raw, hashlib.sha256).hexdigest()
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
+        response = await client.post('/api/v1/payments/webhook/' + connection_id, content=raw,
+            headers={'X-Razorpay-Signature': signature, 'X-Razorpay-Event-Id': 'paid-' + identity})
+    return JSONResponse(response.json(), status_code=response.status_code)
+
+
+@app.middleware('http')
+async def payment_worker_fixture(request, call_next):
+    response = await call_next(request)
+    if '/api/v1/payments' in request.url.path and request.method != 'GET' and response.status_code < 400:
+        for _ in range(10):
+            if not await asyncio.to_thread(payment_processing.process_event) and not await asyncio.to_thread(
+                    payment_processing.process_one):
+                break
+        await asyncio.to_thread(payment_notifications.process_one)
+    return response
