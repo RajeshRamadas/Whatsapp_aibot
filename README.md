@@ -1019,3 +1019,17 @@ before inserting, but calendar owners should review externally added conflicting
 API references: [OAuth web-server flow](https://developers.google.com/identity/protocols/oauth2/web-server),
 [free/busy](https://developers.google.com/workspace/calendar/api/v3/reference/freebusy/query),
 and [event insertion](https://developers.google.com/workspace/calendar/api/v3/reference/events/insert).
+
+### Customer payment links (T9.10)
+
+Merchant payment links use each workspace's own Razorpay test/live API keys, independently
+of platform subscription billing. Owners/admins save an encrypted merchant connection and
+test it. Live keys require explicit live-mode approval. Agents approve a customer conversation,
+amount in INR paise (₹1–₹10 lakh), purpose and expiry (5 minutes–30 days); approval keys prevent
+accidental duplicate dues. The bot will only send approved amounts. Payment does not change
+an appointment's booking state. Worker creation, signed webhooks and admin UI follow in stacked PRs.
+
+`MASTER_KEY` is required for credential storage. `PAYMENT_LINK_REQUESTS_PER_MINUTE` defaults
+to 60 per workspace. Optional WhatsApp utility receipt templates must have three variables
+(description, amount, payment reference). Provider API is Razorpay Payment Links v1.
+Live test-mode payment verification is pending; the environment has no merchant keys configured.

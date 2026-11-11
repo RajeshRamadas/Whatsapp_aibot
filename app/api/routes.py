@@ -28,6 +28,7 @@ from . import (
     meta_signup,
     metrics,
     onboarding,
+    payments,
     platform,
     push,
     qa,
@@ -44,7 +45,7 @@ from .shared import UPLOADS as UPLOADS
 from .shared import origins as origins
 
 router = APIRouter()
-for module in (google_calendar, appointments, bot_messages, improvements, auth, audit, api_keys,
+for module in (payments, google_calendar, appointments, bot_messages, improvements, auth, audit, api_keys,
     workspaces, tenants, billing, channels,
                knowledge,
                onboarding, bot,

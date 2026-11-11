@@ -41,6 +41,7 @@ class Settings(BaseSettings):
     google_calendar_client_secret: str | None = None
     google_calendar_redirect_uri: str | None = None
     google_calendar_requests_per_minute: int = Field(60, ge=1, le=600)
+    payment_link_requests_per_minute: int = Field(60, ge=1, le=600)
     contact_import_max_bytes: int = Field(1048576, ge=1024, le=10485760)
     contact_import_max_rows: int = Field(1000, ge=1, le=10000)
     campaign_max_recipients: int = Field(1000, ge=1, le=10000)
