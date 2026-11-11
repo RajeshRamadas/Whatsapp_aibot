@@ -1,0 +1,86 @@
+import { test, expect } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
+test('lead sync: configure all providers, approve sharing, export and retry without losing local leads', async ({ page }) => {
+  test.setTimeout(120000); page.setDefaultTimeout(15000);
+  const login = (email: string) => page.request.post('/api/backend/auth/login', { data: { email, password: 'lead-sync-browser-passphrase' } });
+  expect((await login('lead-sync@example.com')).ok()).toBeTruthy();
+  await page.goto('/dashboard/lead-sync');
+  await expect(page.getByText('No lead destinations connected yet.')).toBeVisible();
+  await page.getByText('Add a lead destination', { exact: true }).click();
+  const form = page.getByRole('form', { name: 'Add a lead destination', exact: true });
+  for (const provider of ['hubspot', 'zoho'] as const) {
+    await form.getByRole('combobox', { name: 'CRM provider', exact: true }).selectOption(provider);
+    await form.getByLabel('Connection label', { exact: true }).fill(provider === 'hubspot' ? 'Sales contacts' : 'Sales leads');
+    if (provider === 'hubspot') await form.getByLabel('Private-app token', { exact: true }).fill('browser-hubspot-token');
+    else for (const label of ['Zoho client ID', 'Zoho client secret', 'Zoho refresh token']) await form.getByLabel(label, { exact: true }).fill('browser-zoho-credential');
+    await form.getByRole('button', { name: 'Save CRM connection', exact: true }).click();
+    const card = page.getByRole('region', { name: provider === 'hubspot' ? 'Sales contacts' : 'Sales leads', exact: true });
+    await expect(card.getByText('Connected', { exact: true })).toBeVisible();
+    await expect(form.getByLabel(provider === 'hubspot' ? 'Private-app token' : 'Zoho refresh token', { exact: true })).toHaveValue('');
+    await card.getByText('Connection and sharing settings', { exact: true }).click();
+    await card.getByRole('combobox', { name: 'Name', exact: true }).selectOption(provider === 'hubspot' ? 'firstname' : 'Last_Name');
+    await card.getByRole('combobox', { name: 'Phone', exact: true }).selectOption(provider === 'hubspot' ? 'phone' : 'Phone');
+    await card.getByRole('combobox', { name: 'Email', exact: true }).selectOption(provider === 'hubspot' ? 'email' : 'Email');
+    await card.getByLabel('Enable automatic lead sharing', { exact: true }).check();
+    await expect(card.getByRole('button', { name: 'Save sharing settings', exact: true })).toBeDisabled();
+    await card.getByLabel('I approve sending these lead fields to this account.', { exact: true }).check();
+    await card.getByRole('button', { name: 'Save sharing settings', exact: true }).click();
+    await expect(card.getByText('Sharing enabled', { exact: true })).toBeVisible();
+    const connections = (await (await page.request.get('/api/backend/lead-sync')).json()).connections;
+    const id = connections.find((v: { provider: string }) => v.provider === provider).id;
+    if (provider === 'hubspot') await page.request.post('/api/backend/_test/lead-sync/' + id + '/fail');
+    page.once('dialog', dialog => dialog.accept());
+    await card.getByRole('button', { name: 'Export latest 100 existing leads', exact: true }).click();
+    await card.getByText('Delivery history', { exact: true }).click();
+    if (provider === 'hubspot') {
+      await expect(card.getByText('Lead version 1 · Failed', { exact: true })).toBeVisible();
+      await card.getByRole('button', { name: 'Retry delivery', exact: true }).click();
+      await expect(card.getByText('Lead version 1 · Delivered', { exact: true })).toBeVisible();
+      const leads = await (await page.request.get('/api/backend/leads')).json();
+      expect(leads).toHaveLength(1);
+      expect((await page.request.patch('/api/backend/leads/' + leads[0].conversation_id, { data: { status: 'qualified' }, headers: { 'X-CSRF-Token': (await page.context().cookies()).find(c => c.name === 'chatbot_csrf')!.value } })).ok()).toBeTruthy();
+      await page.getByRole('button', { name: 'Refresh lead sync', exact: true }).click();
+      await expect(card.getByText('Lead version 2 · Delivered', { exact: true })).toBeVisible();
+    } else await expect(card.getByText('Lead version 2 · Delivered', { exact: true })).toBeVisible();
+    const delivered = await (await page.request.get('/api/backend/_test/lead-sync/' + id)).json();
+    expect(delivered.versions).toEqual(provider === 'hubspot' ? [1, 2] : [2]);
+    await card.getByText('Connection and sharing settings', { exact: true }).click();
+    await card.getByText('Delivery history', { exact: true }).click();
+  }
+  await page.route('https://accounts.google.com/**', async route => {
+    const state = new URL(route.request().url()).searchParams.get('state');
+    await route.fulfill({ status: 302, headers: { location: 'http://localhost:3000/api/backend/lead-sync/google/callback?code=browser-code&state=' + state } });
+  });
+  await page.getByLabel('Google connection label', { exact: true }).fill('Lead spreadsheet');
+  const returned = page.waitForResponse(r => r.request().isNavigationRequest() && new URL(r.url()).pathname === '/dashboard/lead-sync');
+  await page.getByRole('button', { name: 'Connect Google Sheets', exact: true }).click();
+  await returned;
+  const sheet = page.getByRole('region', { name: 'Lead spreadsheet', exact: true });
+  await expect(sheet.getByText('Connected', { exact: true })).toBeVisible();
+  await sheet.getByText('Connection and sharing settings', { exact: true }).click();
+  await sheet.getByRole('button', { name: 'Create export spreadsheet', exact: true }).click();
+  await sheet.getByRole('combobox', { name: 'Export spreadsheet', exact: true }).selectOption('browser_sheet');
+  await sheet.getByRole('combobox', { name: 'Export tab', exact: true }).selectOption('0');
+  await sheet.getByLabel('Enable automatic lead sharing', { exact: true }).check();
+  await sheet.getByLabel('I approve sending these lead fields to this account.', { exact: true }).check();
+  await sheet.getByRole('button', { name: 'Save sharing settings', exact: true }).click();
+  await expect(sheet.getByText('Sharing enabled', { exact: true })).toBeVisible();
+  page.once('dialog', dialog => dialog.accept());
+  await sheet.getByRole('button', { name: 'Export latest 100 existing leads', exact: true }).click();
+  await sheet.getByText('Delivery history', { exact: true }).click();
+  await expect(sheet.getByText('Lead version 2 · Delivered', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'हिन्दी', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'लीड सिंक', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'English', exact: true }).click();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.setViewportSize({ width: 320, height: 900 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await sheet.getByText('Connection and sharing settings', { exact: true }).click();
+  await page.setViewportSize({ width: 1280, height: 1100 }); await page.mouse.move(0, 0);
+  await page.screenshot({ path: '../docs/screenshots/t9-11-lead-sync.png', fullPage: true });
+  for (const email of ['lead-agent@example.com', 'lead-viewer@example.com']) {
+    expect((await login(email)).ok()).toBeTruthy(); await page.goto('/dashboard/lead-sync');
+    await expect(page.getByText('Only owners and admins can manage lead sharing.', { exact: true })).toBeVisible();
+    expect((await page.request.get('/api/backend/lead-sync')).status()).toBe(403);
+  }
+});

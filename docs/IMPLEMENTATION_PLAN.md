@@ -719,7 +719,7 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 | T9.9c | English/Hindi appointments administration | APT-1, L10N-1/2 | T9.9b |
 | T9.9d | Google Calendar OAuth, free/busy and event synchronization (implemented; live OAuth check pending) | GCAL-1 to GCAL-4 | T9.9c |
 | T9.10 | Payment links (implemented; live merchant verification pending) | PAY-1, RZ-4 | T5.1, T1.8 |
-| T9.11 | Leads to Google Sheets, Zoho and HubSpot (outbox, OAuth, Sheets and native CRM delivery implemented; dashboard controls follow) | LEAD-3, GSH-1 to GSH-3, CRM-1, CRM-2 | T5.2 |
+| T9.11 | Leads to Google Sheets, Zoho and HubSpot (implemented; live provider-account checks pending) | LEAD-3, GSH-1 to GSH-3, CRM-1, CRM-2 | T5.2 |
 | T9.12 | Accuracy runs in the UI with history | ANL-4 | T3.3 |
 | T9.13 | Multiple workspaces per user; 2FA | ACC-4, ACC-5 | T1.4 |
 | T9.14 | GreenPlot pilot (tools via the HTTP connector) | GP-1 to GP-5 | T10.3 |
@@ -785,7 +785,7 @@ Tick each task in the PR that completes it.
 | M6 | T6.1 ☐ · T6.2 ☐ · T6.3 ☐ · T6.4 ☐ · T6.5 ☐ | |
 | M7 | T7.1 ☐ · T7.2 ☐ · T7.3 ☐ · T7.4 ☐ · T7.5 ☑ | |
 | M8 | T8.1 ☐ · T8.2 ☑ · T8.3 ☑ · T8.4 ☐ · T8.5 ☐ | T8.4 code ready; live SES/DNS staging check pending. |
-| M9 | T9.1 ☑ · T9.2a ☑ · T9.2b ☑ · T9.3 ☑ · T9.4a ☑ · T9.4b ☐ · T9.5 ☑ · T9.6a ☑ · T9.6b ☑ · T9.6c ☑ · T9.7a ☑ · T9.7b ☑ · T9.8a ☑ · T9.8b ☑ · T9.8c ☑ · T9.8d ☑ · T9.9a ☑ · T9.9b ☑ · T9.9c ☑ · T9.9d ☑ · T9.10 ☑ | T9.4b code merged; user has no speech dataset and chose to keep transcription disabled. Real-language evaluation pending. T9.8 native-speaker script review and live model accuracy checks remain pilot gates. T9.9d code and fake-provider checks implemented; no Google Cloud OAuth app yet, so live authorization/delivery verification remains pending by user choice. T9.10 code and fake-provider checks implemented; live merchant test-mode payment verification remains pending until merchant keys/webhooks are configured. |
+| M9 | T9.1 ☑ · T9.2a ☑ · T9.2b ☑ · T9.3 ☑ · T9.4a ☑ · T9.4b ☐ · T9.5 ☑ · T9.6a ☑ · T9.6b ☑ · T9.6c ☑ · T9.7a ☑ · T9.7b ☑ · T9.8a ☑ · T9.8b ☑ · T9.8c ☑ · T9.8d ☑ · T9.9a ☑ · T9.9b ☑ · T9.9c ☑ · T9.9d ☑ · T9.10 ☑ · T9.11 ☑ | T9.4b code merged; user has no speech dataset and chose to keep transcription disabled. Real-language evaluation pending. T9.8 native-speaker script review and live model accuracy checks remain pilot gates. T9.9d code and fake-provider checks implemented; no Google Cloud OAuth app yet, so live authorization/delivery verification remains pending by user choice. T9.10 code and fake-provider checks implemented; live merchant test-mode payment verification remains pending until merchant keys/webhooks are configured. T9.11 implemented in stacked PRs #80–#84 with fake Google/HubSpot/Zoho checks; live account verification remains pending until OAuth and tenant credentials are configured. |
 
 ## 7. Human decisions needed before certain tasks
 

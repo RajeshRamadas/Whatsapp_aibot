@@ -39,7 +39,7 @@ class HTTP:
                 wait = 0
             raise SyncError('credentials_required' if status in (401, 403) else (
                 'record_conflict' if status == 409 else 'provider_rejected'),
-                retry=status in (408, 409, 429) or status >= 500, wait=wait,
+                retry=status in (408, 429) or status >= 500, wait=wait,
                 uncertain=method == 'POST' and (status in (408, 429) or status >= 500))
         try:
             value = response.json() if response.content else {}

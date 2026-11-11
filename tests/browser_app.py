@@ -311,3 +311,6 @@ async def payment_worker_fixture(request, call_next):
                 break
         await asyncio.to_thread(payment_notifications.process_one)
     return response
+
+# Import after the app and earlier fakes are configured; never loaded by production.
+from tests import browser_lead_sync as browser_lead_sync  # noqa: E402

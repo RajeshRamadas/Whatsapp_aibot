@@ -2,6 +2,7 @@
 import re
 from urllib.parse import quote
 
+from ...config import settings
 from .http import HTTP, SyncError
 
 HEADERS = ('event_id', 'updated_at', 'conversation_url', 'name', 'phone', 'email', 'need', 'budget',
@@ -18,7 +19,8 @@ class Sheets:
     def __init__(self, tenant_id, token):
         headers = {'Authorization': 'Bearer ' + token}
         self.drive = HTTP(tenant_id, 'sheets', 'https://www.googleapis.com/drive/v3/', headers)
-        self.sheets = HTTP(tenant_id, 'sheets', 'https://sheets.googleapis.com/v4/', headers)
+        self.sheets = HTTP(tenant_id, 'sheets',
+                           'https://sheets.googleapis.com/' + settings.lead_sync_sheets_api_version + '/', headers)
 
     def inventory(self, file_id=None, previous=None):
         files, page = [], None
