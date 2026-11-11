@@ -1,3 +1,5 @@
+import security from '@/messages/security.en.json';
+import securityHi from '@/messages/security.hi.json';
 import accuracy from '@/messages/accuracy.en.json';
 import accuracyHi from '@/messages/accuracy.hi.json';
 import leadSync from '@/messages/lead-sync.en.json';
@@ -41,8 +43,8 @@ import baseHi from '@/messages/hi.json';
 import faqHi from '@/messages/faq.hi.json';
 import errorsHi from '@/messages/errors.hi.json';
 
-export const english = { accuracy, leadSync, payments, appointments, inbox, widget, botMessages, base, websites, campaigns, platform, invoices, analytics, billing, errors, templates, improvements, faq, media, leads, signup };
-export const hindi: typeof english = { ...english, accuracy: accuracyHi, leadSync: leadSyncHi, payments: paymentsHi, appointments: appointmentsHi, websites: websitesHi, campaigns: campaignsHi, platform: platformHi, invoices: invoicesHi, analytics: analyticsHi, billing: billingHi, templates: templatesHi, improvements: improvementsHi, media: mediaHi, leads: leadsHi, signup: signupHi, inbox: inboxHi, widget: widgetHi, botMessages: botMessagesHi, base: baseHi, faq: faqHi, errors: errorsHi };
+export const english = { security, accuracy, leadSync, payments, appointments, inbox, widget, botMessages, base, websites, campaigns, platform, invoices, analytics, billing, errors, templates, improvements, faq, media, leads, signup };
+export const hindi: typeof english = { ...english, security: securityHi, accuracy: accuracyHi, leadSync: leadSyncHi, payments: paymentsHi, appointments: appointmentsHi, websites: websitesHi, campaigns: campaignsHi, platform: platformHi, invoices: invoicesHi, analytics: analyticsHi, billing: billingHi, templates: templatesHi, improvements: improvementsHi, media: mediaHi, leads: leadsHi, signup: signupHi, inbox: inboxHi, widget: widgetHi, botMessages: botMessagesHi, base: baseHi, faq: faqHi, errors: errorsHi };
 export type Locale = 'en' | 'hi';
 export type Catalog = typeof english;
 export const translatedNamespaces = Object.keys(english) as (keyof Catalog)[];

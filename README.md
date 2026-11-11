@@ -1130,7 +1130,8 @@ deprecations quarterly before updating the adapters.
 
 T9.13 adds account-wide authenticator support for verified owners/admins. Core storage uses
 versioned, user-bound encryption through `MASTER_KEY`; authenticator keys are never plaintext in
-the database. `TOTP_ISSUER` defaults to `MarketingAdda`. TOTP uses RFC 6238 SHA-1, six digits,
+the database. `TOTP_ISSUER` defaults to `MarketingAdda`. Retain prior master-key versions for
+existing authenticator ciphertext when rotating the master key. TOTP uses RFC 6238 SHA-1, six digits,
 30-second steps and one adjacent step of clock tolerance. A used time step cannot be replayed.
 Recovery codes are random 128-bit values, stored only as user-bound hashes and consumed atomically.
 Enrollment is bound to the current session and password, expires after ten minutes and permits
@@ -1148,4 +1149,14 @@ minutes apply independently to sign-in, management and verification, with a sepa
 five-attempt bound per challenge. Password reset revokes sessions/challenges and retains 2FA.
 Accounts keep their protection after role demotion and may manage it using their password and
 second factor. Existing API keys are independent credentials; account 2FA does not apply to them.
-English/Hindi controls and multiple-workspace browser verification follow in the next stacked part.
+Open **Account security** (`/account/security`) from the sidebar/mobile navigation to enroll with
+a locally rendered QR code or manual key, save/download one-time recovery codes, regenerate codes,
+or disable protection after reauthentication. The sign-in form handles the second-factor challenge
+and recovery-code alternative in English/Hindi. It never treats password verification alone as a
+successful sign-in for an enrolled account.
+
+Users can create and switch between their own workspaces. A new workspace becomes the selected
+workspace immediately. Switching hides and resets the old workspace's page, waits for private
+inbox cache removal, then loads the selected workspace's role and data. Private content is also
+unmounted before logout is sent, preventing late snapshot writes during sign-out. Workspace APIs
+continue to validate membership and return 404 for another workspace's records.
