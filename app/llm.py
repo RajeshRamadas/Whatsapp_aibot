@@ -80,6 +80,8 @@ def _run(turn, tools: list[Tool]) -> ChatResult:
 class ChatProvider(Protocol):
     def image(self, model: str, data: bytes, mime: str) -> str: ...
 
+    def verify(self, model: str, system: str, messages: list[dict]) -> str: ...
+
     def run(self, model: str, system: str, messages: list[dict], tools: list[Tool]) -> ChatResult: ...
 
     def complete(self, model: str, system: str, messages: list[dict]) -> str:
@@ -110,6 +112,13 @@ class OpenAIChat:
     def complete(self, model, system, messages):
         response = call('openai', 'chat', self.client.chat.completions.create,
             model=model, messages=[{'role': 'system', 'content': system}, *messages])
+        return response.choices[0].message.content or ''
+
+
+    def verify(self, model, system, messages):
+        client = self.client.with_options(timeout=settings.grounding_timeout_seconds, max_retries=0)
+        response = call('openai', 'chat', client.chat.completions.create,
+            model=model, messages=[{'role': 'system', 'content': system}, *messages], max_completion_tokens=1024)
         return response.choices[0].message.content or ''
 
 
@@ -166,6 +175,13 @@ class AnthropicChat:
         return ''.join(block.text for block in response.content if block.type == 'text')
 
 
+    def verify(self, model, system, messages):
+        client = self.client.with_options(timeout=settings.grounding_timeout_seconds, max_retries=0)
+        response = call('anthropic', 'chat', client.messages.create,
+                        model=model, max_tokens=1024, system=system, messages=messages)
+        return ''.join(block.text for block in response.content if block.type == 'text')
+
+
     def run(self, model, system, messages, tools):
         if not tools:
             return ChatResult(self.complete(model, system, messages), [])
@@ -219,6 +235,16 @@ class GeminiChat:
             config=types.GenerateContentConfig(
                 system_instruction=system,
                 http_options=types.HttpOptions(timeout=int(settings.llm_timeout_seconds * 1000))))
+        return response.text or ''
+
+
+    def verify(self, model, system, messages):
+        from google.genai import types
+        response = call('gemini', 'chat', self.client.models.generate_content, model=model,
+            contents=[types.Content(role='user', parts=[types.Part(text=m['content'])]) for m in messages],
+            config=types.GenerateContentConfig(system_instruction=system, max_output_tokens=1024,
+                http_options=types.HttpOptions(timeout=int(settings.grounding_timeout_seconds * 1000),
+                    retry_options=types.HttpRetryOptions(attempts=1))))
         return response.text or ''
 
 

@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     inbox_vapid_subject: str | None = None
     inbox_vapid_public_key: str | None = None
     public_api_default_requests_per_minute: int = Field(60, ge=1, le=6000)
+    grounding_timeout_seconds: float = Field(10, ge=1, le=30)
+    grounding_models: dict[str, str] = Field(default_factory=dict)
     spreadsheet_max_rows: int = Field(20000, ge=1, le=100000)
     spreadsheet_query_timeout_ms: int = Field(1500, ge=100, le=5000)
     spreadsheet_query_row_limit: int = Field(100, ge=1, le=200)
@@ -127,6 +129,13 @@ class Settings(BaseSettings):
     whatsapp_handoff_keywords: str = 'human,agent'
 
     model_config = SettingsConfigDict(env_file='.env', extra='ignore')
+
+    @field_validator('grounding_models')
+    @classmethod
+    def valid_grounding_models(cls, models):
+        if set(models) - set(DEFAULT_CHAT_MODELS) or any(not m.strip() or len(m) > 100 for m in models.values()):
+            raise ValueError('Use known providers and nonempty grounding model names up to 100 characters')
+        return models
 
     @field_validator('ai_prices_usd')
     @classmethod
