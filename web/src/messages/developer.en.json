@@ -1,0 +1,23 @@
+{
+  "title": "Developer API", "intro": "Connect your tools with scoped workspace keys and a versioned public API.",
+  "adminOnly": "Only workspace owners and admins can manage API keys.",
+  "create": "Create API key", "name": "Key name", "expiry": "Expires after", "days": "{days} days", "saving": "Saving…",
+  "scopesTitle": "Permissions", "scopeHelp": "Choose only the permissions your integration needs. These keys access the public API. Creating contacts does not grant marketing consent.",
+  "secretTitle": "Save your new API key", "secretHelp": "This secret appears once. Store it in your server's secret settings. Closing this page hides it permanently.",
+  "secretLabel": "New API key", "copy": "Copy key", "dismiss": "I saved the key", "copied": "Key copied.",
+  "keysTitle": "Workspace API keys", "refresh": "Refresh keys", "loading": "Loading API keys…", "loadError": "Could not load API keys. Use Refresh keys to retry.",
+  "empty": "No API keys yet. Create one to connect an integration.", "actionError": "Could not complete this change. Refresh keys before retrying a creation; a key may already have been created. Copy the secret manually if clipboard access is unavailable.",
+  "active": "Active", "revoked": "Revoked", "expired": "Expired", "expires": "Expires", "lastUsed": "Last used", "never": "Never",
+  "revoke": "Revoke key", "revokeName": "Revoke key: {name}", "revokePrompt": "Revoke this key? Integrations using it will lose access immediately.",
+  "reference": "Public API reference", "baseHelp": "Use your dashboard's origin plus this base path. A directly exposed API server uses /api/v1/public instead.",
+  "authHelp": "Send Authorization: Bearer <api key> on each request. Session cookies do not authenticate the public API.",
+  "paginationHelp": "List responses contain items, next_cursor and limit. Pass cursor and limit on the next request; limit is at most 100. Keep filters unchanged.",
+  "replayHelp": "Every POST requires a unique Idempotency-Key (1–128 characters). Repeating the same request within 24 hours returns its original result. Reusing a key for another request returns 409.",
+  "rateHelp": "All keys share the workspace plan's per-minute quota. A 429 response includes Retry-After. Wait before retrying; the quota also counts replays.",
+  "jobsHelp": "Source and Q&A writes return 202. Poll the returned operation until complete or failed. JSON source uploads support text and Markdown.",
+  "sendHelp": "Send text or approved templates through POST /messages. WhatsApp sends are queued; existing consent and 24-hour reply-window rules apply. Read delivery status using a separate conversations:read key permission.",
+  "runHelp": "Evaluation runs require evals:write and confirm_cost: true. They use configured models and may incur usage charges. Poll the run for results.",
+  "versionHelp": "Breaking changes require a new API version and at least six months of notice. Additive fields may appear in v1.",
+  "downloadSchema": "Download OpenAPI JSON", "interactiveDocs": "Interactive API reference", "exampleHelp": "Set API_BASE to the public API base URL and API_KEY to a server-side secret. Never embed keys in browser code.",
+  "scopes": {"knowledge:read":"Read knowledge", "knowledge:write":"Manage knowledge", "conversations:read":"Read conversations and messages", "conversations:write":"Manage conversations", "messages:send":"Send messages and templates", "contacts:read":"Read contacts", "contacts:write":"Manage contacts", "leads:read":"Read leads", "leads:write":"Manage leads", "evals:read":"Read evaluations", "evals:write":"Manage evaluations"}
+}

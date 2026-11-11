@@ -95,3 +95,16 @@ def test_public_json_and_schema(client, public):
     schema = client.get(ROOT + '/openapi.json').json()
     assert schema['components']['securitySchemes']['ApiKey']['scheme'] == 'bearer'
     assert schema['paths']['/capabilities']['get']['security'] == [{'ApiKey': []}]
+
+
+def test_quota_outage_and_body_limit(client, public, monkeypatch):
+    from redis.exceptions import ConnectionError
+    def unavailable(*args):
+        raise ConnectionError('private Redis URL')
+    monkeypatch.setattr(RateLimiter, 'allow', unavailable)
+    result = client.get(ROOT + '/capabilities', headers=public)
+    assert result.status_code == 503 and result.headers['retry-after'] == '60'
+    assert 'private' not in result.text
+    monkeypatch.setattr(settings, 'public_api_max_body_bytes', 1024)
+    result = client.post(ROOT + '/contacts', headers=public, json={'text': 'sensitive' * 200})
+    assert result.status_code == 413 and 'sensitive' not in result.text

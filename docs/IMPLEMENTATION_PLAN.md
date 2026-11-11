@@ -786,6 +786,7 @@ Tick each task in the PR that completes it.
 | M7 | T7.1 ☐ · T7.2 ☐ · T7.3 ☐ · T7.4 ☐ · T7.5 ☑ | |
 | M8 | T8.1 ☐ · T8.2 ☑ · T8.3 ☑ · T8.4 ☐ · T8.5 ☐ | T8.4 code ready; live SES/DNS staging check pending. |
 | M9 | T9.1 ☑ · T9.2a ☑ · T9.2b ☑ · T9.3 ☑ · T9.4a ☑ · T9.4b ☐ · T9.5 ☑ · T9.6a ☑ · T9.6b ☑ · T9.6c ☑ · T9.7a ☑ · T9.7b ☑ · T9.8a ☑ · T9.8b ☑ · T9.8c ☑ · T9.8d ☑ · T9.9a ☑ · T9.9b ☑ · T9.9c ☑ · T9.9d ☑ · T9.10 ☑ · T9.11 ☑ · T9.12 ☑ · T9.13 ☑ | T9.4b code merged; user has no speech dataset and chose to keep transcription disabled. Real-language evaluation pending. T9.8 native-speaker script review and live model accuracy checks remain pilot gates. T9.9d code and fake-provider checks implemented; no Google Cloud OAuth app yet, so live authorization/delivery verification remains pending by user choice. T9.10 code and fake-provider checks implemented; live merchant test-mode payment verification remains pending until merchant keys/webhooks are configured. T9.11 implemented in stacked PRs #80–#84 with fake Google/HubSpot/Zoho checks; live account verification remains pending until OAuth and tenant credentials are configured. T9.12 implemented in stacked PRs #85–#86 with immutable accuracy-run history and English/Hindi controls; automated checks use fakes, so live-model verification remains pending credentials. T9.13 implemented in stacked PRs #87–#89: existing multi-workspace membership APIs verified; switching clears private view state; optional account-wide TOTP, one-use recovery codes and English/Hindi security controls added. |
+| M10 | T10.1 ☑ · T10.2 ☐ · T10.3 ☐ · T10.4 ☐ · T10.5 ☐ · T10.6 ☐ · T10.7 ☐ · T10.8 ☐ · T10.9 ☐ · T10.10 ☐ | T10.1 implemented in stacked PRs #90–#94: additive public v1 API, granular scoped keys, plan quotas, opaque pagination, atomic 24-hour replay, all PAPI-6 resources, durable knowledge writes and sends, accuracy runs, English/Hindi key controls and OpenAPI reference. Migration 0044 verified up/down/up; tests use fake providers. |
 
 ## 7. Human decisions needed before certain tasks
 
@@ -798,19 +799,3 @@ Tick each task in the PR that completes it.
 | T8.4 | SES Mumbai; notifications@marketingadda.com. Staging/DNS verification pending. | INTEGRATIONS EM-1 |
 | T8.5 | Hosting provider and region | REQUIREMENTS §10.6 |
 | T9.4b | OpenAI selected for the first adapter. User confirmed no dataset yet; keep transcription disabled until real-language evaluation is complete. | INTEGRATIONS STT-1 |
-
-T10.1 progress: part a adds the additive public v1 bearer boundary, granular key
-scopes, plan quotas, encrypted cursors and atomic 24-hour POST replay storage.
-Resource routes, background knowledge operations and the developer reference
-follow in stacked parts; T10.1 remains pending until those parts are complete.
-T10.1 part b adds typed cursor-paginated reads for all PAPI-6 resources and scoped
-contact, conversation, lead and evaluation-case writes. Every public POST requires
-an idempotency key. Contacts created through this API have no marketing opt-in;
-consent remains governed by existing consent workflows.
-T10.1 part c implements durable source/Q&A creation, asynchronous Q&A updates,
-scoped operation polling and deletion. Worker claims, bounded retries, safe error
-codes, payload cleanup and replay retention are tested with fake embeddings.
-T10.1 part d adds idempotent text/template sends through the existing dispatcher,
-approved-template discovery, and atomic accuracy-run creation/cancellation. Existing
-WhatsApp window/consent rules apply. The dashboard proxy preserves quota, replay,
-version and authentication headers and rewrites public Location URLs to its prefix.

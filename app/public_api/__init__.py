@@ -3,13 +3,38 @@ import logging
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from starlette.exceptions import HTTPException
 
 from .auth import PublicPrincipal, authenticate
 from .contracts import JsonLimit, error_body
 
-app = FastAPI(title='MarketingAdda Public API', version='1.0.0',
+
+class ErrorItem(BaseModel):
+    code: str
+    message: str
+    details: dict
+
+
+class ErrorResponse(BaseModel):
+    error: ErrorItem
+
+
+class Capabilities(BaseModel):
+    version: str
+    workspace_id: str
+    scopes: list[str]
+    requests_per_minute: int
+    max_page_size: int
+    idempotency_hours: int
+
+
+app = FastAPI(title='MarketingAdda Public API', version='1.0.0', docs_url=None, redoc_url=None,
+    description='Bearer-scoped v1 API. POST requires Idempotency-Key (24-hour replay). '
+                'Breaking changes require a new API version and six months of notice.',
+    responses={code: {'model': ErrorResponse} for code in (400, 401, 403, 404, 409, 413, 415, 422, 429, 500, 503)},
     servers=[{'url': '/api/v1/public'}, {'url': '/api/backend/public', 'description': 'Dashboard proxy'}])
 app.add_middleware(JsonLimit)
 
@@ -41,7 +66,12 @@ async def unexpected(request: Request, exc):
                                    'details': {}}}, status_code=500)
 
 
-@app.get('/capabilities', tags=['contract'])
+@app.get('/docs', include_in_schema=False)
+def reference():
+    return get_swagger_ui_html(openapi_url='./openapi.json', title='MarketingAdda Public API')
+
+
+@app.get('/capabilities', tags=['contract'], response_model=Capabilities)
 def capabilities(p: PublicPrincipal = Depends(authenticate)):
     return {'version': '1', 'workspace_id': p.tenant.id, 'scopes': sorted(p.scopes),
             'requests_per_minute': p.limit, 'max_page_size': 100, 'idempotency_hours': 24}
