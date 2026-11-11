@@ -1064,7 +1064,7 @@ Live test-mode payment verification is pending; the environment has no merchant 
 
 ### Lead sync (T9.11)
 
-The lead-sync foundation adds explicit sharing approval, encrypted HubSpot/Zoho credentials
+Lead sync adds explicit sharing approval, encrypted HubSpot/Zoho credentials
 and a transactional outbox for each new or updated lead version. Captures and team updates
 remain local even when a connector is unavailable. Optional email capture supports CRM
 identity matching. Disabling/disconnecting stops future sharing. Existing leads are exported
@@ -1085,7 +1085,7 @@ Credential failures notify workspace admins. HubSpot Contacts (CRM v3) and Zoho 
 match exact normalized phone first, then email, and update only mapped fields. Ambiguous matches
 or missing mandatory values fail safely. Each version adds a mapped-field summary and conversation
 link as a CRM note. Private team notes are excluded unless enabled. Uncertain creates and notes
-reconcile before retrying. English/Hindi dashboard controls follow in the next stacked part.
+reconcile before retrying. Owners/admins configure field mapping, select spreadsheet tabs, approve sharing, backfill the latest 100 existing leads, and inspect/retry deliveries from `/dashboard/lead-sync` in English or Hindi. The connection remains paused until sharing is explicitly approved.
 
 For HubSpot, create a private-app token with Contacts read/write and contact-property read access
 (`crm.objects.contacts.read`, `crm.objects.contacts.write`, `crm.schemas.contacts.read`); ensure the
@@ -1102,3 +1102,7 @@ Provider references: [HubSpot notes](https://developers.hubspot.com/docs/api-ref
 `LEAD_SYNC_GOOGLE_REDIRECT_URI` configure the separate Google lead-export consent flow.
 `LEAD_SYNC_REQUESTS_PER_MINUTE` defaults to 60 per provider/workspace. Merchant and Calendar
 credentials are not reused. Live provider checks remain pending until account settings exist.
+
+Lead-sync API versions are pinned with `LEAD_SYNC_HUBSPOT_API_VERSION=v3`,
+`LEAD_SYNC_ZOHO_API_VERSION=v8` and `LEAD_SYNC_SHEETS_API_VERSION=v4`; review provider
+deprecations quarterly before updating the adapters.

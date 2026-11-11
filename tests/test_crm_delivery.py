@@ -215,3 +215,20 @@ def test_uncertain_contact_not_visible_yet_is_never_blindly_recreated(crm):
     with Session() as db:
         job = db.scalar(select(Delivery).where(Delivery.kind == "sync"))
         assert job.state == "queued" and job.last_error == "creation_unconfirmed"
+
+
+def test_transport_retries_transient_errors_and_never_exposes_provider_bodies(tenant, monkeypatch):
+    import httpx
+
+    for status in (401, 403, 408, 409, 429, 500):
+        monkeypatch.setattr(
+            httpx,
+            "request",
+            lambda *a, response_status=status, **k: httpx.Response(
+                response_status, headers={"Retry-After": "120"}, json={"secret": "must-not-leak"}
+            ),
+        )
+        with pytest.raises(SyncError) as caught:
+            HTTP(tenant["tenant_id"], "hubspot", "https://api.hubapi.com/").request("POST", "crm/v3/objects/contacts")
+        assert caught.value.retry == (status in (408, 429, 500))
+        assert caught.value.wait == 120 and "must-not-leak" not in str(caught.value)

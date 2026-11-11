@@ -152,3 +152,47 @@ def test_uncertain_spreadsheet_creation_reuses_the_app_file(client, tenant, shee
     with Session() as db:
         c = db.get(Connection, identity)
         assert c.catalog["files"][0]["id"] == "created_file" and c.catalog["files"][0]["tabs"][0]["id"] == 0
+
+
+def test_worker_retries_five_times_then_keeps_failed_snapshot(client, tenant, sheet, monkeypatch):
+    identity, conversation_id, _, _, _ = sheet
+    capture(tenant["tenant_id"], conversation_id, {"name": "Customer"})
+
+    def unavailable(*args, **kwargs):
+        assert engine.pool.checkedout() == 0
+        raise SyncError("provider_unavailable", retry=True, wait=120)
+
+    monkeypatch.setattr(HTTP, "request", unavailable)
+    for attempt in range(1, 6):
+        assert lead_sync_worker.process_one()
+        with Session.begin() as db:
+            job = db.scalar(select(Delivery).where(Delivery.tenant_id == tenant["tenant_id"], Delivery.kind == "sync"))
+            assert job.attempts == attempt and job.payload["name"] == "Customer"
+            assert job.state == ("queued" if attempt < 5 else "failed")
+            if attempt < 5:
+                assert job.next_attempt_at >= now() + timedelta(seconds=115)
+                job.next_attempt_at = now()
+    assert not lead_sync_worker.process_one()
+
+
+def test_revoked_credentials_pause_other_exports_until_connection_test(client, tenant, sheet, monkeypatch):
+    identity, conversation_id, _, _, _ = sheet
+    capture(tenant["tenant_id"], conversation_id, {"name": "Customer"})
+
+    def revoked(*args, **kwargs):
+        assert engine.pool.checkedout() == 0
+        raise SyncError("credentials_required")
+
+    monkeypatch.setattr(HTTP, "request", revoked)
+    assert lead_sync_worker.process_one()
+    capture(tenant["tenant_id"], conversation_id, {"name": "Updated customer"})
+    assert lead_sync_worker.process_one()
+    with Session() as db:
+        c = db.get(Connection, identity)
+        jobs = db.scalars(
+            select(Delivery)
+            .where(Delivery.connection_id == identity, Delivery.kind == "sync")
+            .order_by(Delivery.lead_version)
+        ).all()
+        assert c.status == "needs_attention" and jobs[0].state == "failed"
+        assert jobs[1].state == "queued" and jobs[1].attempts == 0

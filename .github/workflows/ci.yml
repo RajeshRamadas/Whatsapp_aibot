@@ -75,6 +75,7 @@ jobs:
           python -m scripts.seed_ocr_e2e
           python -m scripts.seed_websites_e2e
           python -m scripts.seed_improvements_e2e
+          python -m scripts.seed_lead_sync_e2e
           python -m scripts.seed_payments_e2e
           python -m scripts.seed_appointments_e2e
           python -m scripts.seed_locales_e2e

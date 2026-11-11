@@ -4,6 +4,7 @@ export const pages = [
   { key: 'knowledge', path: '/dashboard/knowledge', roles: ['owner', 'admin', 'agent', 'viewer'] },
   { key: 'botSettings', path: '/dashboard/bot', roles: ['owner', 'admin'] },
   { key: 'leads', path: '/dashboard/leads', roles: ['owner', 'admin', 'agent', 'viewer'] },
+  { key: 'leadSync', path: '/dashboard/lead-sync', roles: ['owner', 'admin'] },
   { key: 'analytics', path: '/dashboard/analytics', roles: ['owner', 'admin', 'agent', 'viewer'] },
   { key: 'campaigns', path: '/dashboard/campaigns', roles: ['owner', 'admin'] },
   { key: 'appointments', path: '/dashboard/appointments', roles: ['owner', 'admin', 'agent'] },

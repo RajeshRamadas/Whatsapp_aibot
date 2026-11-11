@@ -127,5 +127,6 @@
   "pageLabel": "p.",
   "skipContent": "Skip to main content",
   "appointments": "Appointments",
-  "payments": "Customer payments"
+  "payments": "Customer payments",
+  "leadSync": "Lead sync"
 }

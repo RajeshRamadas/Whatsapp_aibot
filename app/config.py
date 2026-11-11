@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     google_calendar_redirect_uri: str | None = None
     google_calendar_requests_per_minute: int = Field(60, ge=1, le=600)
     payment_link_requests_per_minute: int = Field(60, ge=1, le=600)
+    lead_sync_hubspot_api_version: Literal['v3'] = 'v3'
+    lead_sync_zoho_api_version: Literal['v8'] = 'v8'
+    lead_sync_sheets_api_version: Literal['v4'] = 'v4'
     lead_sync_google_client_id: str | None = None
     lead_sync_google_client_secret: str | None = None
     lead_sync_google_redirect_uri: str | None = None

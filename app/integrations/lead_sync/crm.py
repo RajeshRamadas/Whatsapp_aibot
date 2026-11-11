@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from email_validator import EmailNotValidError, validate_email
 from sqlalchemy import select
 
+from ...config import settings
 from ...db import Session, now
 from ...models.lead_sync import LeadConnection as Connection
 from ...models.lead_sync import LeadDelivery as Delivery
@@ -37,6 +38,8 @@ class CRM:
     def __init__(self, tenant_id, connection, credentials):
         self.tenant_id, self.connection = tenant_id, connection
         self.hub = connection.provider == 'hubspot'
+        self.prefix = 'crm/' + (settings.lead_sync_hubspot_api_version if self.hub
+                                else settings.lead_sync_zoho_api_version) + '/'
         if self.hub:
             self.http = HTTP(tenant_id, 'hubspot', 'https://api.hubapi.com/',
                              {'Authorization': 'Bearer ' + credentials['token']})
@@ -58,12 +61,12 @@ class CRM:
                     if not current or current.revision != connection.revision or current.status == 'disconnected':
                         raise SyncError('connection_changed')
                     current.credentials_enc = packet
-            self.http = HTTP(tenant_id, 'zoho', f'https://www.zohoapis.{suffix}/crm/v8/',
+            self.http = HTTP(tenant_id, 'zoho', f'https://www.zohoapis.{suffix}/' + self.prefix,
                              {'Authorization': 'Zoho-oauthtoken ' + credentials['access_token']})
-        self.root = 'crm/v3/objects/contacts' if self.hub else 'Leads'
+        self.root = self.prefix + 'objects/contacts' if self.hub else 'Leads'
 
     def inventory(self, file_id=None, previous=None):
-        data = self.http.request('GET', 'crm/v3/properties/contacts' if self.hub else 'settings/fields',
+        data = self.http.request('GET', self.prefix + 'properties/contacts' if self.hub else 'settings/fields',
                                  params=None if self.hub else {'module': 'Leads'})
         fields = []
         for f in data.get('results' if self.hub else 'fields', []):
@@ -146,7 +149,7 @@ class CRM:
                 data = self.http.request('GET', self.root + '/' + contact + '/associations/notes',
                                          params={'limit': 100, **({'after': after} if after else {})})
                 ids = [{'id': identity(r.get('id'))} for r in data.get('results', [])]
-                notes = self.http.request('POST', 'crm/v3/objects/notes/batch/read', payload={
+                notes = self.http.request('POST', self.prefix + 'objects/notes/batch/read', payload={
                     'properties': ['hs_note_body'], 'inputs': ids}).get('results', []) if ids else []
                 texts = [n.get('properties', {}).get('hs_note_body', '') for n in notes]
                 after = data.get('paging', {}).get('next', {}).get('after')
@@ -197,7 +200,7 @@ class CRM:
                     'hs_note_body': html.escape(summary).replace('\n', '<br>')},
                     'associations': [{'to': {'id': contact}, 'types': [
                         {'associationCategory': 'HUBSPOT_DEFINED', 'associationTypeId': 202}]}]}
-            path = 'crm/v3/objects/notes'
+            path = self.prefix + 'objects/notes'
         else:
             body = {'data': [{'Note_Title': 'MarketingAdda lead update', 'Note_Content': summary}]}
             path = self.root + '/' + contact + '/Notes'
