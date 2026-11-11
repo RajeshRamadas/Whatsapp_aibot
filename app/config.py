@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     inbox_vapid_subject: str | None = None
     inbox_vapid_public_key: str | None = None
     auth_cookie_secure: bool = True
+    totp_issuer: str = Field('MarketingAdda', min_length=1, max_length=64)
     environment: str = 'development'
     metrics_token: str | None = None
     sentry_dsn: str | None = None

@@ -6,7 +6,7 @@ from datetime import timedelta
 from argon2 import PasswordHasher
 from argon2.exceptions import VerificationError, VerifyMismatchError
 
-from ..db import now
+from ..db import UserSession, now
 
 SESSION_DAYS = 14
 CODE_MINUTES = 15
@@ -41,3 +41,11 @@ def session_expiry():
 
 def code_expiry():
     return now() + timedelta(minutes=CODE_MINUTES)
+
+
+def issue_session(db, user_id, ip=None, user_agent=None, *, mfa_verified=False):
+    raw, csrf = new_token(), new_token()
+    db.add(UserSession(id_hash=hash_token(raw), user_id=user_id, csrf_hash=hash_token(csrf),
+                       expires_at=session_expiry(), ip=ip, user_agent=(user_agent or '')[:512],
+                       mfa_verified=mfa_verified))
+    return raw, csrf

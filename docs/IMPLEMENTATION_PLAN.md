@@ -721,7 +721,7 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 | T9.10 | Payment links (implemented; live merchant verification pending) | PAY-1, RZ-4 | T5.1, T1.8 |
 | T9.11 | Leads to Google Sheets, Zoho and HubSpot (implemented; live provider-account checks pending) | LEAD-3, GSH-1 to GSH-3, CRM-1, CRM-2 | T5.2 |
 | T9.12 | Accuracy runs in the UI with history (implemented; live-model verification pending) | ANL-4 | T3.3 |
-| T9.13 | Multiple workspaces per user; 2FA | ACC-4, ACC-5 | T1.4 |
+| T9.13 | Multiple workspaces per user; 2FA (core storage/primitives implemented; endpoints/UI follow) | ACC-4, ACC-5 | T1.4 |
 | T9.14 | GreenPlot pilot (tools via the HTTP connector) | GP-1 to GP-5 | T10.3 |
 | T10.1 | Public API polish and docs | API-1, PAPI-1 to PAPI-6 | T1.5 |
 | T10.2 | Outgoing webhooks | API-2, OWH-1 to OWH-5 | T2.1 |

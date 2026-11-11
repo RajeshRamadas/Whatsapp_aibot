@@ -1125,3 +1125,15 @@ credentials are not reused. Live provider checks remain pending until account se
 Lead-sync API versions are pinned with `LEAD_SYNC_HUBSPOT_API_VERSION=v3`,
 `LEAD_SYNC_ZOHO_API_VERSION=v8` and `LEAD_SYNC_SHEETS_API_VERSION=v4`; review provider
 deprecations quarterly before updating the adapters.
+
+### Account two-factor authentication (T9.13)
+
+T9.13 adds account-wide authenticator support for verified owners/admins. Core storage uses
+versioned, user-bound encryption through `MASTER_KEY`; authenticator keys are never plaintext in
+the database. `TOTP_ISSUER` defaults to `MarketingAdda`. TOTP uses RFC 6238 SHA-1, six digits,
+30-second steps and one adjacent step of clock tolerance. A used time step cannot be replayed.
+Recovery codes are random 128-bit values, stored only as user-bound hashes and consumed atomically.
+Enrollment is bound to the current session and password, expires after ten minutes and permits
+five proof attempts. Login challenges expire after five minutes and permit five attempts.
+Security changes rotate the current session, revoke other sessions and invalidate pending logins.
+Public enrollment/sign-in endpoints and English/Hindi controls follow in the next stacked parts.
