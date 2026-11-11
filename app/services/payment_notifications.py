@@ -35,6 +35,23 @@ def stage(db, value):
     setattr(value, kind + '_message_id', message.id)
 
 
+def stage_failure(db, value):
+    if not value.conversation_id:
+        return
+    conversation = row(db, Conversation, value.tenant_id, value.conversation_id)
+    if conversation.status == 'closed':
+        return
+    key = f'payment:{value.id}:review'
+    if not db.scalar(select(Message.id).where(Message.conversation_id == conversation.id, Message.reply_key == key)):
+        db.add(Message(conversation_id=conversation.id,
+            role='agent' if conversation.channel == 'web' else 'assistant', direction='outbound',
+            content=notice(db.get(Tenant, value.tenant_id), view(db, value), 'review'), reply_key=key,
+            delivery_status='sent' if conversation.channel == 'web' else 'queued'))
+    conversation.handoff = True
+    if conversation.status == 'bot':
+        conversation.status = 'waiting'
+
+
 def process_one():
     with Session.begin() as db:
         message = db.scalar(select(Message).join(Conversation).where(Message.reply_key.startswith('payment:'), or_(
@@ -49,8 +66,7 @@ def process_one():
             message.delivery_status, message.error = 'unknown', 'delivery_unknown'
             return True
         value = db.scalar(select(Request).where(Request.tenant_id == tenant_id,
-            Request.conversation_id == conversation_id, or_(Request.link_message_id == message.id,
-                                                            Request.receipt_message_id == message.id)))
+            Request.conversation_id == conversation_id, Request.id == message.reply_key.split(':')[1]))
         tenant = db.get(Tenant, tenant_id)
         channel = whatsapp_channel(db, tenant_id)
         phone = channel.external_id if channel else tenant.whatsapp_phone_number_id
@@ -81,6 +97,8 @@ def process_one():
                     blocked = True
         if value and message.id == value.link_message_id and (
                 value.cancel_requested or value.state != 'created' or value.expires_at <= now()):
+            blocked = True
+        if value and message.reply_key.endswith(':review') and value.state != 'failed':
             blocked = True
         if blocked:
             message.delivery_status, message.error = 'failed', 'channel_permission_required'

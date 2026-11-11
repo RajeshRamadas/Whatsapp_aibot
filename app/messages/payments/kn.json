@@ -1,5 +1,6 @@
 {
   "queued": "{description} ಗಾಗಿ INR {amount} ಪಾವತಿ ಲಿಂಕ್ ಸಿದ್ಧವಾಗುತ್ತಿದೆ. ಲಿಂಕ್ ಇಲ್ಲಿಯೇ ಕಳುಹಿಸಲಾಗುವುದು.",
   "link": "{description} ಗಾಗಿ INR {amount} ಪಾವತಿಸಿ: {url}. ಮಾನ್ಯತೆ: {expires} ವರೆಗೆ.",
-  "paid": "ಪಾವತಿ ಸ್ವೀಕರಿಸಲಾಗಿದೆ: {description} ಗಾಗಿ INR {amount}. ಉಲ್ಲೇಖ: {reference}."
+  "paid": "ಪಾವತಿ ಸ್ವೀಕರಿಸಲಾಗಿದೆ: {description} ಗಾಗಿ INR {amount}. ಉಲ್ಲೇಖ: {reference}.",
+  "review": "{description} ಗಾಗಿ INR {amount} ಪಾವತಿ ವಿನಂತಿಯನ್ನು ನಮ್ಮ ತಂಡ ಪರಿಶೀಲಿಸಬೇಕಾಗಿದೆ. ದಯವಿಟ್ಟು ಅವರ ಮಾಹಿತಿಗಾಗಿ ಕಾಯಿರಿ."
 }

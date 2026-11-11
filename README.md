@@ -1030,7 +1030,8 @@ accidental duplicate dues. The bot will only send approved amounts. Payment does
 an appointment's booking state. The worker creates links with a stable unique reference, disables Razorpay SMS/email notifications
 and never accepts partial payments. After an uncertain POST, it reconciles by reference without
 posting again. A crash before the actual POST can therefore require merchant review; this avoids
-creating duplicate links. Five retries honor Retry-After and use backoff with jitter.
+creating duplicate links. Five retries honor Retry-After and use backoff with jitter. Exhausted retries create one
+localized customer follow-up and move bot-handled conversations to the team’s waiting queue.
 
 Register `/api/backend/payments/webhook/<connection-id>` in that merchant account for
 `payment_link.paid`, `payment_link.cancelled`, `payment_link.expired` and `payment_link.partially_paid`.

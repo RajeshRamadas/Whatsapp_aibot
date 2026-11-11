@@ -139,6 +139,8 @@ def process_one():
                 30 * 2 ** (value.attempts - 1) + random.uniform(0, 5)))
             if not retry and value.state != 'paid':
                 value.state = 'failed'
+                from .payment_notifications import stage_failure
+                stage_failure(db, value)
             connection.last_error = error.code
             if error.code == 'credentials_rejected' and connection.status != 'disconnected':
                 connection.status = 'needs_attention'

@@ -7,7 +7,7 @@ from datetime import timedelta
 import pytest
 from sqlalchemy import select
 
-from app.db import Session, engine, now, uid
+from app.db import Conversation, Message, Session, engine, now, uid
 from app.integrations.payment_links import PaymentError, Razorpay
 from app.models.payments import PaymentEvent as Event
 from app.models.payments import PaymentRequest as Request
@@ -154,4 +154,9 @@ def test_retry_after_stops_at_five_attempts(client, tenant, payment, monkeypatch
     with Session() as db:
         row = db.get(Request, value['id'])
         assert row.job_state == 'failed' and row.last_error == 'rate_limited'
+        conversation = db.get(Conversation, row.conversation_id)
+        assert conversation.status == 'waiting' and conversation.handoff
+        notices = db.scalars(select(Message).where(Message.conversation_id == conversation.id,
+            Message.reply_key == f'payment:{row.id}:review')).all()
+        assert len(notices) == 1 and '1250.50' in notices[0].content
     assert not worker.process_one() and not posted
