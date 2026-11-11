@@ -799,3 +799,8 @@ Tick each task in the PR that completes it.
 | T8.4 | SES Mumbai; notifications@marketingadda.com. Staging/DNS verification pending. | INTEGRATIONS EM-1 |
 | T8.5 | Hosting provider and region | REQUIREMENTS §10.6 |
 | T9.4b | OpenAI selected for the first adapter. User confirmed no dataset yet; keep transcription disabled until real-language evaluation is complete. | INTEGRATIONS STT-1 |
+
+T10.2 part a: encrypted, initially paused HTTPS destinations, subscription selection,
+transactional metadata outbox, tenant-isolated delivery logs and idempotent manual
+resend. Worker signing/retries, domain event producers and bilingual controls follow
+in stacked parts; T10.2 remains pending until the full stack is complete.
