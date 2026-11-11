@@ -2,6 +2,7 @@
 import asyncio
 import hashlib
 import hmac
+import ipaddress
 import json
 from urllib.parse import urlsplit
 from urllib.request import getproxies, proxy_bypass
@@ -33,6 +34,9 @@ class Transport:
                 value = web_fetch.canonical(url)
                 host = urlsplit(value).hostname
                 address = await asyncio.to_thread(web_fetch.resolve, host)
+                ip = ipaddress.ip_address(address)
+                if not web_fetch.public(address) or getattr(ip, 'is_site_local', False):
+                    raise DeliveryError('unsafe_destination', False)
                 proxy = None if proxy_bypass(host) else getproxies().get('https', getproxies().get('all'))
                 proxy = httpx.Proxy(proxy, ssl_context=httpx.create_ssl_context()
                     if urlsplit(proxy).scheme == 'https' else None) if proxy else None

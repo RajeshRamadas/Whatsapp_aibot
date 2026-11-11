@@ -1196,3 +1196,5 @@ confirmed outbound sends (including campaign recipients), handoff/closed changes
 lead capture/updates, confirmed bookings, verified payments and completed campaigns.
 Temporary booking holds, queued sends, internal notes and duplicate receipts do not
 emit completion events. Payloads contain record IDs/statuses, not customer content.
+See the [outgoing event guide](docs/OUTGOING_WEBHOOKS.md) for subscriptions,
+receiver verification code, retries, retention and administrative API examples.

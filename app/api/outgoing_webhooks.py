@@ -1,7 +1,9 @@
 """Owners/admins register destinations and inspect metadata-only delivery requests."""
+import ipaddress
 import secrets
 from datetime import datetime, timedelta
 from typing import Annotated, Literal
+from urllib.parse import urlsplit
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
@@ -32,7 +34,14 @@ class EndpointInput(BaseModel):
     def safe_url(cls, value):
         if '#' in value:
             raise ValueError('Use an HTTPS endpoint without a fragment')
-        return web_fetch.canonical(value)
+        value = web_fetch.canonical(value)
+        try:
+            ip = ipaddress.ip_address(urlsplit(value).hostname)
+        except ValueError:
+            return value
+        if getattr(ip, 'is_site_local', False):
+            raise ValueError('Use a public HTTPS address')
+        return value
 
     @field_validator('events')
     @classmethod
