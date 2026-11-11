@@ -134,6 +134,24 @@ def test_webhook_signature_mismatch_account_isolation_and_retention(client, tena
         assert row.state == 'failed' and row.last_error == 'payment_details_mismatch'
         row.created_at = now() - timedelta(days=15)
         assert db.get(Request, value['id']).state == 'created'
+    malformed = {**remote, 'reference_id': {}}
+    assert post_event(client, connection['id'], malformed, event_id='malformed').status_code == 422
     worker.expire_payloads()
     with Session() as db:
         assert db.scalar(select(Event).where(Event.tenant_id == tenant['tenant_id'])).payload_enc is None
+
+
+def test_retry_after_stops_at_five_attempts(client, tenant, payment, monkeypatch):
+    _, value, _, posted = payment
+    monkeypatch.setattr(Razorpay, 'find', lambda *a: (_ for _ in ()).throw(
+        PaymentError('rate_limited', retry=True, wait=120)))
+    for attempt in range(5):
+        assert worker.process_one()
+        with Session.begin() as db:
+            row = db.get(Request, value['id'])
+            assert row.attempts == attempt + 1 and row.next_attempt_at > now() + timedelta(seconds=115)
+            row.next_attempt_at = now()
+    with Session() as db:
+        row = db.get(Request, value['id'])
+        assert row.job_state == 'failed' and row.last_error == 'rate_limited'
+    assert not worker.process_one() and not posted

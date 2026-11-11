@@ -46,6 +46,13 @@ async def webhook(connection_id: UUID, request: Request,
             raise ValueError()
     except (TypeError, KeyError, ValueError, AttributeError):
         raise HTTPException(422, 'Invalid webhook payload') from None
+    for entity in (link, payment):
+        for key in ('id', 'reference_id', 'status', 'currency'):
+            if key in entity and (not isinstance(entity[key], str) or len(entity[key]) > 100):
+                raise HTTPException(422, 'Invalid webhook entity')
+        for key in ('amount', 'amount_paid'):
+            if key in entity and (type(entity[key]) is not int or not 0 <= entity[key] <= 2147483647):
+                raise HTTPException(422, 'Invalid webhook entity')
     digest = hashlib.sha256((event_id[:200].encode() if event_id else bytes(raw))).hexdigest()
     packet = encrypt(tenant_id, bytes(raw))
     # Persist only reconciliation fields outside the encrypted raw payload. No customer PII is copied here.

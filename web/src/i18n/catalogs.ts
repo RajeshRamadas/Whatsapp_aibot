@@ -1,3 +1,5 @@
+import payments from '@/messages/payments.en.json';
+import paymentsHi from '@/messages/payments.hi.json';
 import appointments from '@/messages/appointments.en.json';
 import appointmentsHi from '@/messages/appointments.hi.json';
 import signupHi from '@/messages/whatsapp-signup.hi.json';
@@ -35,8 +37,8 @@ import baseHi from '@/messages/hi.json';
 import faqHi from '@/messages/faq.hi.json';
 import errorsHi from '@/messages/errors.hi.json';
 
-export const english = { appointments, inbox, widget, botMessages, base, websites, campaigns, platform, invoices, analytics, billing, errors, templates, improvements, faq, media, leads, signup };
-export const hindi: typeof english = { ...english, appointments: appointmentsHi, websites: websitesHi, campaigns: campaignsHi, platform: platformHi, invoices: invoicesHi, analytics: analyticsHi, billing: billingHi, templates: templatesHi, improvements: improvementsHi, media: mediaHi, leads: leadsHi, signup: signupHi, inbox: inboxHi, widget: widgetHi, botMessages: botMessagesHi, base: baseHi, faq: faqHi, errors: errorsHi };
+export const english = { payments, appointments, inbox, widget, botMessages, base, websites, campaigns, platform, invoices, analytics, billing, errors, templates, improvements, faq, media, leads, signup };
+export const hindi: typeof english = { ...english, payments: paymentsHi, appointments: appointmentsHi, websites: websitesHi, campaigns: campaignsHi, platform: platformHi, invoices: invoicesHi, analytics: analyticsHi, billing: billingHi, templates: templatesHi, improvements: improvementsHi, media: mediaHi, leads: leadsHi, signup: signupHi, inbox: inboxHi, widget: widgetHi, botMessages: botMessagesHi, base: baseHi, faq: faqHi, errors: errorsHi };
 export type Locale = 'en' | 'hi';
 export type Catalog = typeof english;
 export const translatedNamespaces = Object.keys(english) as (keyof Catalog)[];

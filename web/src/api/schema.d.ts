@@ -108,6 +108,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/payments/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Catalog */
+        get: operations["catalog_api_v1_payments_catalog_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/google-calendar": {
         parameters: {
             query?: never;
@@ -2957,6 +2974,17 @@ export interface components {
             /** Receipt Template Id */
             receipt_template_id?: string | null;
         };
+        /** MerchantOption */
+        MerchantOption: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Mode */
+            mode: string;
+            /** Status */
+            status: string;
+        };
         /** MerchantView */
         MerchantView: {
             /** Id */
@@ -3111,6 +3139,13 @@ export interface components {
              * Format: date-time
              */
             expires_at: string;
+        };
+        /** PaymentCatalog */
+        PaymentCatalog: {
+            /** Timezone */
+            timezone: string;
+            /** Connections */
+            connections: components["schemas"]["MerchantOption"][];
         };
         /** PaymentView */
         PaymentView: {
@@ -4182,6 +4217,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaymentView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    catalog_api_v1_payments_catalog_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentCatalog"];
                 };
             };
             /** @description Validation Error */

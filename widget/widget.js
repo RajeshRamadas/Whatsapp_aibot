@@ -140,7 +140,20 @@
     log.replaceChildren();
     for (const entry of state.entries) {
       const row = element('article', '', 'message');
-      row.append(element('strong', entry.who), element('p', entry.text));
+      const content = element('p');
+      let offset = 0;
+      for (const match of entry.text.matchAll(/https:\/\/rzp\.io\/[a-z0-9/_-]+/gi)) {
+        content.append(document.createTextNode(entry.text.slice(offset, match.index)));
+        const link = element('a', match[0]);
+        link.href = match[0];
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.style.textDecoration = 'underline';
+        content.append(link);
+        offset = (match.index ?? 0) + match[0].length;
+      }
+      content.append(document.createTextNode(entry.text.slice(offset)));
+      row.append(element('strong', entry.who), content);
       const turn = entry.turn;
       if (turn?.sources.length) {
         const sources = element('details', '', 'sources');

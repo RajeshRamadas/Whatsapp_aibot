@@ -5,7 +5,10 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, SecretStr, StrictBool, StringConstraints
+from sqlalchemy import select
 
+from ..db import Session
+from ..models.payments import PaymentConnection
 from ..services import payments
 from ..services.appointments import AppointmentError
 from .appointments import Confirm
@@ -122,3 +125,23 @@ def approve(body: PaymentApproval, p: Principal = Depends(require_role('agent'))
 def change(identity: UUID, action: Literal['send', 'sync', 'cancel'], body: Confirm,
            p: Principal = Depends(require_role('agent'))):
     return run(p, payments.action, str(identity), action, actor=actor(p))
+
+
+class MerchantOption(BaseModel):
+    id: str
+    label: str
+    mode: str
+    status: str
+
+
+class PaymentCatalog(BaseModel):
+    timezone: str
+    connections: list[MerchantOption]
+
+
+@router.get('/catalog', response_model=PaymentCatalog)
+def catalog(p: Principal = Depends(require_role('agent'))):
+    with Session() as db:
+        rows = db.scalars(select(PaymentConnection).where(PaymentConnection.tenant_id == p.tenant.id,
+            PaymentConnection.status != 'disconnected').order_by(PaymentConnection.created_at)).all()
+        return {'timezone': p.tenant.timezone, 'connections': [payments.connection_view(c) for c in rows]}

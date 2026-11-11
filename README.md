@@ -1045,7 +1045,16 @@ Payment links and verified receipts use deterministic copy in the eight supporte
 WhatsApp links require an open 24-hour window. Outside it, receipts require an approved utility
 template of the matching language and the contact’s existing opt-in; otherwise delivery is visibly
 blocked for team follow-up. Uncertain WhatsApp sends are never automatically repeated.
-English/Hindi administration follows in the next stacked PR.
+Use **Customer payments** in the English/Hindi dashboard to connect/test the merchant,
+copy its webhook URL, approve dues, send links, refresh provider status and cancel unpaid links.
+Agents see payment and delivery status; only owners/admins manage merchant credentials.
+The browser suite uses fake merchant API responses and a test-only signed capture flow,
+including accessibility and 320 px checks. The test-only capture endpoint is never registered
+by the production ASGI app.
+
+[Create standard payment links](https://razorpay.com/docs/api/payments/payment-links/create-standard)
+and [payment-link webhooks](https://razorpay.com/docs/webhooks/payment-links) describe the provider contract.
+Standard Razorpay checkout offers the methods enabled on the merchant account, including UPI.
 
 `MASTER_KEY` is required for credential storage. `PAYMENT_LINK_REQUESTS_PER_MINUTE` defaults
 to 60 per workspace. Optional WhatsApp utility receipt templates must have three variables
