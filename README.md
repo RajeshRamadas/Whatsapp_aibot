@@ -283,8 +283,10 @@ case, recovers stale claims after 15 minutes, and stops if knowledge/retrieval c
 Recovery after a crash during a provider call may repeat that unfinished call. Provider failures
 are stored as safe error codes and count as non-passing cases. Scores use literal keyword/source
 checks and decline signals, not semantic grading. Compare like-for-like case sets/settings.
-English/Hindi dashboard controls follow in the next stacked part; live-model validation requires
-configured provider credentials.
+Open **Analytics → Accuracy runs** (`/dashboard/analytics/accuracy`) to manage/select questions,
+approve paid calls, inspect per-question results, cancel remaining questions and browse history in
+English or Hindi. A trend shows completed runs with the same saved test set on the current page.
+Live-model validation requires configured provider credentials.
 
 ## API
 

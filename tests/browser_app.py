@@ -32,7 +32,7 @@ class BrowserKnowledge:
         return 'Refunds accepted within 30 days. [1]'
 
     def run(self, *args):
-        return llm.ChatResult(self.complete(), [])
+        return llm.ChatResult(self.complete(*args[:3]), [])
 
 
 async def browser_ingestion(name, **kwargs):
@@ -313,4 +313,5 @@ async def payment_worker_fixture(request, call_next):
     return response
 
 # Import after the app and earlier fakes are configured; never loaded by production.
+from tests import browser_accuracy as browser_accuracy  # noqa: E402
 from tests import browser_lead_sync as browser_lead_sync  # noqa: E402

@@ -6,7 +6,7 @@ from datetime import timedelta
 from sqlalchemy import and_, func, or_, select
 
 from .. import evaluate, llm
-from ..config import settings
+from ..config import DEFAULT_EMBEDDING_MODELS, settings
 from ..db import Chunk, EvalCase, QAPair, Session, Source, Tenant, now
 from ..models.evaluations import EvalRun
 from .appointments import AppointmentError, row
@@ -22,6 +22,12 @@ FIELDS = ('id', 'label', 'state', 'total', 'completed', 'passed', 'errors', 'acc
 
 def digest(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, default=str).encode()).hexdigest()
+
+
+def runtime():
+    values = {k: getattr(settings, k) for k in RETRIEVAL}
+    values['embedding_model'] = settings.embedding_model or DEFAULT_EMBEDDING_MODELS[settings.embedding_provider]
+    return values
 
 
 def knowledge(db, tenant_id):
@@ -70,7 +76,7 @@ def create(tenant_id, values, actor=('system', None)):
                                                'expect_no_answer')} for c in cases]
         provider, model = llm.resolve_chat(tenant.chat_provider, tenant.chat_model)
         bot = {k: getattr(tenant, k) for k in BOT}
-        context = dict(provider=provider, model=model, settings={k: getattr(settings, k) for k in RETRIEVAL},
+        context = dict(provider=provider, model=model, settings=runtime(),
             knowledge=knowledge(db, tenant_id), case_set=digest(snapshots), bot_hash=digest(bot),
             bot=bot, request=request_hash, scoring='keyword-source-v2')
         run = EvalRun(tenant_id=tenant_id, request_key=values['request_key'], label=values['label'],
@@ -111,7 +117,7 @@ def process_one():
         tenant_id, identity = run.tenant_id, run.id
         tenant = db.get(Tenant, tenant_id)
         code = ('workspace_suspended' if tenant.suspended else 'configuration_changed' if (
-            run.context['settings'] != {k: getattr(settings, k) for k in RETRIEVAL}
+            run.context['settings'] != runtime()
             or run.context['knowledge'] != knowledge(db, tenant_id)) else None)
         if code:
             run.state, run.last_error, run.finished_at = 'failed', code, now()
@@ -129,7 +135,7 @@ def process_one():
         run = row(db, EvalRun, tenant_id, identity, lock=True)
         if run.state != 'running' or run.claimed_at != stamp or run.completed != index:
             return True  # A cancellation or a newer claim owns this run.
-        if (run.context['settings'] != {k: getattr(settings, k) for k in RETRIEVAL}
+        if (run.context['settings'] != runtime()
                 or run.context['knowledge'] != knowledge(db, tenant_id)):
             run.state, run.last_error, run.finished_at = 'failed', 'configuration_changed', now()
             return True

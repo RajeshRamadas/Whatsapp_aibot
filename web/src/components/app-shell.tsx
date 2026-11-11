@@ -44,7 +44,7 @@ export function AppShell({ workspaces, active, children, platformAdmin = false }
         {workspaces.map(workspace => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}
       </select>
       <nav aria-label={messages.navigation} className="mt-8 grid gap-2">
-        {pages.map(page => <Link key={page.key} href={page.path} aria-current={pathname === page.path ? 'page' : undefined}
+        {pages.map(page => <Link key={page.key} href={page.path} aria-current={(pathname === page.path || page.path !== '/dashboard' && pathname.startsWith(page.path + '/')) ? 'page' : undefined}
           className="rounded-lg px-3 py-3 hover:bg-border aria-[current=page]:bg-border">{messages[page.key]}</Link>)}
       </nav>
       {platformAdmin && <Link href="/platform" className="mt-4 block py-3 underline">{platformCopy.title}</Link>}
@@ -62,7 +62,7 @@ export function AppShell({ workspaces, active, children, platformAdmin = false }
       {platformAdmin && <Link href="/platform" className="block p-4 underline md:hidden">{platformCopy.title}</Link>}
     </div>
     <nav aria-label={messages.navigation} className="fixed inset-x-0 bottom-0 z-10 flex gap-1 overflow-x-auto border-t border-border bg-surface p-2 md:hidden">
-      {pages.map(page => <Link key={page.key} href={page.path} aria-current={pathname === page.path ? 'page' : undefined}
+      {pages.map(page => <Link key={page.key} href={page.path} aria-current={(pathname === page.path || page.path !== '/dashboard' && pathname.startsWith(page.path + '/')) ? 'page' : undefined}
         className="flex min-h-11 shrink-0 items-center rounded-lg px-3 text-sm aria-[current=page]:bg-border">{messages[page.key]}</Link>)}
     </nav>
   </div>;

@@ -17,6 +17,8 @@ CASE = {"question": "What is the refund period?", "expected_keywords": ["30 days
 
 @pytest.fixture
 def accuracy(client, tenant, monkeypatch):
+    monkeypatch.setattr(settings, "embedding_provider", "openai")
+    monkeypatch.setattr(settings, "embedding_model", None)
     case = client.post(BASE, headers=tenant["headers"], json={"cases": [CASE]}).json()[0]
     calls = []
 
@@ -52,6 +54,7 @@ def test_queued_snapshot_survives_case_edits_and_saves_history(client, tenant, a
     assert detail["state"] == "complete" and detail["accuracy"] == 1 and detail["completed"] == 1
     assert detail["cases"][0]["expected_keywords"] == ["30 days"]
     assert detail["results"][0]["passed"] and detail["context"]["case_set"]
+    assert detail["context"]["settings"]["embedding_model"] == "text-embedding-3-small"
     assert "bot" not in detail["context"] and "request" not in detail["context"]
     assert client.delete(BASE + "/" + case["id"], headers=tenant["headers"]).status_code == 204
     history = client.get(BASE + "/runs", headers=tenant["headers"]).json()
