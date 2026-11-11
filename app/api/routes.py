@@ -37,6 +37,7 @@ from . import (
     platform,
     push,
     qa,
+    spreadsheets,
     templates,
     tenants,
     usage,
@@ -50,7 +51,8 @@ from .shared import UPLOADS as UPLOADS
 from .shared import origins as origins
 
 router = APIRouter()
-for module in (http_actions, outgoing_webhooks, mfa, lead_sync, payment_webhooks, payments, google_calendar,
+for module in (spreadsheets, http_actions, outgoing_webhooks, mfa, lead_sync, payment_webhooks, payments,
+               google_calendar,
                appointments, bot_messages, improvements,
                auth, audit, api_keys,
     workspaces, tenants, billing, channels,

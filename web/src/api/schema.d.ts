@@ -4,6 +4,91 @@
  */
 
 export interface paths {
+    "/api/v1/tables": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Catalog */
+        get: operations["catalog_api_v1_tables_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tables/{identity}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Enable */
+        patch: operations["enable_api_v1_tables__identity__patch"];
+        trace?: never;
+    };
+    "/api/v1/tables/{identity}/query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Query */
+        post: operations["query_api_v1_tables__identity__query_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tables/{identity}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Preview */
+        get: operations["preview_api_v1_tables__identity__preview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tables/imports/{identity}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reimport */
+        post: operations["reimport_api_v1_tables_imports__identity__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/http-actions": {
         parameters: {
             query?: never;
@@ -3278,6 +3363,13 @@ export interface components {
             /** Staff */
             staff: components["schemas"]["StaffView"][];
         };
+        /** CatalogView */
+        CatalogView: {
+            /** Tables */
+            tables: components["schemas"]["TableView"][];
+            /** Sources */
+            sources: components["schemas"]["SheetSourceView"][];
+        };
         /** ChannelUpdate */
         ChannelUpdate: {
             /** Access Token */
@@ -3301,6 +3393,17 @@ export interface components {
             email: string;
             /** Code */
             code: string;
+        };
+        /** ColumnView */
+        ColumnView: {
+            /** Name */
+            name: string;
+            /** Label */
+            label: string;
+            /** Type */
+            type: string;
+            /** Currency */
+            currency?: string | null;
         };
         /** Confirm */
         Confirm: {
@@ -4200,6 +4303,23 @@ export interface components {
              */
             month: string;
         };
+        /** QueryInput */
+        QueryInput: {
+            /** Sql */
+            sql: string;
+        };
+        /** QueryView */
+        QueryView: {
+            /** Columns */
+            columns: string[];
+            /** Rows */
+            rows: unknown[][];
+            /** Truncated */
+            truncated: boolean;
+            /** Untrusted */
+            untrusted: boolean;
+            source: components["schemas"]["TableCitation"];
+        };
         /** QueuedMedia */
         QueuedMedia: {
             /** Status */
@@ -4582,6 +4702,17 @@ export interface components {
             /** Id */
             id: string;
         };
+        /** SheetSourceView */
+        SheetSourceView: {
+            /** Id */
+            id: string;
+            /** Filename */
+            filename: string;
+            /** Status */
+            status: string;
+            /** Error */
+            error: string | null;
+        };
         /** Signup */
         Signup: {
             /**
@@ -4855,6 +4986,37 @@ export interface components {
         SyncSheet: {
             /** Title */
             title: string;
+        };
+        /** TableCitation */
+        TableCitation: {
+            /** Id */
+            id: string;
+            /** Filename */
+            filename: string;
+            /** Heading */
+            heading: string;
+        };
+        /** TableEnable */
+        TableEnable: {
+            /** Enabled */
+            enabled: boolean;
+        };
+        /** TableView */
+        TableView: {
+            /** Id */
+            id: string;
+            /** Source Id */
+            source_id: string;
+            /** Title */
+            title: string;
+            /** Table Name */
+            table_name: string;
+            /** Columns */
+            columns: components["schemas"]["ColumnView"][];
+            /** Row Count */
+            row_count: number;
+            /** Enabled */
+            enabled: boolean;
         };
         /** TemplateInput */
         TemplateInput: {
@@ -5165,6 +5327,182 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    catalog_api_v1_tables_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    enable_api_v1_tables__identity__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TableEnable"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TableView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    query_api_v1_tables__identity__query_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QueryInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueryView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_api_v1_tables__identity__preview_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueryView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reimport_api_v1_tables_imports__identity__post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SheetSourceView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     listing_api_v1_http_actions_get: {
         parameters: {
             query?: never;

@@ -1225,3 +1225,15 @@ XLSX formulas/error cells must be replaced with values. Imports are bounded to
 Source deletion removes data transactionally; an hourly worker sweep clears orphan
 tables and deleted-tenant schemas/roles. Table queries and controls follow in the
 remaining T10.4 stack.
+
+Owners/admins can inspect `/api/v1/tables`, preview a table at `/{id}/preview`,
+PATCH `/{id}` to enable/pause, and POST `/{id}/query` with a `sql` SELECT.
+POST `/api/v1/tables/imports/{source_id}` reprocesses an older spreadsheet through
+the existing background importer; the source must be ready or failed. This pauses
+its table access and new tables need review. Queries allow one owned table, basic
+filters/aggregates/grouping/sorting, limited casts and scalar functions. Cross-schema
+reads, joins, subqueries, writes, system functions and locks are rejected. Execution
+also uses the isolated SELECT-only role, a read-only transaction,
+`SPREADSHEET_QUERY_TIMEOUT_MS` and `SPREADSHEET_QUERY_ROW_LIMIT`. Results are bounded
+to 32 KB and report truncation; aggregates run across the full table. Query logs
+contain only status/count/duration metadata, without SQL or cell values.

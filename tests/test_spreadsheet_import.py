@@ -124,3 +124,23 @@ def test_row_limit_is_bounded(tmp_path, monkeypatch):
     path.write_text('A\n1\n2\n')
     with pytest.raises(ValueError, match='limit'):
         parse.parse(path)
+
+
+def test_mixed_currencies_stay_text_and_consistent_currency_is_labelled(tmp_path):
+    path = tmp_path / 'data.csv'
+    path.write_text('Price\n₹100\n$200\n')
+    assert parse.parse(path)[0].columns[0]['type'] == 'text'
+    path.write_text('Price\n₹100\n₹200\n')
+    data = parse.parse(path)[0]
+    assert data.columns[0]['currency'] == '₹' and data.rows == [[Decimal('100')], [Decimal('200')]]
+
+
+def test_workbook_currency_format_is_preserved_as_a_unit(tmp_path):
+    book = Workbook()
+    book.active.append(['Price'])
+    book.active.append([3500000])
+    book.active['A2'].number_format = '₹#,##0.00'
+    path = tmp_path / 'prices.xlsx'
+    book.save(path)
+    data = parse.parse(path)[0]
+    assert data.columns[0]['currency'] == '₹' and data.rows == [[Decimal('3500000')]]

@@ -53,7 +53,11 @@ def boolean(value):
 def convert(values):
     if not any(v is not None for v in values):
         return 'text', values
+    currencies = {str(v).strip()[0] for v in values if v is not None and str(v).strip()
+                  and str(v).strip()[0] in '₹$€£'}
     for kind, parser in [('boolean', boolean), ('numeric', number), ('date', iso_date)]:
+        if kind == 'numeric' and len(currencies) > 1:
+            continue
         try:
             return kind, [None if v is None else parser(v) for v in values]
         except (ValueError, TypeError, InvalidOperation):
@@ -89,6 +93,10 @@ def sheet(title, records, budget):
     for i, column in enumerate(columns):
         kind, values = convert([row[i] for row in rows]) if rows else ('text', [])
         column['type'] = kind
+        if kind == 'numeric':
+            symbols = {str(row[i]).strip()[0] for row in rows if row[i] is not None and str(row[i]).strip()
+                       and str(row[i]).strip()[0] in '₹$€£'}
+            column['currency'] = next(iter(symbols), None)
         for row, value in zip(rows, values, strict=True):
             row[i] = value
     return Sheet(title[:200], columns, rows)
@@ -116,7 +124,16 @@ def parse(path):
                             if any(c.data_type in ('f', 'e') for c in cells):
                                 raise ValueError('Replace workbook formulas and error cells '
                                                  'with saved values before upload.')
-                            yield [c.value for c in cells]
+                            values = []
+                            for cell in cells:
+                                value = cell.value
+                                units = re.findall(r'\[\$([₹$€£])(?:-[^]]*)?\]|(?<![\[a-zA-Z])([₹$€£])',
+                                                   cell.number_format or '')
+                                unit = next((a or b for a, b in units), None)
+                                if unit and type(value) in (int, float, Decimal):
+                                    value = unit + str(value)
+                                values.append(value)
+                            yield values
                     value = sheet(tab.title, iter(records()), budget)
                     if value:
                         result.append(value)
