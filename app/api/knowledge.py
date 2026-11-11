@@ -76,6 +76,8 @@ def delete_source(source_id: str, principal: Principal = Depends(require_role('a
         if not src:
             raise HTTPException(404, 'Source not found')
         path = src.file_path
+        from ..spreadsheets.store import remove
+        remove(db, tenant.id, source_id)
         db.delete(src)  # its chunks go with it (ON DELETE CASCADE)
         audit(db, tenant.id, 'knowledge.deleted', source_id,
               actor_user_id=principal.user.id if principal.user else None,

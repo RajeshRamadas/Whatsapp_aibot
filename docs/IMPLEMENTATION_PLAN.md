@@ -820,3 +820,5 @@ SES delivery are configured/tested by each workspace before production use.
 
 The retention sweep uses a partial expiry index and skips payloads already cleared,
 so the five-second worker sweep does not rewrite the full 30-day call history.
+
+T10.4a: typed CSV/XLSX imports, isolated tenant schemas and SELECT-only roles, atomic publication, source data deletion and orphan cleanup. Limits and database permissions documented; query service and controls follow in stacked parts.

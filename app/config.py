@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     inbox_vapid_subject: str | None = None
     inbox_vapid_public_key: str | None = None
     public_api_default_requests_per_minute: int = Field(60, ge=1, le=6000)
+    spreadsheet_max_rows: int = Field(20000, ge=1, le=100000)
+    spreadsheet_query_timeout_ms: int = Field(1500, ge=100, le=5000)
+    spreadsheet_query_row_limit: int = Field(100, ge=1, le=200)
     http_action_limit: int = Field(20, ge=1, le=50)
     http_action_requests_per_minute: int = Field(60, ge=1, le=6000)
     outgoing_webhook_max_endpoints: int = Field(10, ge=1, le=50)

@@ -107,6 +107,8 @@ def delete_source(identity: UUID, p: PublicPrincipal = Depends(require('knowledg
         from ..db import Tenant
         db.get(Tenant, p.tenant.id, with_for_update=True)
         row = owned(db, Source, p.tenant.id, identity, lock=True)
+        from ..spreadsheets.store import remove
+        remove(db, p.tenant.id, str(identity))
         if row.file_path.startswith('storage:'):
             queue(db, p, uid(), 'source.delete', str(identity), {'storage_key': row.file_path[8:]})
         db.delete(row)
