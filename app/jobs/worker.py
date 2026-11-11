@@ -394,6 +394,8 @@ async def dispatch_public_operations(ctx):
 
 @observed_job
 async def dispatch_outgoing_webhooks(ctx):
+    from ..services.http_actions import maintain as maintain_http_actions
+    await asyncio.to_thread(maintain_http_actions)
     from ..services import webhook_delivery
     await asyncio.to_thread(webhook_delivery.maintain)
     for _ in range(10):

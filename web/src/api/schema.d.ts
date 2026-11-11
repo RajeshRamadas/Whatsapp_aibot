@@ -41,6 +41,40 @@ export interface paths {
         patch: operations["enable_api_v1_http_actions__identity__patch"];
         trace?: never;
     };
+    "/api/v1/http-actions/{identity}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Test Action */
+        post: operations["test_action_api_v1_http_actions__identity__test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/http-actions/{identity}/calls": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Call History */
+        get: operations["call_history_api_v1_http_actions__identity__calls_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/webhook-endpoints": {
         parameters: {
             query?: never;
@@ -2856,6 +2890,25 @@ export interface components {
             /** Enabled */
             enabled: boolean;
         };
+        /** ActionSample */
+        ActionSample: {
+            /** Values */
+            values: {
+                [key: string]: unknown;
+            };
+            /**
+             * Request Key
+             * Format: uuid
+             */
+            request_key: string;
+            /** Sample Phone */
+            sample_phone?: string | null;
+            /**
+             * Confirm Changes
+             * @default false
+             */
+            confirm_changes: boolean;
+        };
         /** ActionView */
         ActionView: {
             /** Id */
@@ -3140,6 +3193,36 @@ export interface components {
             configured: boolean;
             /** Connections */
             connections: components["schemas"]["CalendarAccount"][];
+        };
+        /** CallView */
+        CallView: {
+            /** Id */
+            id: string;
+            /** Reference */
+            reference: string;
+            /** State */
+            state: string;
+            /** Error */
+            error?: string | null;
+            /** Http Status */
+            http_status?: number | null;
+            /** Duration Ms */
+            duration_ms?: number | null;
+            /** Created At */
+            created_at?: string | null;
+            /**
+             * Untrusted
+             * @default true
+             */
+            untrusted: boolean;
+            /** Data */
+            data?: {
+                [key: string]: unknown;
+            } | null;
+            /** Raw */
+            raw?: unknown | null;
+            /** Identity */
+            identity?: string | null;
         };
         /** CampaignInput */
         CampaignInput: {
@@ -5245,6 +5328,78 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ActionView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    test_action_api_v1_http_actions__identity__test_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActionSample"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    call_history_api_v1_http_actions__identity__calls_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallView"][];
                 };
             };
             /** @description Validation Error */
