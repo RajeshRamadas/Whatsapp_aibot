@@ -16,7 +16,8 @@
     "need": "Need",
     "budget": "Budget",
     "location": "Location",
-    "preferred_time": "Preferred time"
+    "preferred_time": "Preferred time",
+    "email": "Email"
   },
   "list": "List",
   "board": "Board",

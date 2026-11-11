@@ -23,6 +23,7 @@ from . import (
     invoices,
     jobs,
     knowledge,
+    lead_sync,
     leads,
     media,
     meta_signup,
@@ -46,7 +47,7 @@ from .shared import UPLOADS as UPLOADS
 from .shared import origins as origins
 
 router = APIRouter()
-for module in (payment_webhooks, payments, google_calendar, appointments, bot_messages, improvements,
+for module in (lead_sync, payment_webhooks, payments, google_calendar, appointments, bot_messages, improvements,
                auth, audit, api_keys,
     workspaces, tenants, billing, channels,
                knowledge,

@@ -357,6 +357,7 @@ class InboxPushSubscription(Base):
 
 class Lead(Base):
     __tablename__ = 'leads'
+    sync_version: Mapped[int] = mapped_column(Integer, default=0)
     conversation_id: Mapped[str] = mapped_column(ForeignKey('conversations.id', ondelete='CASCADE'), primary_key=True)
     tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'), index=True)
     fields: Mapped[dict] = mapped_column(JSONB, default=dict)
@@ -636,4 +637,5 @@ class Invoice(Base):
 # Register domain tables without expanding this shared module further.
 from .models import appointments as _appointments  # noqa: E402, F401
 from .models import google_calendar as _google_calendar  # noqa: E402, F401
+from .models import lead_sync as _lead_sync  # noqa: E402,F401
 from .models import payments as _payments  # noqa: E402,F401

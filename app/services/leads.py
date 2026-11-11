@@ -21,9 +21,14 @@ def save_lead(db, conversation, fields: dict) -> bool:
             Lead.conversation_id == conversation.id, Lead.tenant_id == conversation.tenant_id,
         ).with_for_update())
         if lead is not None:
-            lead.fields = {**lead.fields, **fields}
+            merged = {**lead.fields, **fields}
+            if merged == lead.fields:
+                return False
+            lead.fields = merged
     if created is not None:
         record(db, 'first_lead', conversation.tenant_id)
+    from .lead_sync import changed
+    changed(db, conversation.tenant_id, conversation.id)
     return created is not None
 
 

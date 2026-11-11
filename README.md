@@ -1061,3 +1061,17 @@ Standard Razorpay checkout offers the methods enabled on the merchant account, i
 to 60 per workspace. Optional WhatsApp utility receipt templates must have three variables
 (description, amount, payment reference). Provider API is Razorpay Payment Links v1.
 Live test-mode payment verification is pending; the environment has no merchant keys configured.
+
+### Lead sync (T9.11)
+
+The lead-sync foundation adds explicit sharing approval, encrypted HubSpot/Zoho credentials
+and a transactional outbox for each new or updated lead version. Captures and team updates
+remain local even when a connector is unavailable. Optional email capture supports CRM
+identity matching. Disabling/disconnecting stops future sharing. Existing leads are exported
+only through an explicitly confirmed backfill; retries keep the same immutable snapshot.
+Google OAuth, provider adapters, worker delivery and English/Hindi controls follow in stacked PRs.
+
+`LEAD_SYNC_GOOGLE_CLIENT_ID`, `LEAD_SYNC_GOOGLE_CLIENT_SECRET` and
+`LEAD_SYNC_GOOGLE_REDIRECT_URI` configure the separate Google lead-export consent flow.
+`LEAD_SYNC_REQUESTS_PER_MINUTE` defaults to 60 per provider/workspace. Merchant and Calendar
+credentials are not reused. Live provider checks remain pending until account settings exist.
