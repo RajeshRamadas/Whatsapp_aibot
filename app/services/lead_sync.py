@@ -82,7 +82,9 @@ def configure(tenant_id, identity, values, actor=('system', None)):
                     raise AppointmentError('Choose fields returned by this connection’s test', 422)
                 if any(f.get('required') and k not in mapping.values() for k, f in fields.items()):
                     raise AppointmentError('Map every required CRM field', 422)
-                if not any(source in mapping for source in ('phone', 'email')):
+                targets = {'phone': ('phone', 'mobilephone'), 'email': ('email',)} if c.provider == 'hubspot' else {
+                    'phone': ('Phone', 'Mobile'), 'email': ('Email',)}
+                if not any(mapping.get(source) in names for source, names in targets.items()):
                     raise AppointmentError('Map phone or email to match CRM records', 422)
             else:
                 file = next((f for f in c.catalog.get('files', []) if f['id'] == values['spreadsheet_id']), None)
