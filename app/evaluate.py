@@ -27,7 +27,7 @@ def score(case: EvalCase, result: rag.Answer) -> dict:
     cited = [s['filename'] for s in result.sources]
     answer = result.text.lower()
     if case.expect_no_answer:
-        passed = not result.sources or declined(result.text)
+        passed = result.uncertain or declined(result.text)
         return {'passed': passed, 'checks': {'declined': passed}}
     checks = {}
     if case.expected_source:
@@ -46,10 +46,14 @@ def run(tenant: Tenant, cases: list[EvalCase]) -> dict:
             result = rag.answer(tenant, None, case.question)
             entry |= score(case, result)
             entry |= {'answer': result.text, 'sources': [s['filename'] for s in result.sources]}
-        except Exception as e:
+        except Exception:
             log.exception('Eval case %s failed', case.id)
-            entry |= {'passed': False, 'error': str(e)[:300]}
+            entry |= {'passed': False, 'error': 'provider_failed'}
         results.append(entry)
+    return summarize(results)
+
+
+def summarize(results):
     with_source = [r for r in results if 'source_found' in r.get('checks', {})]
     passed = sum(r['passed'] for r in results)
     return {

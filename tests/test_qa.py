@@ -17,7 +17,10 @@ def test_faq_wins_over_conflicting_document_in_eval(client, tenant, chats, monke
     monkeypatch.setattr(chats['openai'], 'complete', grounded_answer)
     cases = [{'question': PAIR['question'], 'expected_keywords': ['14 days'], 'expected_source': 'FAQ'}]
     assert client.post('/api/v1/evals', headers=headers, json={'cases': cases}).status_code == 201
-    result = client.post('/api/v1/evals/run', headers=headers).json()
+    from app.services.evaluation_runs import process_one
+    queued = client.post('/api/v1/evals/run', headers=headers).json()
+    assert process_one()
+    result = client.get('/api/v1/evals/runs/' + queued['id'], headers=headers).json()
     assert result['results'][0]['passed']
     assert result['source_hit_rate'] == 1.0
 

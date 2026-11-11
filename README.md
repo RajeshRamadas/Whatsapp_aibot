@@ -258,16 +258,33 @@ curl -X POST http://localhost:8000/api/v1/evals -H 'X-Admin-Key: YOUR_ADMIN_KEY'
   ]}'
 
 curl -X POST http://localhost:8000/api/v1/evals/run -H 'X-Admin-Key: YOUR_ADMIN_KEY'
-# {"total": 2, "passed": 2, "accuracy": 1.0, "source_hit_rate": 1.0, "results": [...]}
+# HTTP 202: {"id": "RUN_ID", "state": "queued", "total": 2, ...}
+# Poll /api/v1/evals/runs/RUN_ID for progress and per-question results.
 ```
 
 Each case can check three things:
 
 - `expected_source`: that file must be among the cited sources.
 - `expected_keywords`: every keyword must appear in the answer (case-insensitive).
-- `expect_no_answer`: the documents don't cover the question, so the bot must find no sources or say it doesn't know.
+- `expect_no_answer`: the documents don't cover the question, so the bot must explicitly decline or signal uncertainty. An uncited invented answer does not pass.
 
-Scoring is plain text matching, with no extra model call. A good set has 30–50 real customer questions, including a few the bot should decline. Re-run it after uploading documents or changing provider, model or retrieval settings, and compare `accuracy`. Each question is a real, billed provider call, and a large set can take a few minutes.
+Scoring is plain text matching, with no extra model call. A good set has 30–50 real customer questions, including a few the bot should decline. Re-run it after uploading documents or changing provider, model or retrieval settings, and compare `accuracy`. Each question may make billed embedding/model calls, and a large set can take a few minutes.
+
+T9.12 stores immutable question/bot snapshots, model and retrieval settings, knowledge and case-set
+fingerprints, timestamps, scores and per-question answers. `POST /evals/run` now returns HTTP 202
+with a run ID instead of a synchronous report; clients must poll `GET /evals/runs/{id}`.
+`GET /evals/runs?limit=30&offset=0` paginates history; `POST /evals/runs/{id}/cancel` with
+`{"confirm":true}` stops further questions (an in-flight call can still be billed). Owners/admins
+manage questions and start/cancel runs; workspace readers can inspect cases/history. Only one run
+is active per workspace. Optional UUID `request_key` makes a start request idempotent.
+`PUT /evals/{case_id}` edits a test; older results retain their original expectations.
+`EVAL_MAX_CASES_PER_RUN` defaults to 100 (maximum 200). The arq worker checkpoints each completed
+case, recovers stale claims after 15 minutes, and stops if knowledge/retrieval changes mid-run.
+Recovery after a crash during a provider call may repeat that unfinished call. Provider failures
+are stored as safe error codes and count as non-passing cases. Scores use literal keyword/source
+checks and decline signals, not semantic grading. Compare like-for-like case sets/settings.
+English/Hindi dashboard controls follow in the next stacked part; live-model validation requires
+configured provider credentials.
 
 ## API
 

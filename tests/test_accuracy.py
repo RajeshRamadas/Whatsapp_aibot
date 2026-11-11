@@ -63,7 +63,12 @@ def test_eval_run_scores_cases(client, tenant, chats, monkeypatch):
     ]
     r = client.post('/api/v1/evals', headers=tenant['headers'], json={'cases': cases})
     assert r.status_code == 201 and len(r.json()) == 3
-    report = client.post('/api/v1/evals/run', headers=tenant['headers']).json()
+    from app.services.evaluation_runs import process_one
+    queued = client.post('/api/v1/evals/run', headers=tenant['headers'])
+    assert queued.status_code == 202
+    while process_one():
+        pass
+    report = client.get('/api/v1/evals/runs/' + queued.json()['id'], headers=tenant['headers']).json()
     assert [x['passed'] for x in report['results']] == [True, False, True]
     assert report['results'][1]['missing_keywords'] == ['60 days']
     assert report['accuracy'] == 0.667 and report['source_hit_rate'] == 1.0
