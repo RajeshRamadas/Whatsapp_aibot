@@ -2444,6 +2444,10 @@ export interface components {
             expires_at: string;
             /** State */
             state: string;
+            /** Calendar State */
+            calendar_state: string;
+            /** Calendar Error */
+            calendar_error: string | null;
             /** Reminder State */
             reminder_state: string;
             /** Reminder Error */

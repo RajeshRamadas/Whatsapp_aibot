@@ -62,7 +62,7 @@ def command(tenant, conversation_id, question):
     except appointments.AppointmentError:
         return COPY[language]['error']
     publish_sync(tenant.id, 'appointments.updated', {})
-    return notice(tenant, value, 'cancelled' if action == 'cancel' else 'confirmed')
+    return notice(tenant, value, 'cancelled' if action == 'cancel' else value['state'])
 
 
 def tools(tenant, conversation_id, question, language=None):
@@ -102,7 +102,7 @@ def tools(tenant, conversation_id, question, language=None):
         rows = appointments.bookings(tenant.id, now(), now() + timedelta(days=60), conversation_id)
         return [{'id': r['id'], 'reference': reference(r['id']), 'service': r['service'], 'staff': r['staff'],
                  'starts_at': r['starts_at'].isoformat(), 'state': r['state']}
-                for r in rows if r['state'] in ('held', 'confirmed')]
+                for r in rows if r['state'] in ('held', 'confirming', 'confirmed')]
 
     identity = {'type': 'string', 'minLength': 36, 'maxLength': 36}
     return [llm.Tool('check_slots', 'List services/staff and currently free appointment slots.', {

@@ -985,7 +985,7 @@ customer language. Staff can choose each customer's language on the hold form.
 Screenshot: [Appointments](docs/screenshots/t9-9-appointments.png).
 Google Calendar connection is the separately ordered T9.9d task. No new credentials.
 
-### Google Calendar (T9.9d, connection foundation)
+### Google Calendar (T9.9d)
 
 Optional Google OAuth uses Calendar v3 with calendar-list read, event write and event free/busy scopes.
 Create a Google Cloud OAuth web app, enable Calendar API, and register
@@ -999,4 +999,11 @@ No Google app exists yet: live OAuth verification remains pending. Availability 
 service duration and local reservations. Up to five calendar bindings may target a service,
 a staff member or their combination. Matching calendars all constrain availability.
 Linked resources generate slots up to 60 days ahead; unlinked resources retain manual slots.
-Customer-data sharing needs explicit administrator consent when binding. Event synchronization follows in stacked PRs.
+Customer-data sharing needs explicit administrator consent when binding. Confirming a linked booking queues a fresh free/busy check and deterministic Google events.
+The customer receives a pending notice first, then confirmation after all calendars accept.
+Rescheduling creates replacement events before cancelling the original booking and removing old events.
+Cancellation and failed partial creates queue cleanup; retries reuse event IDs. External edits with
+changed ownership are preserved and surfaced for administrator attention. Provider conflicts or
+exhausted retries appear in platform failed jobs. Token refresh failures email workspace admins.
+WhatsApp completion notices require an open 24-hour customer-service window and channel consent;
+uncertain sends are never automatically repeated. The admin connection panel follows in a stacked PR.

@@ -1,10 +1,56 @@
 {
-  "Verify your email": {"intro": "Use this code to verify your email. It expires in 15 minutes.", "path": "/verify-email", "action": "Verify email", "minutes": 15},
-  "Reset your password": {"intro": "Use this code to reset your password. It expires in 15 minutes. If you did not request this, you can ignore this email.", "path": "/reset-password", "action": "Reset password", "minutes": 15},
-  "Workspace invitation": {"intro": "You have been invited to a workspace. Paste this invitation token on the acceptance screen within 7 days.", "path": "/accept-invitation", "action": "Accept invitation", "minutes": 10080},
-  "New Inbox lead": {"intro": "A new lead is ready for your team to review.", "path": "/dashboard/leads", "action": "Review leads", "minutes": 1440},
-  "AI usage reached 80%": {"intro": "Your workspace has used at least 80% of its monthly AI messages.", "path": "/dashboard/billing", "action": "Review usage", "minutes": 1440},
-  "AI usage reached 100%": {"intro": "Your workspace has reached its monthly AI message allowance.", "path": "/dashboard/billing", "action": "Review usage", "minutes": 1440},
-  "Conversation needs attention": {"intro": "A conversation is waiting for a teammate.", "path": "/dashboard/inbox", "action": "Open inbox", "minutes": 1440},
-  "Your invoice is ready": {"intro": "Your invoice is available in your workspace billing page.", "path": "/dashboard/billing", "action": "Open billing", "minutes": 10080}
+  "Verify your email": {
+    "intro": "Use this code to verify your email. It expires in 15 minutes.",
+    "path": "/verify-email",
+    "action": "Verify email",
+    "minutes": 15
+  },
+  "Reset your password": {
+    "intro": "Use this code to reset your password. It expires in 15 minutes. If you did not request this, you can ignore this email.",
+    "path": "/reset-password",
+    "action": "Reset password",
+    "minutes": 15
+  },
+  "Workspace invitation": {
+    "intro": "You have been invited to a workspace. Paste this invitation token on the acceptance screen within 7 days.",
+    "path": "/accept-invitation",
+    "action": "Accept invitation",
+    "minutes": 10080
+  },
+  "New Inbox lead": {
+    "intro": "A new lead is ready for your team to review.",
+    "path": "/dashboard/leads",
+    "action": "Review leads",
+    "minutes": 1440
+  },
+  "AI usage reached 80%": {
+    "intro": "Your workspace has used at least 80% of its monthly AI messages.",
+    "path": "/dashboard/billing",
+    "action": "Review usage",
+    "minutes": 1440
+  },
+  "AI usage reached 100%": {
+    "intro": "Your workspace has reached its monthly AI message allowance.",
+    "path": "/dashboard/billing",
+    "action": "Review usage",
+    "minutes": 1440
+  },
+  "Conversation needs attention": {
+    "intro": "A conversation is waiting for a teammate.",
+    "path": "/dashboard/inbox",
+    "action": "Open inbox",
+    "minutes": 1440
+  },
+  "Your invoice is ready": {
+    "intro": "Your invoice is available in your workspace billing page.",
+    "path": "/dashboard/billing",
+    "action": "Open billing",
+    "minutes": 10080
+  },
+  "Google Calendar needs attention": {
+    "intro": "A calendar connection needs administrator attention.",
+    "path": "/dashboard/appointments",
+    "action": "Review calendar connection",
+    "minutes": 1440
+  }
 }

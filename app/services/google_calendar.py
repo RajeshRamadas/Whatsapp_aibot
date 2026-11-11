@@ -6,11 +6,11 @@ from datetime import timedelta
 
 from sqlalchemy import func, select
 
-from ..db import Membership, Session, Tenant, UserSession, now
+from ..db import Membership, Session, Tenant, User, UserSession, now
 from ..integrations.google_calendar import SCOPES, CalendarError, Client, authorization_url, configured
 from ..models.google_calendar import GoogleConnection as Connection
 from ..models.google_calendar import GoogleTask as Task
-from . import crypto
+from . import crypto, email
 from .appointments import AppointmentError, row
 from .audit import audit
 
@@ -105,7 +105,16 @@ def access(tenant_id, connection_id, revision=None):
         packet, expires, version = c.credentials_enc, c.token_expires_at, c.revision
     tokens = json.loads(crypto.decrypt(tenant_id, packet))
     if not expires or expires <= now() + timedelta(minutes=5):
-        fresh = Client(tenant_id).refresh(tokens['refresh_token'])
+        try:
+            fresh = Client(tenant_id).refresh(tokens['refresh_token'])
+        except CalendarError as exc:
+            if not exc.retry:
+                with Session.begin() as db:
+                    c = row(db, Connection, tenant_id, connection_id, lock=True)
+                    callbacks = attention(db, c, 'authorization_required') if c.revision == version else []
+                for callback in callbacks:
+                    callback()
+            raise
         tokens = validate_tokens(fresh, tokens)
         packet = crypto.encrypt(tenant_id, json.dumps(tokens))
         with Session.begin() as db:
@@ -170,3 +179,15 @@ def execute(tenant_id, identity, kind, revision):
     else:
         token = access(tenant_id, identity, revision)
     return {'calendars': provider.test(token), 'status': 'connected'}
+
+
+def attention(db, connection, code):
+    callbacks = []
+    if connection.status != 'needs_attention':
+        for user in db.scalars(select(User).join(Membership, Membership.user_id == User.id).where(
+                Membership.tenant_id == connection.tenant_id, Membership.role.in_(['owner', 'admin']),
+                User.email_verified_at.is_not(None))):
+            callbacks.append(email.sender.stage(db, user.email, 'Google Calendar needs attention',
+                'Reconnect the Google account from Appointments. Calendar-linked slots are paused until it recovers.'))
+    connection.status, connection.last_error = 'needs_attention', code
+    return callbacks

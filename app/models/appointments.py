@@ -2,6 +2,7 @@
 from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..db import Base, now, uid
@@ -46,6 +47,10 @@ class Slot(Base):
 
 class Booking(Base):
     __tablename__ = 'appointment_bookings'
+    calendar_targets: Mapped[list] = mapped_column(JSONB, default=list)
+    calendar_state: Mapped[str] = mapped_column(String(24), default='none')
+    calendar_version: Mapped[int] = mapped_column(Integer, default=0)
+    calendar_error: Mapped[str | None] = mapped_column(String(64))
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
     tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'), index=True)
     slot_id: Mapped[str] = mapped_column(ForeignKey('appointment_slots.id', ondelete='CASCADE'))
@@ -65,4 +70,4 @@ class Booking(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
     __table_args__ = (Index('uq_appointment_slot_reserved', 'slot_id', unique=True,
-                           postgresql_where=text("state IN ('held', 'confirmed')")),)
+                           postgresql_where=text("state IN ('held', 'confirming', 'confirmed')")),)

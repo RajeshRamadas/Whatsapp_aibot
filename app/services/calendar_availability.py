@@ -110,8 +110,9 @@ def overlap(db, tenant_id, slot, pairs, *, excluding=None):
     for booking, other in rows:
         if booking.id == excluding:
             continue
-        if other.staff_id == slot.staff_id or calendars.intersection(
-                b.calendar_id for b, c in targets(db, tenant_id, other.service_id, other.staff_id)):
+        linked = ({t['calendar_id'] for t in booking.calendar_targets} if booking.calendar_targets else
+                  {b.calendar_id for b, c in targets(db, tenant_id, other.service_id, other.staff_id)})
+        if other.staff_id == slot.staff_id or calendars.intersection(linked):
             return True
     return False
 

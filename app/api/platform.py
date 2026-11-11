@@ -23,6 +23,7 @@ from ..db import (
     WidgetTurn,
     now,
 )
+from ..models.google_calendar import GoogleTask
 from ..services.audit import audit
 from ..services.usage import month_start
 from .auth import _csrf, _session
@@ -143,6 +144,8 @@ def suspend(tenant_id: UUID, body: Suspension, user: User = Depends(platform_adm
 def failed_jobs(limit: int = Query(25, ge=1, le=100), offset: int = Query(0, ge=0)):
     # Terminal records survive Redis job-result expiry. Deliberately omit raw errors and payloads.
     failures = union_all(
+        select(GoogleTask.id, GoogleTask.tenant_id, literal('google_calendar').label('kind'),
+               GoogleTask.created_at.label('received_at')).where(GoogleTask.state == 'failed'),
         select(Source.id, Source.tenant_id, literal('ingestion').label('kind'),
                Source.created_at.label('received_at')).where(Source.status == 'failed'),
         select(InboundEvent.id, InboundEvent.tenant_id, literal('whatsapp'), InboundEvent.received_at)
