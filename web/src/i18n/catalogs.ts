@@ -1,3 +1,5 @@
+import actions from '@/messages/actions.en.json';
+import actionsHi from '@/messages/actions.hi.json';
 import webhooks from '@/messages/webhooks.en.json';
 import webhooksHi from '@/messages/webhooks.hi.json';
 import developer from '@/messages/developer.en.json';
@@ -47,8 +49,8 @@ import baseHi from '@/messages/hi.json';
 import faqHi from '@/messages/faq.hi.json';
 import errorsHi from '@/messages/errors.hi.json';
 
-export const english = { webhooks, developer, security, accuracy, leadSync, payments, appointments, inbox, widget, botMessages, base, websites, campaigns, platform, invoices, analytics, billing, errors, templates, improvements, faq, media, leads, signup };
-export const hindi: typeof english = { ...english, webhooks: webhooksHi, developer: developerHi, security: securityHi, accuracy: accuracyHi, leadSync: leadSyncHi, payments: paymentsHi, appointments: appointmentsHi, websites: websitesHi, campaigns: campaignsHi, platform: platformHi, invoices: invoicesHi, analytics: analyticsHi, billing: billingHi, templates: templatesHi, improvements: improvementsHi, media: mediaHi, leads: leadsHi, signup: signupHi, inbox: inboxHi, widget: widgetHi, botMessages: botMessagesHi, base: baseHi, faq: faqHi, errors: errorsHi };
+export const english = { actions, webhooks, developer, security, accuracy, leadSync, payments, appointments, inbox, widget, botMessages, base, websites, campaigns, platform, invoices, analytics, billing, errors, templates, improvements, faq, media, leads, signup };
+export const hindi: typeof english = { ...english, actions: actionsHi, webhooks: webhooksHi, developer: developerHi, security: securityHi, accuracy: accuracyHi, leadSync: leadSyncHi, payments: paymentsHi, appointments: appointmentsHi, websites: websitesHi, campaigns: campaignsHi, platform: platformHi, invoices: invoicesHi, analytics: analyticsHi, billing: billingHi, templates: templatesHi, improvements: improvementsHi, media: mediaHi, leads: leadsHi, signup: signupHi, inbox: inboxHi, widget: widgetHi, botMessages: botMessagesHi, base: baseHi, faq: faqHi, errors: errorsHi };
 export type Locale = 'en' | 'hi';
 export type Catalog = typeof english;
 export const translatedNamespaces = Object.keys(english) as (keyof Catalog)[];
