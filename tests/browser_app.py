@@ -1,6 +1,7 @@
 """ASGI app for browser CI with an isolated Razorpay fake."""
 import asyncio
 import io
+import re
 import wave
 from datetime import timedelta
 
@@ -29,9 +30,11 @@ class BrowserKnowledge:
         return [[1.0, 0.0, 0.0] for _ in texts]
 
     def complete(self, *args):
-        if len(args) > 1 and 'KNOWLEDGE:\n(none)' in args[1]:
-            return "I don't know based on our documents."
-        return 'Refunds accepted within 30 days. [1]'
+        parts = re.split(r'(?m)^\[([0-9]+)\] ', args[1] if len(args) > 1 else '')
+        for number, content in zip(parts[1::2], parts[2::2], strict=True):
+            if match := re.search(r'Refunds (?:are )?accepted within [0-9]+ days\.', content):
+                return match[0] + ' [' + number + ']'
+        return "I don't know based on our documents."
 
     def verify(self, model, system, messages):
         import json
