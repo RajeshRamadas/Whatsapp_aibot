@@ -642,3 +642,4 @@ from .models import google_calendar as _google_calendar  # noqa: E402, F401
 from .models import lead_sync as _lead_sync  # noqa: E402,F401
 from .models import mfa as _mfa  # noqa: E402,F401
 from .models import payments as _payments  # noqa: E402,F401
+from .models import public_api as _public_api  # noqa: E402,F401

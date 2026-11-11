@@ -3303,11 +3303,10 @@ export interface components {
         KeyInput: {
             /** Name */
             name: string;
-            /**
-             * Scope
-             * @enum {string}
-             */
-            scope: "viewer" | "agent" | "admin";
+            /** Scope */
+            scope?: ("viewer" | "agent" | "admin") | null;
+            /** Scopes */
+            scopes?: ("knowledge:read" | "knowledge:write" | "conversations:read" | "conversations:write" | "messages:send" | "contacts:read" | "contacts:write" | "leads:read" | "leads:write" | "evals:read" | "evals:write")[] | null;
             /** Expires In Days */
             expires_in_days?: number | null;
         };
