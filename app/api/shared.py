@@ -4,11 +4,12 @@ import json
 import logging
 import secrets
 from pathlib import Path
+from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Header, HTTPException, Query, Request, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, PlainTextResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StringConstraints, model_validator
 from sqlalchemy import select
 
 from .. import evaluate, ingest, llm, rag, whatsapp
@@ -66,10 +67,22 @@ class ChatInput(BaseModel):
 
 
 class EvalCaseInput(BaseModel):
-    question: str = Field(min_length=1, max_length=4000)
-    expected_keywords: list[str] = Field(default_factory=list, max_length=20)
-    expected_source: str | None = Field(default=None, max_length=255)
+    question: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=4000)]
+    expected_keywords: list[Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]] = (
+        Field(default_factory=list, max_length=20))
+    expected_source: (
+        Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=255)] | None) = None
     expect_no_answer: bool = False
+
+    @model_validator(mode='after')
+    def expectations(self):
+        if self.expect_no_answer and (self.expected_keywords or self.expected_source):
+            raise ValueError('Decline tests cannot also expect answer keywords or a source')
+        if not self.expect_no_answer and not (self.expected_keywords or self.expected_source):
+            raise ValueError('Choose at least one keyword, an expected source, or a decline test')
+        if self.expected_source is not None and not self.expected_source.strip():
+            raise ValueError('Expected source must not be blank')
+        return self
 
 
 class EvalCasesInput(BaseModel):

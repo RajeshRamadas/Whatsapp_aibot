@@ -78,6 +78,7 @@ class Settings(BaseSettings):
     embedding_dimensions: int = 1536
 
     # Retrieval
+    eval_max_cases_per_run: int = Field(100, ge=1, le=200)
     qa_min_similarity: float = Field(0.9, ge=0, le=1)
     retrieval_top_k: int = 6
     retrieval_candidates: int = 20  # per search method, before the results are merged

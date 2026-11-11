@@ -1331,6 +1331,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/evals/cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Case Catalog */
+        get: operations["case_catalog_api_v1_evals_cases_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/evals/{case_id}": {
         parameters: {
             query?: never;
@@ -1339,7 +1356,8 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put?: never;
+        /** Update Case */
+        put: operations["update_case_api_v1_evals__case_id__put"];
         post?: never;
         /** Delete Eval Case */
         delete: operations["delete_eval_case_api_v1_evals__case_id__delete"];
@@ -1357,11 +1375,59 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Run Evals
-         * @description Ask every test question and score the answers. Each question is a real (billed) provider call.
-         */
-        post: operations["run_evals_api_v1_evals_run_post"];
+        /** Start Run */
+        post: operations["start_run_api_v1_evals_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/evals/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Runs */
+        get: operations["list_runs_api_v1_evals_runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/evals/runs/{identity}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Run */
+        get: operations["get_run_api_v1_evals_runs__identity__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/evals/runs/{identity}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Run */
+        post: operations["cancel_run_api_v1_evals_runs__identity__cancel_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2568,6 +2634,13 @@ export interface components {
             /** Token */
             token: string;
         };
+        /** AccuracyCases */
+        AccuracyCases: {
+            /** Cases */
+            cases: components["schemas"]["CaseView"][];
+            /** Max Run Cases */
+            max_run_cases: number;
+        };
         /** AgentReply */
         AgentReply: {
             /** Message */
@@ -2811,6 +2884,19 @@ export interface components {
             /** Body */
             body: string;
         };
+        /** CaseView */
+        CaseView: {
+            /** Id */
+            id: string;
+            /** Question */
+            question: string;
+            /** Expected Keywords */
+            expected_keywords: string[];
+            /** Expected Source */
+            expected_source: string | null;
+            /** Expect No Answer */
+            expect_no_answer: boolean;
+        };
         /** Catalog */
         Catalog: {
             /** Timezone */
@@ -2970,6 +3056,30 @@ export interface components {
         EvalCasesInput: {
             /** Cases */
             cases: components["schemas"]["EvalCaseInput"][];
+        };
+        /** EvalResult */
+        EvalResult: {
+            /** Id */
+            id: string;
+            /** Question */
+            question: string;
+            /** Passed */
+            passed: boolean;
+            /** Checks */
+            checks?: {
+                [key: string]: boolean;
+            };
+            /** Missing Keywords */
+            missing_keywords?: string[];
+            /**
+             * Answer
+             * @default
+             */
+            answer: string;
+            /** Sources */
+            sources?: string[];
+            /** Error */
+            error?: string | null;
         };
         /** FailedJob */
         FailedJob: {
@@ -3598,6 +3708,94 @@ export interface components {
              * @enum {string}
              */
             role: "owner" | "admin" | "agent" | "viewer";
+        };
+        /** RunDetail */
+        RunDetail: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** State */
+            state: string;
+            /** Total */
+            total: number;
+            /** Completed */
+            completed: number;
+            /** Passed */
+            passed: number;
+            /** Errors */
+            errors: number;
+            /** Accuracy */
+            accuracy: number | null;
+            /** Source Hit Rate */
+            source_hit_rate: number | null;
+            /** Last Error */
+            last_error: string | null;
+            /** Context */
+            context: {
+                [key: string]: unknown;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Started At */
+            started_at: string | null;
+            /** Finished At */
+            finished_at: string | null;
+            /** Cases */
+            cases: components["schemas"]["CaseView"][];
+            /** Results */
+            results: components["schemas"]["EvalResult"][];
+        };
+        /** RunInput */
+        RunInput: {
+            /**
+             * Label
+             * @default Accuracy run
+             */
+            label: string;
+            /** Case Ids */
+            case_ids?: string[] | null;
+            /** Request Key */
+            request_key?: string | null;
+        };
+        /** RunSummary */
+        RunSummary: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** State */
+            state: string;
+            /** Total */
+            total: number;
+            /** Completed */
+            completed: number;
+            /** Passed */
+            passed: number;
+            /** Errors */
+            errors: number;
+            /** Accuracy */
+            accuracy: number | null;
+            /** Source Hit Rate */
+            source_hit_rate: number | null;
+            /** Last Error */
+            last_error: string | null;
+            /** Context */
+            context: {
+                [key: string]: unknown;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Started At */
+            started_at: string | null;
+            /** Finished At */
+            finished_at: string | null;
         };
         /** SegmentFilters */
         SegmentFilters: {
@@ -7348,7 +7546,10 @@ export interface operations {
     };
     list_eval_cases_api_v1_evals_get: {
         parameters: {
-            query?: never;
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
             header?: {
                 "X-Workspace-Id"?: string | null;
                 "X-Admin-Key"?: string | null;
@@ -7364,7 +7565,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["CaseView"][];
                 };
             };
             /** @description Validation Error */
@@ -7400,7 +7601,77 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["CaseView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    case_catalog_api_v1_evals_cases_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccuracyCases"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_case_api_v1_evals__case_id__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EvalCaseInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseView"];
                 };
             };
             /** @description Validation Error */
@@ -7446,9 +7717,48 @@ export interface operations {
             };
         };
     };
-    run_evals_api_v1_evals_run_post: {
+    start_run_api_v1_evals_run_post: {
         parameters: {
             query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RunInput"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_runs_api_v1_evals_runs_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
             header?: {
                 "X-Workspace-Id"?: string | null;
                 "X-Admin-Key"?: string | null;
@@ -7464,7 +7774,79 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["RunSummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_run_api_v1_evals_runs__identity__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_run_api_v1_evals_runs__identity__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Confirm"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunSummary"];
                 };
             };
             /** @description Validation Error */
