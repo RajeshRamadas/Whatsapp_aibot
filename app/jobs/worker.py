@@ -144,6 +144,8 @@ def process_inbound_locked(event_id, tenant_id, contact):
             for row in db.scalars(select(InboundEvent).where(InboundEvent.tenant_id == tenant_id,
                                   InboundEvent.id.in_([item.id for item in batch]))):
                 row.status = 'processed' if row.id == event_id else 'merged'
+                from ..services.http_action_chat import redact_command
+                row.payload = {**row.payload, 'text': redact_command(row.payload.get('text', ''))}
                 row.last_error = None
     return False
 

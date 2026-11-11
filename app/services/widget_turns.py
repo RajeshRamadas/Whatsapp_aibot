@@ -8,6 +8,7 @@ from .. import rag
 from ..db import Conversation, Session, Tenant, WidgetTurn, now
 from .customer_languages import copy_for
 from .events import publish_sync
+from .http_action_chat import redact_command
 from .leads import notify_created
 from .usage import QUOTA_NOTICE, blocked_notice, reserve
 
@@ -42,13 +43,15 @@ def process_turn() -> bool:
         notice = copy['widget_handoff']
         if quota_reached:
             notice = copy['quota'] if blocked_notice(tenant.id) == QUOTA_NOTICE else copy['billing']
-        result = rag.answer(tenant, conversation.id, turn.message) if wants_ai and not quota_reached else None
+        result = (rag.answer(tenant, conversation.id, turn.message, action_turn_key='widget:' + turn.id)
+                  if wants_ai and not quota_reached else None)
     except Exception:
         log.warning('Widget answer generation failed')
         with Session.begin() as db:
             current = db.get(WidgetTurn, turn.id, with_for_update=True)
             if current and current.state == 'processing' and current.attempts == attempt:
                 current.state = 'failed'
+                current.message = redact_command(current.message)
         return True
 
     with Session.begin() as db:
@@ -59,7 +62,11 @@ def process_turn() -> bool:
             current.state = 'failed'
             return True
         conv = db.get(Conversation, conversation.id, with_for_update=True)
-        if turn.handoff or result is None or conv.handoff or conv.status == 'closed':
+        current.message = redact_command(current.message)
+        if result and result.action_failed:
+            conv.handoff, conv.status = True, 'waiting'
+            current.answer, current.sources, lead_fields = result.text, [], None
+        elif turn.handoff or result is None or conv.handoff or conv.status == 'closed':
             if conv.status == 'bot':
                 conv.handoff, conv.status = True, 'waiting'
             current.answer = notice
