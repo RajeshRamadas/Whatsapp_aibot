@@ -45,3 +45,7 @@ async def unexpected(request: Request, exc):
 def capabilities(p: PublicPrincipal = Depends(authenticate)):
     return {'version': '1', 'workspace_id': p.tenant.id, 'scopes': sorted(p.scopes),
             'requests_per_minute': p.limit, 'max_page_size': 100, 'idempotency_hours': 24}
+
+from .resources import router  # noqa: E402
+
+app.include_router(router)
