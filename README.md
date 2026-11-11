@@ -1081,7 +1081,22 @@ It validates the export header and reconciles uncertain appends by stable event 
 writes are never blindly repeated. Use a fresh export tab after 50,000 rows. Successful delivery
 clears its extra customer-data snapshot; local leads remain authoritative. Five retries use
 backoff/jitter and Retry-After; terminal failures appear in platform administration.
-Credential failures notify workspace admins. Native CRM adapters and English/Hindi controls follow.
+Credential failures notify workspace admins. HubSpot Contacts (CRM v3) and Zoho Leads (CRM v8)
+match exact normalized phone first, then email, and update only mapped fields. Ambiguous matches
+or missing mandatory values fail safely. Each version adds a mapped-field summary and conversation
+link as a CRM note. Private team notes are excluded unless enabled. Uncertain creates and notes
+reconcile before retrying. English/Hindi dashboard controls follow in the next stacked part.
+
+For HubSpot, create a private-app token with Contacts read/write and contact-property read access
+(`crm.objects.contacts.read`, `crm.objects.contacts.write`, `crm.schemas.contacts.read`); ensure the
+app can also read/create associated notes. Zoho self-client OAuth credentials need
+`ZohoCRM.modules.leads.READ,ZohoCRM.modules.leads.CREATE,ZohoCRM.modules.leads.UPDATE,ZohoCRM.modules.notes.READ,ZohoCRM.modules.notes.CREATE,ZohoCRM.settings.fields.READ,ZohoSearch.securesearch.READ`.
+Choose the account's data centre (India by default; US, EU and Australia supported). Refresh tokens
+and cached access tokens remain encrypted. Required Zoho fields such as Last Name or Company must
+map to actual lead values; no placeholder customer data is invented.
+Provider references: [HubSpot notes](https://developers.hubspot.com/docs/api-reference/legacy/crm/activities/notes/guide),
+[Zoho record search](https://www.zoho.com/crm/developer/docs/api/v8/search-records.html),
+[Zoho notes](https://www.zoho.com/crm/developer/docs/api/v8/create-notes.html).
 
 `LEAD_SYNC_GOOGLE_CLIENT_ID`, `LEAD_SYNC_GOOGLE_CLIENT_SECRET` and
 `LEAD_SYNC_GOOGLE_REDIRECT_URI` configure the separate Google lead-export consent flow.
