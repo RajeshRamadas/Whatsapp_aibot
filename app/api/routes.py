@@ -28,6 +28,7 @@ from . import (
     media,
     meta_signup,
     metrics,
+    mfa,
     onboarding,
     payment_webhooks,
     payments,
@@ -47,7 +48,7 @@ from .shared import UPLOADS as UPLOADS
 from .shared import origins as origins
 
 router = APIRouter()
-for module in (lead_sync, payment_webhooks, payments, google_calendar, appointments, bot_messages, improvements,
+for module in (mfa, lead_sync, payment_webhooks, payments, google_calendar, appointments, bot_messages, improvements,
                auth, audit, api_keys,
     workspaces, tenants, billing, channels,
                knowledge,
