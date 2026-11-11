@@ -120,6 +120,24 @@ def test_blocked_widget_enters_staff_queue_and_does_not_store_rejected_text(clie
         assert all('90 days' not in m.content for m in messages)
 
 
+def test_legacy_web_handoff_persists_and_followups_do_not_call_model(client, tenant, chats, monkeypatch):
+    upload(client, tenant, 'policy.txt', 'Refunds within 30 days.')
+    draft(chats, monkeypatch, 'Refunds within 90 days. [1]')
+    chats['openai'].grounding_verdict = {'verdict': 'unsupported', 'citations': []}
+    path = '/api/v1/chat/' + tenant['public_key']
+    response = client.post(path, json={'message': 'refund'})
+    assert response.status_code == 200
+    result = response.json()
+    assert result['answer'] == COPY['en']['widget_handoff'] and result['sources'] == []
+    with Session() as db:
+        conv = db.get(Conversation, result['conversation_id'])
+        assert conv.status == 'waiting' and conv.handoff and conv.analytics_handoff
+        assert db.scalar(select(AnswerReview).where(AnswerReview.tenant_id == tenant['tenant_id'])).unanswered
+    followup = client.post(path, json={'conversation_id': conv.id, 'message': 'hello'})
+    assert followup.status_code == 200 and followup.json()['sources'] == []
+    assert len(chats['openai'].verifications) == 1
+
+
 def test_whatsapp_blocked_answer_and_verified_length_never_send_bad_or_cut_claims(client, tenant, chats,
                                                                                monkeypatch, sent):
     upload(client, tenant, 'policy.txt', 'Refunds within 30 days.')
