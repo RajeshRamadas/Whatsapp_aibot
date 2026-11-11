@@ -3,13 +3,15 @@ from datetime import datetime
 from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, StrictBool, StringConstraints, model_validator
 
-from ..config import settings
+from ..services import lead_oauth
 from ..services import lead_sync as service
 from ..services.appointments import AppointmentError
 from .appointments import Confirm
+from .auth import _session
 from .principal import Principal, require_role
 
 router = APIRouter(prefix='/api/v1/lead-sync', tags=['lead-sync'])
@@ -114,8 +116,7 @@ def actor(p):
 @router.get('', response_model=SyncConnections)
 def connections(p: Principal = Depends(require_role('admin'))):
     return {'connections': service.connections(p.tenant.id), 'sources': list(service.SOURCES),
-            'google_configured': bool(settings.lead_sync_google_client_id and settings.lead_sync_google_client_secret
-                                      and settings.lead_sync_google_redirect_uri and settings.master_key)}
+            'google_configured': lead_oauth.configured()}
 
 
 @router.post('/connections', response_model=SyncConnectionView, status_code=201)
@@ -159,3 +160,34 @@ def backfill(identity: UUID, body: SyncBackfill, p: Principal = Depends(require_
 @router.post('/connections/{identity}/jobs/{job_id}/retry', response_model=SyncQueued)
 def retry(identity: UUID, job_id: UUID, body: Confirm, p: Principal = Depends(require_role('admin'))):
     return run(p, service.retry, str(identity), str(job_id), actor=actor(p))
+
+
+class LeadOAuthInput(Input):
+    label: Name
+
+
+class LeadOAuthURL(BaseModel):
+    url: str
+
+
+@router.post('/google/connect', response_model=LeadOAuthURL)
+def google_connect(body: LeadOAuthInput, request: Request, p: Principal = Depends(require_role('admin'))):
+    if not p.user:
+        raise HTTPException(403, 'Sign in as an administrator to authorize Google')
+    session, user = _session(request)
+    return run(p, lead_oauth.start, user.id, session.id_hash, body.label)
+
+
+@router.get('/google/callback', response_class=RedirectResponse)
+def google_callback(request: Request, state: Annotated[str, Query(min_length=40, max_length=128)],
+                    code: Annotated[str | None, Query(min_length=1, max_length=4096)] = None,
+                    error: Annotated[str | None, Query(max_length=100)] = None):
+    session, user = _session(request)
+    if not code and not error:
+        raise HTTPException(422, 'Authorization code or denial is required')
+    try:
+        lead_oauth.callback(state, code or '', session.id_hash, user.id, denied=bool(error))
+    except AppointmentError as exc:
+        raise HTTPException(exc.status, str(exc)) from None
+    return RedirectResponse('/dashboard/lead-sync', status_code=303,
+                            headers={'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer'})

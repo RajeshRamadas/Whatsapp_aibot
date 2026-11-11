@@ -1069,7 +1069,13 @@ and a transactional outbox for each new or updated lead version. Captures and te
 remain local even when a connector is unavailable. Optional email capture supports CRM
 identity matching. Disabling/disconnecting stops future sharing. Existing leads are exported
 only through an explicitly confirmed backfill; retries keep the same immutable snapshot.
-Google OAuth, provider adapters, worker delivery and English/Hindi controls follow in stacked PRs.
+Google Sheets uses a separate, session-bound OAuth flow with PKCE and the narrow `drive.file` scope.
+Only app-accessible spreadsheets can be selected; users can create a dedicated export spreadsheet.
+Calendar credentials and account profile scopes are not requested. The arq worker exchanges
+authorization codes and refreshes access tokens early. Register
+`https://marketingadda.com/api/backend/lead-sync/google/callback` exactly in the Google OAuth app.
+Disconnect removes stored credentials; revoke provider access from the provider’s account settings
+if desired. Provider adapters, worker delivery and English/Hindi controls follow in stacked PRs.
 
 `LEAD_SYNC_GOOGLE_CLIENT_ID`, `LEAD_SYNC_GOOGLE_CLIENT_SECRET` and
 `LEAD_SYNC_GOOGLE_REDIRECT_URI` configure the separate Google lead-export consent flow.
