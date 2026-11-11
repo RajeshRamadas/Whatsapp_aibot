@@ -13,7 +13,14 @@ from ..db import AuditLog, Conversation, InboundEvent, Message, Session, Source,
 from ..integrations.ses import Transport, cache_certificate
 from ..observability import bind, configure, observed_job
 from ..rate_limits import RateLimiter
-from ..services import calendar_availability, calendar_notifications, calendar_sync, google_jobs, media
+from ..services import (
+    calendar_availability,
+    calendar_notifications,
+    calendar_sync,
+    google_jobs,
+    media,
+    payment_processing,
+)
 from ..services.analytics import reconcile as reconcile_analytics_daily
 from ..services.appointment_reminders import process_one as process_appointment_reminder
 from ..services.billing import reconcile_settlements, reconcile_subscriptions
@@ -348,9 +355,19 @@ async def dispatch_google_calendar(ctx):
             break
 
 
+@observed_job
+async def dispatch_payments(ctx):
+    await asyncio.to_thread(payment_processing.expire_payloads)
+    for _ in range(10):
+        if (not await asyncio.to_thread(payment_processing.process_event)
+                and not await asyncio.to_thread(payment_processing.process_one)):
+            break
+
+
 class WorkerSettings:
     on_startup = startup
-    cron_jobs = [cron(dispatch_google_calendar, second=set(range(0, 60, 5)), timeout=600),
+    cron_jobs = [cron(dispatch_payments, second=set(range(0, 60, 5)), timeout=600),
+                 cron(dispatch_google_calendar, second=set(range(0, 60, 5)), timeout=600),
                  cron(dispatch_appointment_reminders, second={0, 15, 30, 45}),
                  cron(publish_improvement, second=set(range(0, 60, 5)), timeout=600),
                  cron(dispatch_websites, second={0, 10, 20, 30, 40, 50}),
