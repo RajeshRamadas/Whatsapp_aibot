@@ -995,4 +995,8 @@ Only a signed-in owner/admin can authorize an account; access and refresh tokens
 The arq worker exchanges codes, refreshes tokens early and lists writable calendars.
 Failures retry up to five times, honor Retry-After and expose safe status codes.
 Disconnect revokes credentials; previously created Google events remain until explicitly cancelled.
-No Google app exists yet: live OAuth verification remains pending. Availability and event synchronization follow in stacked PRs.
+No Google app exists yet: live OAuth verification remains pending. Availability uses a worker-refreshed free/busy cache (90-second freshness), workspace hours,
+service duration and local reservations. Up to five calendar bindings may target a service,
+a staff member or their combination. Matching calendars all constrain availability.
+Linked resources generate slots up to 60 days ahead; unlinked resources retain manual slots.
+Customer-data sharing needs explicit administrator consent when binding. Event synchronization follows in stacked PRs.

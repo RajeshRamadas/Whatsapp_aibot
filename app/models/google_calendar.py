@@ -23,6 +23,7 @@ class GoogleConnection(Base):
     oauth_user_id: Mapped[str | None] = mapped_column(ForeignKey('users.id', ondelete='SET NULL'))
     oauth_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     oauth_secret_enc: Mapped[bytes | None] = mapped_column(LargeBinary)
+    busy: Mapped[dict] = mapped_column(JSONB, default=dict)
     calendars: Mapped[list] = mapped_column(JSONB, default=list)
     last_success_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_error: Mapped[str | None] = mapped_column(String(64))
@@ -45,3 +46,13 @@ class GoogleTask(Base):
     claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_error: Mapped[str | None] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class CalendarBinding(Base):
+    __tablename__ = 'google_calendar_bindings'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'), index=True)
+    connection_id: Mapped[str] = mapped_column(ForeignKey('google_calendar_connections.id', ondelete='CASCADE'))
+    calendar_id: Mapped[str] = mapped_column(String(1024))
+    service_id: Mapped[str | None] = mapped_column(ForeignKey('appointment_services.id', ondelete='CASCADE'))
+    staff_id: Mapped[str | None] = mapped_column(ForeignKey('appointment_staff.id', ondelete='CASCADE'))

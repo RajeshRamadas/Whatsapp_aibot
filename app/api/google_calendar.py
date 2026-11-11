@@ -1,11 +1,13 @@
 """Google Calendar account administration; callbacks bind the initiating cookie session."""
 from datetime import datetime
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, model_validator
 
+from ..services import calendar_availability
 from ..services import google_calendar as service
 from ..services.appointments import AppointmentError
 from .appointments import Confirm
@@ -78,3 +80,41 @@ def refresh(identity: str, principal: Principal = Depends(require_role('admin'))
 @router.delete('/connections/{identity}', response_model=CalendarAccount)
 def disconnect(identity: str, body: Confirm, principal: Principal = Depends(require_role('admin'))):
     return run(service.change, principal.tenant.id, identity, disconnect=True)
+
+
+class BindingInput(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    connection_id: UUID
+    calendar_id: str = Field(min_length=1, max_length=1024)
+    service_id: UUID | None = None
+    staff_id: UUID | None = None
+    confirm_data_sharing: StrictBool
+
+    @model_validator(mode='after')
+    def valid(self):
+        if not self.confirm_data_sharing or not (self.service_id or self.staff_id):
+            raise ValueError('Select a service or staff member and confirm customer-data sharing')
+        return self
+
+
+class BindingView(BaseModel):
+    id: str
+    connection_id: str
+    calendar_id: str
+    service_id: str | None
+    staff_id: str | None
+
+
+@router.get('/bindings', response_model=list[BindingView])
+def bindings(principal: Principal = Depends(require_role('admin'))):
+    return calendar_availability.bindings(principal.tenant.id)
+
+
+@router.post('/bindings', status_code=201, response_model=dict[str, str])
+def bind(body: BindingInput, principal: Principal = Depends(require_role('admin'))):
+    return {'id': run(calendar_availability.bind, principal.tenant.id, body.model_dump(mode='json'))}
+
+
+@router.delete('/bindings/{identity}', status_code=204)
+def unbind(identity: UUID, principal: Principal = Depends(require_role('admin'))):
+    run(calendar_availability.unbind, principal.tenant.id, str(identity))

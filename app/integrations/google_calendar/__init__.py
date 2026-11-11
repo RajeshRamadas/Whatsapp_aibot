@@ -112,3 +112,23 @@ class Client:
     def path(calendar_id, event_id=None):
         path = 'calendars/' + quote(calendar_id, safe='') + '/events'
         return path + '/' + quote(event_id, safe='') if event_id else path
+
+    def freebusy(self, token, calendars, start, end):
+        data = self.request('POST', 'freeBusy', token=token, payload={
+            'timeMin': start.isoformat(), 'timeMax': end.isoformat(), 'items': [{'id': c} for c in calendars]})
+        result = {}
+        for identity in calendars:
+            item = data.get('calendars', {}).get(identity)
+            if not isinstance(item, dict) or item.get('errors') or not isinstance(item.get('busy'), list):
+                raise CalendarError('availability_unavailable', retry=True)
+            intervals = []
+            for busy in item['busy']:
+                try:
+                    first, last = (datetime.fromisoformat(busy[k].replace('Z', '+00:00')) for k in ('start', 'end'))
+                    if not first.tzinfo or not last.tzinfo or first >= last:
+                        raise ValueError()
+                except (KeyError, TypeError, ValueError, AttributeError):
+                    raise CalendarError('invalid_response') from None
+                intervals.append({'start': first.isoformat(), 'end': last.isoformat()})
+            result[identity] = intervals
+        return result

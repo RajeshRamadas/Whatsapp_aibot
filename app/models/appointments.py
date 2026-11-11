@@ -32,6 +32,7 @@ class Staff(Base):
 
 class Slot(Base):
     __tablename__ = 'appointment_slots'
+    calendar_signature: Mapped[str | None] = mapped_column(String(64))
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
     tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'), index=True)
     service_id: Mapped[str] = mapped_column(ForeignKey('appointment_services.id', ondelete='CASCADE'))
