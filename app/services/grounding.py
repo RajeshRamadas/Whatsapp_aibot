@@ -102,7 +102,8 @@ def check(chat, model, answer, evidence, *, choices=None):
         if len(set(verdict.citations)) != len(verdict.citations):
             raise ValueError()
         if verdict.verdict == 'non_factual':
-            return result(not verdict.citations, 'non_factual' if not verdict.citations else 'invalid_verdict')
+            valid = not verdict.citations and not citations
+            return result(valid, 'non_factual' if valid else 'invalid_verdict')
         if verdict.verdict == 'unsupported':
             return result(False, 'unsupported_claim')
         if not citations:

@@ -3,6 +3,7 @@ import hashlib
 import hmac
 import json
 import os
+import re
 from pathlib import Path
 
 import pytest
@@ -40,6 +41,8 @@ class FakeChat:
     def __init__(self, name):
         self.name, self.calls, self.rewrites = name, [], []
         self.tool_turns = []
+        self.verifications = []
+        self.grounding_verdict = None
 
     def run(self, model, system, messages, tools):
         if not self.tool_turns:
@@ -53,6 +56,16 @@ class FakeChat:
 
         return llm._run(turn, tools)
 
+    def verify(self, model, system, messages):
+        self.verifications.append({'model': model, 'system': system, 'messages': messages})
+        if self.grounding_verdict is not None:
+            if isinstance(self.grounding_verdict, Exception):
+                raise self.grounding_verdict
+            return json.dumps(self.grounding_verdict)
+        payload = json.loads(messages[0]['content'])
+        numbers = [s['number'] for s in payload['evidence']]
+        return json.dumps({'verdict': 'supported' if numbers else 'non_factual', 'citations': numbers})
+
     def complete(self, model, system, messages):
         if system == rag.REWRITE_PROMPT:
             # Stand-in for a real rewrite: the first customer message's topic plus the follow-up.
@@ -62,7 +75,9 @@ class FakeChat:
             self.rewrites.append(prompt)
             return f'{latest} (about: {first})'
         self.calls.append({'model': model, 'system': system, 'messages': messages})
-        return f'{self.name}:{model}: {messages[-1]["content"]}'
+        references = re.findall(r'(?m)^\[([0-9]+)\] ', system)
+        citations = (' '.join('[' + n + ']' for n in references) + ' ') if references else ''
+        return f'{self.name}:{model}: {citations}{messages[-1]["content"]}'
 
 
 @pytest.fixture

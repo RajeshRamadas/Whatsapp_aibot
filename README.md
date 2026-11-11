@@ -1251,5 +1251,8 @@ failures are blocked. Nonfactual greetings/questions/acknowledgements may pass.
 The check uses the draft's provider/model by default; `GROUNDING_MODELS` can map
 provider names to other configured models, and `GROUNDING_TIMEOUT_SECONDS` bounds
 the SDK request timeout (no automatic verifier retries). Verifier calls are metered
-through the existing usage ledger. Customer delivery integration follows in the
-remaining T10.5 stack.
+through the existing usage ledger. Blocked drafts become localized handoffs in
+WhatsApp and the widget, enter the staff queue and appear as unanswered reviews.
+Checked WhatsApp replies that exceed the rendering budget also hand off rather
+than lose a verified condition through truncation. See [Grounding](docs/GROUNDING.md)
+for evidence boundaries, operational behavior and the live-model launch checks.

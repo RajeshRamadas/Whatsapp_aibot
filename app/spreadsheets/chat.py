@@ -19,7 +19,7 @@ POLICY = ('\n\nSPREADSHEET ANSWERS: Use list_tables to discover enabled table na
           'alongside documents; use fresh queries for table quantities even if an FAQ mentions a number.')
 
 
-def tools(tenant_id, first_number):
+def tools(tenant_id, first_number, *, evidence=None):
     citations, state = {}, {}
     def listing(values):
         search, offset = values.get('search', ''), values.get('offset', 0)
@@ -48,9 +48,13 @@ def tools(tenant_id, first_number):
             result = execute(tenant_id, values.get('table_id'), values.get('sql'))
             source = result['source']
             key = (source['id'], source['heading'])
-            if key not in citations:
-                citations[key] = {'number': first_number + len(citations), 'filename': source['filename'],
-                                           'heading': source['heading'], 'page': None}
+            metadata = {'filename': source['filename'], 'heading': source['heading'], 'page': None}
+            if evidence is not None:
+                citations[key] = evidence.add(('table', *key), metadata, {
+                    'query': result['query_context'], 'columns': result['columns'],
+                    'rows': result['rows'], 'truncated': result['truncated']})
+            elif key not in citations:
+                citations[key] = {'number': first_number + len(citations), **metadata}
             result['source'] = citations[key]
             return result
         except QueryError as exc:

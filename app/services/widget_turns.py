@@ -63,9 +63,13 @@ def process_turn() -> bool:
             return True
         conv = db.get(Conversation, conversation.id, with_for_update=True)
         current.message = redact_command(current.message)
-        if result and result.action_failed and not conv.handoff and conv.status == 'bot':
+        blocked = bool(result and result.grounding_blocked and not conv.handoff and conv.status == 'bot')
+        if result and (result.action_failed or blocked) and not conv.handoff and conv.status == 'bot':
             conv.handoff, conv.status = True, 'waiting'
-            current.answer, current.sources, lead_fields = result.text, [], None
+            current.answer, current.sources = result.text, []
+            lead_fields = result.lead_fields if blocked else None
+            if blocked:
+                conv.analytics_handoff = True
         elif turn.handoff or result is None or conv.handoff or conv.status == 'closed':
             if conv.status == 'bot':
                 conv.handoff, conv.status = True, 'waiting'
@@ -74,7 +78,7 @@ def process_turn() -> bool:
         else:
             current.answer, current.sources, lead_fields = result.text, result.sources, result.lead_fields
         current.state = 'complete'
-        ai_answer = result if not (turn.handoff or conv.handoff or conv.status == 'closed') else None
+        ai_answer = result if blocked or not (turn.handoff or conv.handoff or conv.status == 'closed') else None
         pairs = [('user', turn.message), ('assistant', current.answer)]
         created = rag.save_exchange_rows(db, conv, pairs, sources=current.sources, lead_fields=lead_fields,
                                          review_answer=ai_answer, widget_turn_id=turn.id)

@@ -29,7 +29,15 @@ class BrowserKnowledge:
         return [[1.0, 0.0, 0.0] for _ in texts]
 
     def complete(self, *args):
+        if len(args) > 1 and 'KNOWLEDGE:\n(none)' in args[1]:
+            return "I don't know based on our documents."
         return 'Refunds accepted within 30 days. [1]'
+
+    def verify(self, model, system, messages):
+        import json
+        payload = json.loads(messages[0]['content'])
+        numbers = [s['number'] for s in payload['evidence']]
+        return json.dumps({'verdict': 'supported' if numbers else 'non_factual', 'citations': numbers})
 
     def run(self, *args):
         return llm.ChatResult(self.complete(*args[:3]), [])
@@ -314,6 +322,7 @@ async def payment_worker_fixture(request, call_next):
 
 # Import after the app and earlier fakes are configured; never loaded by production.
 from tests import browser_accuracy as browser_accuracy  # noqa: E402
+from tests import browser_grounding as browser_grounding  # noqa: E402
 from tests import browser_http_actions as browser_http_actions  # noqa: E402
 from tests import browser_lead_sync as browser_lead_sync  # noqa: E402
 from tests import browser_security as browser_security  # noqa: E402

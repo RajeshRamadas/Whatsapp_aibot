@@ -161,4 +161,6 @@ def execute(tenant_id, identity, sql, *, admin=False, limit=None):
             'duration_ms': int((time.monotonic() - began) * 1000), 'error': error})
     if error:
         raise QueryError(error)
+    result['query_context'] = {'select': statement, 'parameters': {k: scalar(v) for k, v in parameters.items()},
+                               'schema': table.columns}
     return result

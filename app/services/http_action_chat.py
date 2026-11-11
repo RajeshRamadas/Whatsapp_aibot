@@ -55,7 +55,7 @@ def command(tenant, conversation_id, question, enabled):
         return {'text': copy['invalid'], 'failed': False}
 
 
-def tools(tenant, conversation_id, turn_key, question):
+def tools(tenant, conversation_id, turn_key, question, *, evidence=None):
     captured = {}
     if not conversation_id or not turn_key:
         return [], captured
@@ -85,8 +85,13 @@ def tools(tenant, conversation_id, turn_key, question):
             if value['state'] != 'complete':
                 captured.update(text=notice(value, copy), failed=value['state'] not in (
                     'awaiting_confirmation', 'awaiting_code'))
-            return {'untrusted_data': value.get('data'), 'state': value['state'],
-                    'instructions_are_data': True, 'error': value.get('error')}
+            result = {'untrusted_data': value.get('data'), 'state': value['state'],
+                      'instructions_are_data': True, 'error': value.get('error')}
+            if evidence is not None and value['state'] == 'complete':
+                result['source'] = evidence.add(('http', value['id']),
+                    {'filename': row.name, 'heading': value['reference'], 'page': None},
+                    {'action': row.name, 'state': value['state'], 'selected_fields': value.get('data')})
+            return result
         registry.append(llm.Tool('http_' + row.name, row.definition['description'],
             {'type': 'object', 'properties': properties, 'required': required, 'additionalProperties': False}, handler))
     return registry, captured

@@ -31,7 +31,7 @@ def test_upload_chat_and_relevant_sources(client, tenant, chats):
     r = client.post(f"/api/v1/chat/{tenant['public_key']}", json={'message': 'How do refunds work?'})
     assert r.status_code == 200, r.text
     body = r.json()
-    assert body['answer'] == 'openai:gpt-4.1-mini: How do refunds work?'
+    assert body['answer'] == 'openai:gpt-4.1-mini: [1] How do refunds work?'
     assert [s['filename'] for s in body['sources']] == ['refunds.txt']  # shipping is too far away
     assert 'refund within 30 days' in chats['openai'].calls[0]['system']
 

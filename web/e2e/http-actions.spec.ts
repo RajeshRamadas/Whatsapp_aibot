@@ -45,7 +45,7 @@ test('custom actions: test gates, selected fields, explicit customer approval an
     const completed = await (await page.request.get(base + '/turns/' + id)).json();
     expect(completed.state).toBe('complete'); return completed;
   }
-  expect((await turn('LOOKUP SKU')).answer).toBe('Available: 5');
+  expect((await turn('LOOKUP SKU')).answer).toBe('Available: 5 [1]');
   const metrics = async () => (await (await page.request.get('/api/backend/_test/http-actions')).json());
   expect(JSON.stringify((await metrics()).results)).not.toContain('Admin-only');
   await card.getByRole('button', { name: 'Edit action', exact: true }).click();
