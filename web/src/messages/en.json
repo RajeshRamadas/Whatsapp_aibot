@@ -128,5 +128,9 @@
   "skipContent": "Skip to main content",
   "appointments": "Appointments",
   "payments": "Customer payments",
-  "leadSync": "Lead sync"
+  "leadSync": "Lead sync",
+  "accountSecurity": "Account security",
+  "switchingWorkspace": "Switching workspace…",
+  "switchFailed": "Could not switch workspaces. Your current workspace is still selected. Try again.",
+  "logoutFailed": "Sign-out could not finish. Check your connection and try again."
 }
