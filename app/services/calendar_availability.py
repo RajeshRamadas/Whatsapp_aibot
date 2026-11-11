@@ -70,8 +70,10 @@ def in_hours(tenant, start, end):
     if not hours:
         return True
     window = hours.get(str(first.weekday()))
-    return bool(window and first.date() == last.date()
-                and window[0] <= first.strftime('%H:%M') and last.strftime('%H:%M') <= window[1])
+    if not window or first.date() != last.date():
+        return False
+    opening, closing = (datetime.combine(first.date(), time.fromisoformat(v), zone) for v in window)
+    return opening <= first and last <= closing
 
 
 def signature(tenant, service, pairs):
@@ -174,7 +176,8 @@ def fetch(tenant_id, identity, revision):
 def schedule():
     with Session.begin() as db:
         # Global cron selection only; each task and execution carries the selected tenant.
-        for c in db.scalars(select(Connection).where(Connection.status == 'connected').limit(100)):
+        for c in db.scalars(select(Connection).where(Connection.status == 'connected')
+                .order_by(Connection.last_success_at.asc().nullsfirst(), Connection.id).limit(100)):
             if c.busy and datetime.fromisoformat(c.busy['checked']) > now() - timedelta(seconds=45):
                 continue
             if db.scalar(select(Binding.id).where(Binding.tenant_id == c.tenant_id,
@@ -182,3 +185,9 @@ def schedule():
                 select(Task.id).where(Task.tenant_id == c.tenant_id, Task.connection_id == c.id,
                     Task.kind == 'availability', Task.state.in_(['queued', 'working'])).limit(1)):
                 enqueue(db, c, 'availability')
+
+
+def offered_state(db, tenant, slot):
+    pairs = targets(db, tenant.id, slot.service_id, slot.staff_id)
+    status = state(db, tenant, slot, pairs)
+    return 'held' if status == 'available' and overlap(db, tenant.id, slot, pairs) else status

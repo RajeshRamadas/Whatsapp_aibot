@@ -1006,4 +1006,16 @@ Cancellation and failed partial creates queue cleanup; retries reuse event IDs. 
 changed ownership are preserved and surfaced for administrator attention. Provider conflicts or
 exhausted retries appear in platform failed jobs. Token refresh failures email workspace admins.
 WhatsApp completion notices require an open 24-hour customer-service window and channel consent;
-uncertain sends are never automatically repeated. The admin connection panel follows in a stacked PR.
+uncertain sends are never automatically repeated. Owners/admins manage connections and bindings from **Appointments → Google Calendar**
+in English or Hindi. Agents can view booking synchronization status. A disconnected linked
+resource remains paused until its link is explicitly removed; removing all links restores manual slots.
+The browser suite uses a fake OAuth redirect and fake Google calls, with accessibility and 320 px checks.
+The Python `tzdata` dependency supplies legacy IANA aliases such as `Asia/Calcutta` on minimal images.
+
+Google can accept unrelated external events between a free/busy check and insertion; Google offers
+no atomic reservation API. This integration serializes local holds and checks Google immediately
+before inserting, but calendar owners should review externally added conflicting events.
+
+API references: [OAuth web-server flow](https://developers.google.com/identity/protocols/oauth2/web-server),
+[free/busy](https://developers.google.com/workspace/calendar/api/v3/reference/freebusy/query),
+and [event insertion](https://developers.google.com/workspace/calendar/api/v3/reference/events/insert).

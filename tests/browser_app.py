@@ -205,3 +205,50 @@ async def appointment_worker_fixture(request, call_next):
         from app.services.appointment_reminders import process_one
         await asyncio.to_thread(process_one)
     return response
+
+
+# Calendar OAuth and API calls are entirely local to this test-only ASGI app.
+from app.integrations.google_calendar import Client as GoogleClient  # noqa: E402
+from app.services import calendar_availability, calendar_sync, google_jobs  # noqa: E402
+
+settings.master_key = 'Y2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2M='
+settings.google_calendar_client_id = 'browser-calendar-client'
+settings.google_calendar_client_secret = 'browser-calendar-secret'
+settings.google_calendar_redirect_uri = 'http://localhost:3000/api/backend/google-calendar/callback'
+_calendar_events = {}
+
+
+def browser_google(self, method, path, **kwargs):
+    if 'token' in path:
+        return {'access_token': 'browser-access', 'refresh_token': 'browser-refresh', 'expires_in': 3600}
+    if 'revoke' in path:
+        return {}
+    if path == 'users/me/calendarList':
+        return {'items': [{'id': 'demo-calendar', 'summary': 'Appointment calendar', 'timeZone': 'Asia/Calcutta',
+                           'accessRole': 'owner'}]}
+    if path == 'freeBusy':
+        return {'calendars': {i['id']: {'busy': []} for i in kwargs['payload']['items']}}
+    if method == 'POST':
+        value = {**kwargs['payload'], 'etag': '"browser-v1"'}
+        _calendar_events[value['id']] = value
+        return value
+    if method == 'DELETE':
+        return _calendar_events.pop(path.rsplit('/', 1)[-1], None)
+    return _calendar_events.get(path.rsplit('/', 1)[-1])
+
+
+GoogleClient.request = browser_google
+
+
+@app.middleware('http')
+async def calendar_worker_fixture(request, call_next):
+    response = await call_next(request)
+    if (response.status_code < 400 and ('/google-calendar' in request.url.path
+            and (request.method != 'GET' or request.url.path.endswith('/callback'))
+            or '/appointments/bookings/' in request.url.path and request.method == 'POST')):
+        await asyncio.to_thread(calendar_availability.schedule)
+        for _ in range(10):
+            if (not await asyncio.to_thread(calendar_sync.process_one)
+                    and not await asyncio.to_thread(google_jobs.process_one)):
+                break
+    return response

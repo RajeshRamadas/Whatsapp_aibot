@@ -22,7 +22,7 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
   const type = response.headers.get('content-type');
   if (type) outgoing.headers.set('content-type', type);
   for (const name of ['location', 'content-disposition', 'cache-control', 'x-content-type-options',
-    'content-range', 'accept-ranges']) {
+    'content-range', 'accept-ranges', 'referrer-policy']) {
     const value = response.headers.get(name);
     if (value) outgoing.headers.set(name, value);
   }

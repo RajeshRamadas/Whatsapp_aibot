@@ -11,7 +11,7 @@ from app.db import ApiKey, Membership, Session, User, UserSession, engine, now, 
 from app.integrations.google_calendar import SCOPES, CalendarError, Client
 from app.models.google_calendar import GoogleConnection as Connection
 from app.models.google_calendar import GoogleTask as Task
-from app.services import crypto, google_jobs
+from app.services import crypto, google_calendar, google_jobs
 from app.services.auth import hash_password, hash_token
 
 BASE = '/api/v1/google-calendar'
@@ -133,3 +133,53 @@ def test_oauth_catalog_retry_does_not_replay_code(client, tenant, connected, mon
         db.add(ApiKey(tenant_id=tenant['tenant_id'], key_hash=hash_token(other), key_prefix=other[:8],
                       name='Read only', scopes=['viewer']))
     assert client.get(BASE, headers={'Authorization': 'Bearer ' + other}).status_code == 403
+
+
+def test_foreign_connections_and_callback_session_are_rejected(client, tenant, connected):
+    headers, _, user_id = connected
+    authorize(client, headers)
+    google_jobs.process_one()
+    identity = client.get(BASE, headers=headers).json()['connections'][0]['id']
+    other = client.post('/api/v1/tenants', headers={'X-Bootstrap-Token': 'test-bootstrap'},
+                        json={'name': 'Other workspace'}).json()
+    foreign = {'Authorization': 'Bearer ' + other['admin_key']}
+    assert client.get(BASE, headers=foreign).json()['connections'] == []
+    assert client.post(BASE + '/connections/' + identity + '/refresh', headers=foreign).status_code == 404
+    assert client.request('DELETE', BASE + '/connections/' + identity, headers=foreign,
+                          json={'confirm': True}).status_code == 404
+    assert client.post(BASE + '/connections/invalid/refresh', headers=headers).status_code == 422
+    assert client.request('DELETE', BASE + '/connections/invalid', headers=headers,
+                          json={'confirm': True}).status_code == 422
+    url = client.post(BASE + '/connect', headers=headers, json={'label': 'Second'}).json()['url']
+    state = parse_qs(urlsplit(url).query)['state'][0]
+    raw = uid()
+    with Session.begin() as db:
+        db.add(UserSession(id_hash=hash_token(raw), user_id=user_id, csrf_hash=hash_token(uid()),
+                           expires_at=now() + timedelta(days=1)))
+    client.cookies.set('chatbot_session', raw)
+    assert client.get(BASE + '/callback', params={'state': state, 'code': 'fake'}).status_code == 403
+
+
+def test_token_failure_alerts_admin_once_and_fences_disconnect(client, tenant, connected, monkeypatch):
+    headers, calls, _ = connected
+    authorize(client, headers)
+    google_jobs.process_one()
+    connection_id = client.get(BASE, headers=headers).json()['connections'][0]['id']
+    alerts = []
+    from app.services import email
+    monkeypatch.setattr(email.sender, 'stage', lambda *a: lambda: alerts.append(a[2]))
+    monkeypatch.setattr(Client, 'refresh', lambda *a: (_ for _ in ()).throw(CalendarError('authorization_required')))
+    with Session.begin() as db:
+        c = db.scalar(select(Connection).where(Connection.id == connection_id,
+            Connection.tenant_id == tenant['tenant_id']))
+        c.token_expires_at = now()
+    google_calendar.change(tenant['tenant_id'], connection_id)
+    google_jobs.process_one()
+    assert alerts == ['Google Calendar needs attention']
+    assert client.get(BASE, headers=headers).json()['connections'][0]['status'] == 'needs_attention'
+    google_calendar.change(tenant['tenant_id'], connection_id)
+    google_calendar.change(tenant['tenant_id'], connection_id, disconnect=True)
+    for _ in range(3):
+        google_jobs.process_one()
+    assert alerts == ['Google Calendar needs attention']
+    assert client.get(BASE, headers=headers).json()['connections'][0]['status'] == 'disconnected'

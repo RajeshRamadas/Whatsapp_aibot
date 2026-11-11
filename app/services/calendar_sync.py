@@ -110,6 +110,8 @@ def execute(tenant_id, identity, kind):
 
 
 def process_one():
+    if not google_calendar.configured():
+        return False
     with Session.begin() as db:
         task = db.scalar(select(Task).where(Task.kind.in_(['booking', 'calendar_cancel']), or_(
             and_(Task.state == 'queued', Task.next_attempt_at <= now()),
@@ -120,7 +122,10 @@ def process_one():
         tenant_id, identity, task_id, version, kind = (
             task.tenant_id, task.resource_id, task.id, task.revision, task.kind)
         tenant = db.get(Tenant, tenant_id, with_for_update=True)
-        booking = row(db, Booking, tenant_id, identity)
+        booking = db.scalar(select(Booking).where(Booking.id == identity, Booking.tenant_id == tenant_id))
+        if not booking:
+            task.state, task.last_error = 'failed', 'booking_removed'
+            return True
         if booking.calendar_version != version:
             task.state = 'complete'
             return True
@@ -181,8 +186,11 @@ def process_one():
                 queue(db, booking, 'calendar_cancel')
                 booking.calendar_state = 'failed'
         else:
-            task.state, booking.calendar_error = 'complete', None
-            booking.calendar_state = 'synced' if kind == 'booking' else 'cancelled'
+            task.state = 'complete'
+            if kind == 'booking' or booking.state != 'failed':
+                booking.calendar_error = None
+            booking.calendar_state = ('synced' if kind == 'booking' else
+                                      'failed' if booking.state == 'failed' else 'cancelled')
             if kind == 'booking':
                 if booking.replaces_id:
                     previous = row(db, Booking, tenant_id, booking.replaces_id, lock=True)

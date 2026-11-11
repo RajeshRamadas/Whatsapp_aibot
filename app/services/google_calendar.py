@@ -171,10 +171,13 @@ def execute(tenant_id, identity, kind, revision):
         # Persist tokens before catalog lookup: a transient list failure must not replay a one-use code.
         with Session.begin() as db:
             c = row(db, Connection, tenant_id, identity, lock=True)
-            if c.revision != revision or c.status == 'disconnecting':
-                return {}
-            c.credentials_enc, c.token_expires_at = encrypted, now() + timedelta(seconds=tokens['expires_in'])
-            c.oauth_secret_enc, c.status = None, 'connected'
+            stale = c.revision != revision or c.status == 'disconnecting'
+            if not stale:
+                c.credentials_enc, c.token_expires_at = encrypted, now() + timedelta(seconds=tokens['expires_in'])
+                c.oauth_secret_enc, c.status = None, 'connected'
+        if stale:
+            provider.disconnect(tokens['refresh_token'])
+            return {}
         token = tokens['access_token']
     else:
         token = access(tenant_id, identity, revision)

@@ -11,6 +11,8 @@ from . import google_calendar
 
 
 def process_one():
+    if not google_calendar.configured():
+        return False
     with Session.begin() as db:
         task = db.scalar(select(Task).where(Task.kind.not_in(['booking', 'calendar_cancel']),
             or_(and_(Task.state == 'queued', Task.next_attempt_at <= now()),

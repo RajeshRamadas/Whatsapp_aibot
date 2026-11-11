@@ -61,6 +61,7 @@ def refresh_cache(tenant_id, identity):
 def test_confirmation_reschedule_cancel_idempotency(client, tenant, setup, calendar):
     headers, events, busy, connection_id = calendar
     identity = hold_confirm(client, setup, headers)
+    appointments.transition(tenant['tenant_id'], identity, 'confirm', reminder_opt_in=True)
     assert not events and calendar_sync.process_one()
     assert len(events) == 1
     event = next(iter(events.values()))
@@ -118,3 +119,21 @@ def test_uncertain_create_retry_and_cancel_race(client, tenant, setup, calendar,
         assert db.get(Booking, identity).state == 'confirmed'
     appointments.transition(tenant['tenant_id'], identity, 'cancel')
     assert calendar_sync.process_one() and not events
+
+
+def test_cancellation_during_create_cleans_remote_event(client, tenant, setup, calendar, monkeypatch):
+    headers, events, _, _ = calendar
+    identity = hold_confirm(client, setup, headers)
+    original = Client.request
+    def cancelling(self, method, path, **kwargs):
+        result = original(self, method, path, **kwargs)
+        if method == 'POST':
+            appointments.transition(tenant['tenant_id'], identity, 'cancel')
+        return result
+    monkeypatch.setattr(Client, 'request', cancelling)
+    assert calendar_sync.process_one() and len(events) == 1
+    for _ in range(4):
+        calendar_sync.process_one()
+    assert not events
+    with Session() as db:
+        assert db.get(Booking, identity).state == 'cancelled'

@@ -73,13 +73,13 @@ def callback(request: Request, state: Annotated[str, Query(min_length=40, max_le
 
 
 @router.post('/connections/{identity}/refresh', response_model=CalendarAccount)
-def refresh(identity: str, principal: Principal = Depends(require_role('admin'))):
-    return run(service.change, principal.tenant.id, identity)
+def refresh(identity: UUID, principal: Principal = Depends(require_role('admin'))):
+    return run(service.change, principal.tenant.id, str(identity))
 
 
 @router.delete('/connections/{identity}', response_model=CalendarAccount)
-def disconnect(identity: str, body: Confirm, principal: Principal = Depends(require_role('admin'))):
-    return run(service.change, principal.tenant.id, identity, disconnect=True)
+def disconnect(identity: UUID, body: Confirm, principal: Principal = Depends(require_role('admin'))):
+    return run(service.change, principal.tenant.id, str(identity), disconnect=True)
 
 
 class BindingInput(BaseModel):

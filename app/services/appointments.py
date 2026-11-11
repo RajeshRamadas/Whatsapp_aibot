@@ -121,7 +121,7 @@ def slots(tenant_id, start, end, service_id=None, staff_id=None):
         if staff_id:
             query = query.where(Slot.staff_id == staff_id)
         return [{**fields(s, 'id service_id staff_id starts_at ends_at'), 'service': service, 'staff': staff,
-                 'state': state or calendar.state(db, db.get(Tenant, tenant_id), s),
+                 'state': state or calendar.offered_state(db, db.get(Tenant, tenant_id), s),
                  'expires_at': expiry if state == 'held' else None}
                 for s, service, staff, state, expiry in db.execute(query.order_by(Slot.starts_at, Slot.id).limit(100))]
 
@@ -214,6 +214,8 @@ def transition(tenant_id, identity, action, conversation_id=None, actor=('system
         slot = row(db, Slot, tenant_id, value.slot_id)
         if action == 'confirm':
             if value.state == 'confirming':
+                if reminder_opt_in is True:
+                    value.reminder_opt_in = True
                 return booking_view(db, value)
             if value.state == 'confirmed':
                 if reminder_opt_in and not value.reminder_opt_in and slot.starts_at > now():
