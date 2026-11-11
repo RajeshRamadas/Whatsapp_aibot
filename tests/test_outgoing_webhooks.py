@@ -56,7 +56,7 @@ def test_registration_and_lifecycle(client, tenant, endpoint):
 
 @pytest.mark.parametrize('url', ['http://example.com', 'https://localhost/x', 'https://127.0.0.1',
     'https://169.254.169.254/latest', 'https://[::1]', 'https://example.com:8443',
-    'https://user:secret@example.com', 'https://example.com/x#fragment', 'https://a.internal/x'])
+    'https://user:secret@example.com', 'https://example.com/x#fragment', 'https://a.internal/x', 'https://[fec0::1]/'])
 def test_unsafe_registration(client, tenant, endpoint, url):
     assert client.post(BASE, headers=tenant['headers'], json={**BODY, 'url': url}).status_code == 422
 

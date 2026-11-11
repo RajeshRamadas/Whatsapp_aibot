@@ -316,3 +316,4 @@ async def payment_worker_fixture(request, call_next):
 from tests import browser_accuracy as browser_accuracy  # noqa: E402
 from tests import browser_lead_sync as browser_lead_sync  # noqa: E402
 from tests import browser_security as browser_security  # noqa: E402
+from tests import browser_webhooks as browser_webhooks  # noqa: E402

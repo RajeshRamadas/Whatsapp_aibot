@@ -161,3 +161,11 @@ def test_dead_letter_and_expired_window(client, tenant, endpoint, delivery):
     # The platform-wide queue exposes IDs/types, never destination secrets or request content.
     result = failed_jobs(limit=25, offset=0)
     assert any(row.kind == 'outgoing_webhook' and row.id == delivery for row in result.items)
+
+
+@pytest.mark.parametrize('address', ['127.0.0.1', '10.0.0.1', 'fec0::1'])
+def test_selected_address_is_checked_even_after_resolution(monkeypatch, address):
+    monkeypatch.setattr(web_fetch, 'resolve', lambda host: address)
+    with pytest.raises(DeliveryError) as error:
+        asyncio.run(Transport().send('https://hooks.example.com/events', b'{}', {}))
+    assert error.value.code == 'unsafe_destination' and not error.value.retryable
