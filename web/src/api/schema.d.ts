@@ -4,6 +4,43 @@
  */
 
 export interface paths {
+    "/api/v1/http-actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listing */
+        get: operations["listing_api_v1_http_actions_get"];
+        put?: never;
+        /** Create */
+        post: operations["create_api_v1_http_actions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/http-actions/{identity}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update */
+        put: operations["update_api_v1_http_actions__identity__put"];
+        post?: never;
+        /** Remove */
+        delete: operations["remove_api_v1_http_actions__identity__delete"];
+        options?: never;
+        head?: never;
+        /** Enable */
+        patch: operations["enable_api_v1_http_actions__identity__patch"];
+        trace?: never;
+    };
     "/api/v1/webhook-endpoints": {
         parameters: {
             query?: never;
@@ -2814,6 +2851,36 @@ export interface components {
             /** Max Run Cases */
             max_run_cases: number;
         };
+        /** ActionEnable */
+        ActionEnable: {
+            /** Enabled */
+            enabled: boolean;
+        };
+        /** ActionView */
+        ActionView: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Definition */
+            definition: {
+                [key: string]: unknown;
+            };
+            /** Credential Last4 */
+            credential_last4: string;
+            /** Revision */
+            revision: number;
+            /** Tested Revision */
+            tested_revision: number | null;
+            /** Enabled */
+            enabled: boolean;
+            /** Status */
+            status: string;
+            /** Last Success At */
+            last_success_at: string | null;
+            /** Last Error */
+            last_error: string | null;
+        };
         /** AgentReply */
         AgentReply: {
             /** Message */
@@ -2877,6 +2944,55 @@ export interface components {
             language?: string | null;
             /** Audio Seconds */
             audio_seconds?: string | null;
+        };
+        /** Auth */
+        Auth: {
+            /**
+             * Kind
+             * @default none
+             * @enum {string}
+             */
+            kind: "none" | "api_key" | "bearer" | "basic" | "oauth_client_credentials";
+            /**
+             * Header
+             * @default X-API-Key
+             */
+            header: string;
+            /**
+             * Value
+             * @default
+             */
+            value: string;
+            /**
+             * Username
+             * @default
+             */
+            username: string;
+            /**
+             * Password
+             * @default
+             */
+            password: string;
+            /**
+             * Token Url
+             * @default
+             */
+            token_url: string;
+            /**
+             * Client Id
+             * @default
+             */
+            client_id: string;
+            /**
+             * Client Secret
+             * @default
+             */
+            client_secret: string;
+            /**
+             * Scope
+             * @default
+             */
+            scope: string;
         };
         /** BillingDetails */
         BillingDetails: {
@@ -3264,6 +3380,61 @@ export interface components {
             day: string;
             /** Channel */
             channel: string;
+        };
+        /** Definition */
+        Definition: {
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /** Parameters */
+            parameters?: components["schemas"]["Parameter"][];
+            /**
+             * Method
+             * @default GET
+             * @enum {string}
+             */
+            method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+            /** Url Template */
+            url_template: string;
+            /** Body Template */
+            body_template?: {
+                [key: string]: unknown;
+            } | null;
+            /** Headers */
+            headers?: {
+                [key: string]: string;
+            };
+            auth?: components["schemas"]["Auth"];
+            /** Outputs */
+            outputs: {
+                [key: string]: string;
+            };
+            /**
+             * Personal Data
+             * @default true
+             */
+            personal_data: boolean;
+            /**
+             * Identity
+             * @default none
+             * @enum {string}
+             */
+            identity: "none" | "phone_match" | "email_otp";
+            /** Identity Path */
+            identity_path?: string | null;
+            /** Verification Url */
+            verification_url?: string | null;
+            /**
+             * Allow Changes
+             * @default false
+             */
+            allow_changes: boolean;
+            /**
+             * Customer Confirmation
+             * @default true
+             */
+            customer_confirmation: boolean;
         };
         /** DeliveryPage */
         DeliveryPage: {
@@ -3790,6 +3961,26 @@ export interface components {
             question: string;
             /** Answer */
             answer: string;
+        };
+        /** Parameter */
+        Parameter: {
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /**
+             * Type
+             * @default string
+             * @enum {string}
+             */
+            type: "string" | "integer" | "number" | "boolean";
+            /**
+             * Required
+             * @default true
+             */
+            required: boolean;
+            /** Pattern */
+            pattern?: string | null;
         };
         /** PasswordInput */
         PasswordInput: {
@@ -4891,6 +5082,182 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    listing_api_v1_http_actions_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_api_v1_http_actions_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Definition"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_api_v1_http_actions__identity__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Definition"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_api_v1_http_actions__identity__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    enable_api_v1_http_actions__identity__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActionEnable"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     listing_api_v1_webhook_endpoints_get: {
         parameters: {
             query?: never;
