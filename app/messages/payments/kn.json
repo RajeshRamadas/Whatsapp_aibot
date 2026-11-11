@@ -1,0 +1,5 @@
+{
+  "queued": "{description} ಗಾಗಿ INR {amount} ಪಾವತಿ ಲಿಂಕ್ ಸಿದ್ಧವಾಗುತ್ತಿದೆ. ಲಿಂಕ್ ಇಲ್ಲಿಯೇ ಕಳುಹಿಸಲಾಗುವುದು.",
+  "link": "{description} ಗಾಗಿ INR {amount} ಪಾವತಿಸಿ: {url}. ಮಾನ್ಯತೆ: {expires} ವರೆಗೆ.",
+  "paid": "ಪಾವತಿ ಸ್ವೀಕರಿಸಲಾಗಿದೆ: {description} ಗಾಗಿ INR {amount}. ಉಲ್ಲೇಖ: {reference}."
+}

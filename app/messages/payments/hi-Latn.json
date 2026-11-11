@@ -1,0 +1,5 @@
+{
+  "queued": "{description} ke liye INR {amount} ka payment link taiyar ho raha hai. Link yahin bheja jayega.",
+  "link": "{description} ke liye INR {amount} ka bhugtan karein: {url}. Valid: {expires} tak.",
+  "paid": "Bhugtan prapt hua: {description} ke liye INR {amount}. Reference: {reference}."
+}

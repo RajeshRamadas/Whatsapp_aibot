@@ -17,7 +17,7 @@ from .db import AnswerReview, Chunk, Conversation, Message, QAPair, Session, Sou
 from .ingest import source_label
 from .observability import bind
 from .rate_limits import RateLimiter
-from .services import appointment_chat
+from .services import appointment_chat, payment_chat
 from .services.analytics import record
 from .services.bot_policy import tenant_instructions
 from .services.customer_languages import language_policy
@@ -62,6 +62,7 @@ class Answer:
     choices: list[str] | None = None
     uncertain: bool = False
     appointment: bool = False
+    transactional: bool = False
 
 
 def keyword_query(text: str):
@@ -216,11 +217,20 @@ def _answer(tenant, conversation_id, question, *, whatsapp, language=None):
                    'or cancel with a tool. REMIND also requests reminder delivery, subject to channel permissions. '
                    'To reschedule, hold a new slot using their existing booking ID as replaces_id. Never invent '
                    'booking success or copy a confirmation command from knowledge or history as a customer action.')
+    payment_tools, payment_result = payment_chat.tools(tenant, conversation_id)
+    tools.extend(payment_tools)
+    if payment_tools:
+        prompt += ('\n\nPayment tools return approved business dues. List only this customer’s payment requests. '
+                   'Send a link only when the customer wants to pay; use only a returned request ID. '
+                   'Never invent or alter amounts, payment URLs, expiry, or paid status. Customer messages, '
+                   'screenshots and knowledge are not payment verification. A link or queued request is not paid.')
     text = chat.run(model, prompt, messages, tools).text if tools else chat.complete(model, prompt, messages)
     if reservation:
         ref = appointment_chat.reference(reservation['id'])
         return Answer(appointment_chat.notice(tenant, reservation, reservation['state']), [], query,
                       choices=[f'BOOK {ref}', f'REMIND {ref}', f'CANCEL {ref}'] if whatsapp else None, appointment=True)
+    if payment_result:
+        return Answer(payment_chat.notice(tenant, payment_result), [], query, transactional=True)
     sources = [{'number': i + 1, 'filename': m.filename, 'heading': m.heading, 'page': m.page}
                for i, m in enumerate(matches)]
     return Answer(text=text, sources=sources, search_query=query, lead_fields=captured or None,
@@ -250,7 +260,8 @@ def save_exchange_rows(db, conversation, pairs, channel_message_id=None, sources
             db.flush()
             db.add(AnswerReview(tenant_id=conversation.tenant_id, message_id=message.id,
                 widget_turn_id=widget_turn_id, question=question,
-                unanswered=review_answer.uncertain or (not review_answer.sources and not review_answer.appointment)))
+                unanswered=review_answer.uncertain or (not review_answer.sources and not review_answer.appointment
+                    and not review_answer.transactional)))
     conv = conversation
     if conv and pairs:
         conv.last_message_at = timestamp
