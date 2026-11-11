@@ -1191,3 +1191,8 @@ validated/pinned public DNS and no redirects. Network errors, 408, 429 and 5xx r
 with jitter and Retry-After for up to 24 hours; other non-2xx fail. Three days without
 a successful delivery after a failure disables the destination and queues an
 owner/admin email. Failed deliveries also appear in the platform failure queue.
+Subscribed events are staged with the source transaction: inbound messages,
+confirmed outbound sends (including campaign recipients), handoff/closed changes,
+lead capture/updates, confirmed bookings, verified payments and completed campaigns.
+Temporary booking holds, queued sends, internal notes and duplicate receipts do not
+emit completion events. Payloads contain record IDs/statuses, not customer content.

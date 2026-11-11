@@ -807,3 +807,7 @@ in stacked parts; T10.2 remains pending until the full stack is complete.
 T10.2 part b: pinned HTTPS signed delivery, exact-byte signatures, 10-second timeout,
 24-hour retry deadline, shared tenant quota, crash-lease recovery, safe failure logs,
 three-day automatic disablement and transactional administrator email staging.
+T10.2 part c: ORM state transitions stage the message, conversation, confirmed
+booking and verified-payment events atomically; Core-SQL lead/campaign producers
+stage explicitly. Rollback, duplicate receipts, internal notes, cross-tenant fanout
+and metadata-only payloads are covered by tests. Bilingual controls follow.

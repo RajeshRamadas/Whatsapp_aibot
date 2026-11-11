@@ -108,8 +108,13 @@ def maintain():
         unfinished = exists(select(Recipient.id).where(Recipient.campaign_id == Campaign.id,
             Recipient.tenant_id == Campaign.tenant_id, Recipient.is_test.is_(False),
             Recipient.state.in_(('queued', 'sending'))))
-        changed.update(db.execute(update(Campaign).where(Campaign.state.in_(('scheduled', 'sending')), ~unfinished)
-                       .values(state='completed').returning(Campaign.tenant_id, Campaign.id)).all())
+        completed = db.execute(update(Campaign).where(Campaign.state.in_(('scheduled', 'sending')), ~unfinished)
+            .values(state='completed').returning(Campaign.tenant_id, Campaign.id)).all()
+        changed.update(completed)
+        from .outgoing_webhooks import stage
+        for tenant_id, identity in completed:
+            stage(db, tenant_id, 'campaign.completed', 'campaign.completed:' + identity,
+                  {'campaign_id': identity, 'state': 'completed'})
     for tenant_id, identity in changed:
         notify(tenant_id, identity)
 

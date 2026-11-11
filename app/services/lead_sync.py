@@ -116,13 +116,17 @@ def stage_one(db, lead, c):
     db.execute(statement.on_conflict_do_nothing(constraint='uq_lead_delivery_version'))
 
 
-def changed(db, tenant_id, conversation_id):
+def changed(db, tenant_id, conversation_id, *, created=False):
     lead = db.scalar(select(Lead).where(Lead.tenant_id == tenant_id, Lead.conversation_id == conversation_id)
                      .with_for_update())
     lead.sync_version += 1
     for c in db.scalars(select(Connection).where(Connection.tenant_id == tenant_id, Connection.enabled,
                                                  Connection.status != 'disconnected')):
         stage_one(db, lead, c)
+    from .outgoing_webhooks import stage
+    kind = 'lead.created' if created else 'lead.updated'
+    stage(db, tenant_id, kind, f'{kind}:{conversation_id}:{lead.sync_version}',
+          {'conversation_id': conversation_id, 'status': lead.status, 'version': lead.sync_version})
 
 
 def backfill(tenant_id, identity, lead_ids, actor=('system', None)):

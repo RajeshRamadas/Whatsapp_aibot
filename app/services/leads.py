@@ -28,7 +28,7 @@ def save_lead(db, conversation, fields: dict) -> bool:
     if created is not None:
         record(db, 'first_lead', conversation.tenant_id)
     from .lead_sync import changed
-    changed(db, conversation.tenant_id, conversation.id)
+    changed(db, conversation.tenant_id, conversation.id, created=created is not None)
     return created is not None
 
 
