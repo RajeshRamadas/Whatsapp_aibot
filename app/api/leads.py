@@ -13,9 +13,9 @@ from ..db import Conversation, Lead, Membership, Session, Tenant, User
 from .principal import tenant_for_role
 
 router = APIRouter(prefix='/api/v1')
-LeadField = Literal['name', 'phone', 'need', 'budget', 'location', 'preferred_time']
+LeadField = Literal['name', 'phone', 'need', 'budget', 'location', 'preferred_time', 'email']
 LeadStatus = Literal['new', 'contacted', 'qualified', 'won', 'lost']
-FIELDS = ('name', 'phone', 'need', 'budget', 'location', 'preferred_time')
+FIELDS = ('name', 'phone', 'need', 'budget', 'location', 'preferred_time', 'email')
 
 
 class LeadConfig(BaseModel):
@@ -104,6 +104,7 @@ def update_lead(lead_id: str, body: LeadUpdate, tenant: Tenant = Depends(tenant_
                         .with_for_update())
         if row is None:
             raise HTTPException(404, 'Lead not found')
+        before = (row.status, row.owner_id, row.notes)
         if body.owner_id is not None and not db.scalar(select(Membership.user_id).where(
             Membership.tenant_id == tenant.id, Membership.user_id == body.owner_id,
             Membership.role.in_(('owner', 'admin', 'agent')),
@@ -115,6 +116,10 @@ def update_lead(lead_id: str, body: LeadUpdate, tenant: Tenant = Depends(tenant_
             row.status = body.status
         if body.notes is not None:
             row.notes = body.notes
+        from ..services.lead_sync import changed
+        db.flush()
+        if before != (row.status, row.owner_id, row.notes):
+            changed(db, tenant.id, lead_id)
         return view(row)
 
 
