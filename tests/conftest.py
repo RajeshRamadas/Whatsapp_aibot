@@ -84,6 +84,11 @@ def sent(monkeypatch):
 def client(chats, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(whatsapp, 'mark_typing', lambda *args: None)
+    from sqlalchemy import inspect
+
+    from app.spreadsheets.store import cleanup
+    if inspect(engine).has_table('spreadsheet_tables'):
+        cleanup(reset=True)
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
     with Session.begin() as db:

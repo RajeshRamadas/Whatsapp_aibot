@@ -19,14 +19,17 @@ from openpyxl import load_workbook
 from pypdf import PdfReader
 from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.exc import DBAPIError
 
 from . import llm
 from .config import settings
-from .db import Chunk, Session, Source, UsageEvent
+from .db import Chunk, Session, Source, Tenant, UsageEvent
 from .services import ocr
 from .services.analytics import milestone
 from .services.storage import storage
 from .services.usage import meter
+from .spreadsheets import parse as spreadsheet_parse
+from .spreadsheets import store as spreadsheet_store
 
 SUPPORTED_SUFFIXES = {'.pdf', '.docx', '.txt', '.md', '.csv', '.xlsx', '.json'} | ocr.IMAGE_SUFFIXES
 EMBED_BATCH = 32
@@ -251,8 +254,12 @@ def ingest(source_id: str, tenant_id: str) -> None:
                     request_key=f'ocr:{source_id}:{identity}:{page}').on_conflict_do_nothing(
                         constraint='uq_usage_request'))
 
-        pieces = chunk_blocks(extract(path, path.suffix.lower(), on_ocr_page=metered_page))
-    if not pieces:
+        sheets = spreadsheet_parse.parse(path) if path.suffix.lower() in ('.csv', '.xlsx') else []
+        blocks = ([Block(render_row({c['label']: v for c, v in zip(sheet.columns, row, strict=True)}),
+                         heading=sheet.title, row=True) for sheet in sheets for row in sheet.rows]
+                  if sheets else extract(path, path.suffix.lower(), on_ocr_page=metered_page))
+        pieces = chunk_blocks(blocks)
+    if not pieces and not sheets:
         raise ValueError('No extractable text found. Upload a clearer scan or a document containing text.')
     embedder = llm.embedder()
     rows = []
@@ -265,11 +272,18 @@ def ingest(source_id: str, tenant_id: str) -> None:
                  for n, (piece, vector) in enumerate(zip(batch, vectors, strict=True))]
     # Deleted sources stay deleted; chunks and ready state are committed together.
     with Session.begin() as db:
+        db.get(Tenant, tenant_id, with_for_update=True)
         current = db.scalar(select(Source).where(Source.id == source_id, Source.tenant_id == tenant_id)
                             .with_for_update())
         if not current or current.file_path != file_path:
             return
         db.execute(delete(Chunk).where(Chunk.source_id == source_id, Chunk.tenant_id == tenant_id))
         db.add_all(rows)
+        if sheets:
+            try:
+                spreadsheet_store.publish(db, tenant_id, source_id, sheets)
+            except DBAPIError:
+                raise ValueError('Spreadsheet tables could not be stored. '
+                                 'Check database permissions and spreadsheet values.') from None
         current.status, current.error = 'ready', None
         milestone(db, 'first_knowledge_ready', tenant_id, 'knowledge')

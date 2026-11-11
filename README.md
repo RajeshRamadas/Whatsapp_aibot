@@ -1213,3 +1213,15 @@ changes/personal data; uncertain writes are never automatically retried. Calls a
 short-lived payloads are encrypted, and the worker maintains their retention.
 See the [custom action guide](docs/HTTP_ACTIONS.md) for examples, identity setup,
 network limits, test semantics, and handling unknown outcomes.
+
+CSV/XLSX knowledge imports also create typed tables in a separate `t_<tenant>`
+schema, with exact decimal values and a dedicated NOLOGIN read-only role. The
+application database user needs permission to create schemas and roles, grant the
+reader role to itself, and manage its generated tables/roles (the Compose database
+owner has these permissions). New/replaced tables start disabled for customer
+queries until an owner/admin reviews them. Mixed numeric/text columns stay text;
+XLSX formulas/error cells must be replaced with values. Imports are bounded to
+`SPREADSHEET_MAX_ROWS`, 60 columns, 12 sheets, 250000 cells and 50 MB expanded XLSX.
+Source deletion removes data transactionally; an hourly worker sweep clears orphan
+tables and deleted-tenant schemas/roles. Table queries and controls follow in the
+remaining T10.4 stack.

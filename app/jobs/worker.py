@@ -410,9 +410,16 @@ async def dispatch_outgoing_webhooks(ctx):
         logging.getLogger(__name__).warning('Webhook failure notification could not be queued')
 
 
+@observed_job
+async def clean_spreadsheet_storage(ctx):
+    from ..spreadsheets.store import cleanup
+    await asyncio.to_thread(cleanup)
+
+
 class WorkerSettings:
     on_startup = startup
-    cron_jobs = [cron(dispatch_outgoing_webhooks, second=set(range(0, 60, 5)), timeout=180),
+    cron_jobs = [cron(clean_spreadsheet_storage, minute=0, second=0),
+                 cron(dispatch_outgoing_webhooks, second=set(range(0, 60, 5)), timeout=180),
                  cron(dispatch_public_operations, second=set(range(0, 60, 5)), timeout=900),
                  cron(dispatch_evaluations, second=set(range(0, 60, 5)), timeout=900),
                  cron(dispatch_lead_sync, second=set(range(0, 60, 5)), timeout=900),
