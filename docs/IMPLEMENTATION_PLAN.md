@@ -718,7 +718,7 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 | T9.9b | Appointment chat tools and consent-aware reminder worker | APT-1 | T9.9a |
 | T9.9c | English/Hindi appointments administration | APT-1, L10N-1/2 | T9.9b |
 | T9.9d | Google Calendar OAuth, free/busy and event synchronization (implemented; live OAuth check pending) | GCAL-1 to GCAL-4 | T9.9c |
-| T9.10 | Payment links (merchant connections, queued creation and verified webhooks implemented; chat/UI follow) | PAY-1, RZ-4 | T5.1, T1.8 |
+| T9.10 | Payment links (merchant connections, queued creation, verified webhooks and chat delivery implemented; admin UI follows) | PAY-1, RZ-4 | T5.1, T1.8 |
 | T9.11 | Leads to Google Sheets, Zoho and HubSpot | LEAD-3, GSH-1 to GSH-3, CRM-1, CRM-2 | T5.2 |
 | T9.12 | Accuracy runs in the UI with history | ANL-4 | T3.3 |
 | T9.13 | Multiple workspaces per user; 2FA | ACC-4, ACC-5 | T1.4 |

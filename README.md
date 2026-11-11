@@ -1040,7 +1040,12 @@ Duplicate and out-of-order events cannot send a second receipt or undo a paid st
 Raw verified payloads are encrypted and removed after 14 days; deduplication records remain.
 Disconnect removes API credentials; the encrypted webhook secret remains to recognize payments
 on existing links. Revoke old API keys in the merchant dashboard when appropriate.
-Chat notices and the admin UI follow in stacked PRs.
+The bot can list and send only agent-approved dues in its current conversation.
+Payment links and verified receipts use deterministic copy in the eight supported customer languages.
+WhatsApp links require an open 24-hour window. Outside it, receipts require an approved utility
+template of the matching language and the contact’s existing opt-in; otherwise delivery is visibly
+blocked for team follow-up. Uncertain WhatsApp sends are never automatically repeated.
+English/Hindi administration follows in the next stacked PR.
 
 `MASTER_KEY` is required for credential storage. `PAYMENT_LINK_REQUESTS_PER_MINUTE` defaults
 to 60 per workspace. Optional WhatsApp utility receipt templates must have three variables

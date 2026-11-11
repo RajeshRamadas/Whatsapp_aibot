@@ -38,11 +38,15 @@ def apply(db, value, remote, payment_id=None):
     if remote.get('short_url'):
         value.url = safe_url(remote['short_url'])
     if value.state == 'paid':
+        if payment_id and not value.payment_id:
+            value.payment_id = payment_id
         return  # Out-of-order cancellation/expiry can never undo verified payment.
     state = remote['status']
     value.state = 'created' if state == 'partially_paid' else state
     if state == 'paid':
         value.payment_id = payment_id
+    from .payment_notifications import stage
+    stage(db, value)
     audit(db, value.tenant_id, 'payments.' + value.state, value.id, actor_type='system')
 
 

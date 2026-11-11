@@ -19,6 +19,7 @@ from ..services import (
     calendar_sync,
     google_jobs,
     media,
+    payment_notifications,
     payment_processing,
 )
 from ..services.analytics import reconcile as reconcile_analytics_daily
@@ -357,6 +358,7 @@ async def dispatch_google_calendar(ctx):
 
 @observed_job
 async def dispatch_payments(ctx):
+    await asyncio.to_thread(payment_notifications.process_one)
     await asyncio.to_thread(payment_processing.expire_payloads)
     for _ in range(10):
         if (not await asyncio.to_thread(payment_processing.process_event)

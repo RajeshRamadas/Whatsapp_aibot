@@ -1,0 +1,5 @@
+{
+  "queued": "Preparing a payment link for {description}: INR {amount}. I’ll send the link here.",
+  "link": "Pay INR {amount} for {description}: {url}. Expires {expires}.",
+  "paid": "Payment received: INR {amount} for {description}. Reference: {reference}."
+}
