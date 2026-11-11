@@ -67,7 +67,9 @@ test('lead sync: configure all providers, approve sharing, export and retry with
   await expect(sheet.getByText('Sharing enabled', { exact: true })).toBeVisible();
   page.once('dialog', dialog => dialog.accept());
   await sheet.getByRole('button', { name: 'Export latest 100 existing leads', exact: true }).click();
-  await sheet.getByText('Delivery history', { exact: true }).click();
+  await expect(sheet.getByRole('button', { name: 'Export latest 100 existing leads', exact: true })).toBeEnabled();
+  const history = sheet.getByText('Delivery history', { exact: true });
+  if (!await history.evaluate(node => (node.parentElement as HTMLDetailsElement).open)) await history.click();
   await expect(sheet.getByText('Lead version 2 · Delivered', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'हिन्दी', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'लीड सिंक', exact: true })).toBeVisible();

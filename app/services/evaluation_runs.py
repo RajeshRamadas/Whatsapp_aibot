@@ -48,43 +48,47 @@ def view(run, detail=False):
 
 
 def create(tenant_id, values, actor=('system', None)):
-    request_hash = digest(values | {'request_key': None})
     with Session.begin() as db:
-        tenant = db.get(Tenant, tenant_id, with_for_update=True)
-        previous = db.scalar(select(EvalRun).where(EvalRun.tenant_id == tenant_id,
-                                                    EvalRun.request_key == values['request_key']))
-        if previous:
-            if previous.context['request'] != request_hash:
-                raise AppointmentError('This request key was used for different inputs')
-            return view(previous)
-        if db.scalar(select(EvalRun.id).where(EvalRun.tenant_id == tenant_id,
-                                               EvalRun.state.in_(['queued', 'running'])).limit(1)):
-            raise AppointmentError('Wait for the active run or cancel it first')
-        query = select(EvalCase).where(EvalCase.tenant_id == tenant_id).order_by(EvalCase.created_at, EvalCase.id)
-        if values.get('case_ids') is not None:
-            query = query.where(EvalCase.id.in_(values['case_ids']))
-        cases = db.scalars(query.limit(settings.eval_max_cases_per_run + 1)).all()
-        if values.get('case_ids') is not None and len(cases) != len(set(values['case_ids'])):
-            raise AppointmentError('Test question not found', 404)
-        if not cases:
-            raise AppointmentError('Add test questions first', 409)
-        if any(not c.expect_no_answer and not (c.expected_keywords or c.expected_source) for c in cases):
-            raise AppointmentError('Add scoring expectations to every selected question', 422)
-        if len(cases) > settings.eval_max_cases_per_run:
-            raise AppointmentError('Select fewer test questions for this run', 422)
-        snapshots = [{k: getattr(c, k) for k in ('id', 'question', 'expected_keywords', 'expected_source',
-                                               'expect_no_answer')} for c in cases]
-        provider, model = llm.resolve_chat(tenant.chat_provider, tenant.chat_model)
-        bot = {k: getattr(tenant, k) for k in BOT}
-        context = dict(provider=provider, model=model, settings=runtime(),
-            knowledge=knowledge(db, tenant_id), case_set=digest(snapshots), bot_hash=digest(bot),
-            bot=bot, request=request_hash, scoring='keyword-source-v2')
-        run = EvalRun(tenant_id=tenant_id, request_key=values['request_key'], label=values['label'],
-                      cases=snapshots, context=context, total=len(cases))
-        db.add(run)
-        db.flush()
-        audit(db, tenant_id, 'eval_run.created', run.id, actor_type=actor[0], actor_user_id=actor[1])
-        return view(run)
+        return create_in_session(db, tenant_id, values, actor)
+
+
+def create_in_session(db, tenant_id, values, actor=('system', None)):
+    request_hash = digest(values | {'request_key': None})
+    tenant = db.get(Tenant, tenant_id, with_for_update=True)
+    previous = db.scalar(select(EvalRun).where(EvalRun.tenant_id == tenant_id,
+                                                EvalRun.request_key == values['request_key']))
+    if previous:
+        if previous.context['request'] != request_hash:
+            raise AppointmentError('This request key was used for different inputs')
+        return view(previous)
+    if db.scalar(select(EvalRun.id).where(EvalRun.tenant_id == tenant_id,
+                                           EvalRun.state.in_(['queued', 'running'])).limit(1)):
+        raise AppointmentError('Wait for the active run or cancel it first')
+    query = select(EvalCase).where(EvalCase.tenant_id == tenant_id).order_by(EvalCase.created_at, EvalCase.id)
+    if values.get('case_ids') is not None:
+        query = query.where(EvalCase.id.in_(values['case_ids']))
+    cases = db.scalars(query.limit(settings.eval_max_cases_per_run + 1)).all()
+    if values.get('case_ids') is not None and len(cases) != len(set(values['case_ids'])):
+        raise AppointmentError('Test question not found', 404)
+    if not cases:
+        raise AppointmentError('Add test questions first', 409)
+    if any(not c.expect_no_answer and not (c.expected_keywords or c.expected_source) for c in cases):
+        raise AppointmentError('Add scoring expectations to every selected question', 422)
+    if len(cases) > settings.eval_max_cases_per_run:
+        raise AppointmentError('Select fewer test questions for this run', 422)
+    snapshots = [{k: getattr(c, k) for k in ('id', 'question', 'expected_keywords', 'expected_source',
+                                           'expect_no_answer')} for c in cases]
+    provider, model = llm.resolve_chat(tenant.chat_provider, tenant.chat_model)
+    bot = {k: getattr(tenant, k) for k in BOT}
+    context = dict(provider=provider, model=model, settings=runtime(),
+        knowledge=knowledge(db, tenant_id), case_set=digest(snapshots), bot_hash=digest(bot),
+        bot=bot, request=request_hash, scoring='keyword-source-v2')
+    run = EvalRun(tenant_id=tenant_id, request_key=values['request_key'], label=values['label'],
+                  cases=snapshots, context=context, total=len(cases))
+    db.add(run)
+    db.flush()
+    audit(db, tenant_id, 'eval_run.created', run.id, actor_type=actor[0], actor_user_id=actor[1])
+    return view(run)
 
 
 def listing(tenant_id, limit, offset):

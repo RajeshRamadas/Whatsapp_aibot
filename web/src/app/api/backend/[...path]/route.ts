@@ -22,9 +22,11 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
   const type = response.headers.get('content-type');
   if (type) outgoing.headers.set('content-type', type);
   for (const name of ['location', 'content-disposition', 'cache-control', 'x-content-type-options',
-    'content-range', 'accept-ranges', 'referrer-policy']) {
+    'content-range', 'accept-ranges', 'referrer-policy', 'retry-after', 'idempotency-replayed',
+    'api-version', 'x-request-id', 'www-authenticate']) {
     const value = response.headers.get(name);
-    if (value) outgoing.headers.set(name, value);
+    if (value) outgoing.headers.set(name, name === 'location' && path[0] === 'public'
+      && value.startsWith('/api/v1/public/') ? value.replace('/api/v1/public/', '/api/backend/public/') : value);
   }
   // Preserve multiple Set-Cookie headers for the session and CSRF double-submit cookie.
   for (const cookie of response.headers.getSetCookie()) outgoing.headers.append('set-cookie', cookie);
