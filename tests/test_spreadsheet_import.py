@@ -153,3 +153,19 @@ def test_blank_records_also_obey_the_import_scan_limit(tmp_path, monkeypatch):
     path.write_text('Name\n\n\n\nA\n')
     with pytest.raises(ValueError, match='row limit'):
         parse.parse(path)
+
+
+def test_codes_phone_prefixes_and_workbook_padding_are_preserved(tmp_path):
+    path = tmp_path / 'codes.csv'
+    path.write_text('Code,Phone\n00123,+919999000001\n00001,+919999000002\n')
+    data = parse.parse(path)[0]
+    assert [c['type'] for c in data.columns] == ['text', 'text']
+    assert data.rows[0] == ['00123', '+919999000001']
+    book = Workbook()
+    book.active.append(['Code'])
+    book.active.append([123])
+    book.active['A2'].number_format = '00000'
+    path = tmp_path / 'codes.xlsx'
+    book.save(path)
+    data = parse.parse(path)[0]
+    assert data.columns[0]['type'] == 'text' and data.rows == [['00123']]

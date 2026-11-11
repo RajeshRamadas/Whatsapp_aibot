@@ -25,6 +25,8 @@ def number(value):
     if isinstance(value, bool) or not isinstance(value, (str, int, float, Decimal)):
         raise ValueError()
     raw = str(value).strip()
+    if isinstance(value, str) and (raw.startswith('+') or re.match(r'^-?0[0-9]', raw)):
+        raise ValueError()  # Preserve phone prefixes and zero-padded identifiers as text.
     if raw.startswith(('₹', '$', '€', '£')):
         raw = raw[1:].strip()
     if not NUMBER.fullmatch(raw):
@@ -133,6 +135,8 @@ def parse(path):
                                 units = re.findall(r'\[\$([₹$€£])(?:-[^]]*)?\]|(?<![\[a-zA-Z])([₹$€£])',
                                                    cell.number_format or '')
                                 unit = next((a or b for a, b in units), None)
+                                if type(value) is int and value >= 0 and re.fullmatch(r'0{2,60}', cell.number_format):
+                                    value = str(value).zfill(len(cell.number_format))
                                 if unit and type(value) in (int, float, Decimal):
                                     value = unit + str(value)
                                 values.append(value)

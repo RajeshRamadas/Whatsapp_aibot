@@ -20,7 +20,8 @@ queries, so a few matching retrieval examples cannot be mistaken for a total.
   visible, including duplicate, blank and Indian-language labels.
 - Consistent columns become exact `NUMERIC`, `BOOLEAN`, `DATE`, or `TEXT`. Mixed
   values stay text, including mixed currencies; they are not silently coerced to
-  zero. Blank cells become null. Empty tables with headers are supported.
+  zero. Leading-zero codes, phone prefixes and simple XLSX zero-padding masks
+  remain text. Blank cells become null. Empty tables with headers are supported.
 - Indian and international numeric grouping, scientific notation and saved XLSX
   currency formats are recognized. Decimal values are preserved without float
   rounding in database results. Currency symbols remain units; `$` does not imply
