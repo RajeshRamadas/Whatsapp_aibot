@@ -1206,3 +1206,10 @@ Personal-data actions require identity checks; changing actions require explicit
 permission and default to customer confirmation. New or edited actions stay paused
 until their current revision is tested. Configure `MASTER_KEY`, `HTTP_ACTION_LIMIT`
 and `HTTP_ACTION_REQUESTS_PER_MINUTE` as needed.
+Owners/admins can define, test, enable and pause actions in **Dashboard → Custom
+actions** (English/Hindi). Runtime calls run only from background WhatsApp/widget
+turns. Literal conversation-bound confirmation and email-code commands protect
+changes/personal data; uncertain writes are never automatically retried. Calls and
+short-lived payloads are encrypted, and the worker maintains their retention.
+See the [custom action guide](docs/HTTP_ACTIONS.md) for examples, identity setup,
+network limits, test semantics, and handling unknown outcomes.

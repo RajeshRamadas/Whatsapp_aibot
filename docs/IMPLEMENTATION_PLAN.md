@@ -786,7 +786,7 @@ Tick each task in the PR that completes it.
 | M7 | T7.1 ☐ · T7.2 ☐ · T7.3 ☐ · T7.4 ☐ · T7.5 ☑ | |
 | M8 | T8.1 ☐ · T8.2 ☑ · T8.3 ☑ · T8.4 ☐ · T8.5 ☐ | T8.4 code ready; live SES/DNS staging check pending. |
 | M9 | T9.1 ☑ · T9.2a ☑ · T9.2b ☑ · T9.3 ☑ · T9.4a ☑ · T9.4b ☐ · T9.5 ☑ · T9.6a ☑ · T9.6b ☑ · T9.6c ☑ · T9.7a ☑ · T9.7b ☑ · T9.8a ☑ · T9.8b ☑ · T9.8c ☑ · T9.8d ☑ · T9.9a ☑ · T9.9b ☑ · T9.9c ☑ · T9.9d ☑ · T9.10 ☑ · T9.11 ☑ · T9.12 ☑ · T9.13 ☑ | T9.4b code merged; user has no speech dataset and chose to keep transcription disabled. Real-language evaluation pending. T9.8 native-speaker script review and live model accuracy checks remain pilot gates. T9.9d code and fake-provider checks implemented; no Google Cloud OAuth app yet, so live authorization/delivery verification remains pending by user choice. T9.10 code and fake-provider checks implemented; live merchant test-mode payment verification remains pending until merchant keys/webhooks are configured. T9.11 implemented in stacked PRs #80–#84 with fake Google/HubSpot/Zoho checks; live account verification remains pending until OAuth and tenant credentials are configured. T9.12 implemented in stacked PRs #85–#86 with immutable accuracy-run history and English/Hindi controls; automated checks use fakes, so live-model verification remains pending credentials. T9.13 implemented in stacked PRs #87–#89: existing multi-workspace membership APIs verified; switching clears private view state; optional account-wide TOTP, one-use recovery codes and English/Hindi security controls added. |
-| M10 | T10.1 ☑ · T10.2 ☑ · T10.3 ☐ · T10.4 ☐ · T10.5 ☐ · T10.6 ☐ · T10.7 ☐ · T10.8 ☐ · T10.9 ☐ · T10.10 ☐ | T10.1 implemented in stacked PRs #90–#94: additive public v1 API, granular scoped keys, plan quotas, opaque pagination, atomic 24-hour replay, all PAPI-6 resources, durable knowledge writes and sends, accuracy runs, English/Hindi key controls and OpenAPI reference. Migration 0044 verified up/down/up; tests use fake providers. T10.2 implemented in stacked PRs #95–#98: encrypted destinations, atomic metadata events, signed/pinned HTTPS delivery, 24-hour retries, three-day disablement/admin alerts, 30-day logs and English/Hindi controls. Migration 0045 verified up/down/up. |
+| M10 | T10.1 ☑ · T10.2 ☑ · T10.3 ☑ · T10.4 ☐ · T10.5 ☐ · T10.6 ☐ · T10.7 ☐ · T10.8 ☐ · T10.9 ☐ · T10.10 ☐ | T10.1 implemented in stacked PRs #90–#94: additive public v1 API, granular scoped keys, plan quotas, opaque pagination, atomic 24-hour replay, all PAPI-6 resources, durable knowledge writes and sends, accuracy runs, English/Hindi key controls and OpenAPI reference. Migration 0044 verified up/down/up; tests use fake providers. T10.2 implemented in stacked PRs #95–#98: encrypted destinations, atomic metadata events, signed/pinned HTTPS delivery, 24-hour retries, three-day disablement/admin alerts, 30-day logs and English/Hindi controls. Migration 0045 verified up/down/up. T10.3 implemented in stacked parts: versioned encrypted HTTP actions, pinned public HTTPS, all five auth modes, server-bound identity checks, customer confirmation, OTP, durable replay and English/Hindi test controls. Migrations 0046–0047 verified up/down/up; receiver/provider checks use fakes. Live tenant endpoint and SES delivery checks remain deployment setup. |
 
 ## 7. Human decisions needed before certain tasks
 
@@ -800,20 +800,23 @@ Tick each task in the PR that completes it.
 | T8.5 | Hosting provider and region | REQUIREMENTS §10.6 |
 | T9.4b | OpenAI selected for the first adapter. User confirmed no dataset yet; keep transcription disabled until real-language evaluation is complete. | INTEGRATIONS STT-1 |
 
-T10.3 part a adds versioned HTTP action definitions, safe templates and bounded
-validation, encrypted credentials and conversation-bound call storage. CRUD is
-admin-only and scoped. Transport, identity/confirmation, bot tools and controls
-follow in stacked parts; T10.3 remains pending until the full stack is complete.
-T10.3 part b adds pinned public HTTPS JSON transport, 100,000-byte responses,
-request deadlines, all five authentication modes, idempotency headers for writes
-and credential-reflection redaction. All network tests use local fakes.
-T10.3 part c adds encrypted call replay, shared request quotas, selected-field
-projection, server-bound phone checks and transactional email OTP. Personal writes
-use a read-only identity lookup before mutation. Confirmations/codes are bound to
-conversation, inputs and revision, expire, and cannot be supplied by the model.
-Ambiguous mutations are not retried automatically. The admin test endpoint shows
-redacted raw data and the gated bot projection; call logs contain metadata only.
+T10.3 acceptance: owner/admin Custom actions dashboard defines bounded scalar
+inputs, exact response paths, credentials, privacy and write policy. Only tested
+revisions can be enabled. Customer identity uses verified WhatsApp phone matching
+or transactional email OTP to the address returned by the business system; personal
+writes verify a read-only lookup first. Literal approvals/codes bypass the model.
+Code masking preserves widget replay, and source-turn write replay is stable even
+when a model retries with different arguments. Pausing cancels pending approvals.
+Unknown mutations need manual reconciliation, with no automatic write retries.
 
-T10.3d progress: live background WhatsApp/widget tools expose only selected untrusted fields. Literal conversation-bound confirmations and OTP commands bypass the model; codes are masked from history. Previews/evaluations cannot execute HTTP actions. Four chat integration tests pass.
+Browser acceptance covers failed/successful tests, current-revision enablement,
+credential re-entry, selected-only model results, customer confirmation/replay,
+pause/delete, owner/viewer isolation, English/Hindi, axe and 320 px layout. All 30
+browser tests and 48 frontend unit tests pass. Backend regression checks use real
+Postgres/Redis and fake receivers/providers. Migrations 0046–0047 passed up/down/up/check.
+See [HTTP_ACTIONS.md](HTTP_ACTIONS.md) and
+[screenshot](screenshots/t10-3-custom-actions.png). Live endpoint credentials and
+SES delivery are configured/tested by each workspace before production use.
 
-T10.3e progress: English/Hindi owner/admin dashboard at /dashboard/actions defines scalar inputs, selected response paths, all five authentication modes, privacy proofs and write approval policy. Testing shows redacted raw responses and selected bot fields; current-revision success gates enablement. Credential re-entry is required on edit. Frontend typecheck, lint and 48 unit tests pass.
+The retention sweep uses a partial expiry index and skips payloads already cleared,
+so the five-second worker sweep does not rewrite the full 30-day call history.

@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
+from sqlalchemy import update as sql_update
 from sqlalchemy.exc import IntegrityError
 
 from ..config import settings
@@ -114,6 +115,11 @@ def enable(identity: UUID, body: ActionEnable, p: Principal = Depends(require_ro
         if body.enabled and (row.tested_revision != row.revision or row.status != 'connected'):
             raise HTTPException(409, 'Successfully test this revision before enabling it')
         row.enabled = body.enabled
+        if not body.enabled:
+            db.execute(sql_update(HttpActionCall).where(HttpActionCall.tenant_id == p.tenant.id,
+                HttpActionCall.action_id == row.id, HttpActionCall.is_test.is_(False),
+                HttpActionCall.state.in_(['queued', 'awaiting_confirmation', 'awaiting_code']))
+                .values(state='failed', last_error='action_paused', inputs_enc=None, result_enc=None, code_hash=None))
         audit(db, p.tenant.id, 'http_action.enabled' if body.enabled else 'http_action.paused', row.id,
               actor_user_id=p.user.id if p.user else None)
         return view(row)

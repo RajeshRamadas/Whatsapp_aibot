@@ -63,7 +63,7 @@ def process_turn() -> bool:
             return True
         conv = db.get(Conversation, conversation.id, with_for_update=True)
         current.message = redact_command(current.message)
-        if result and result.action_failed:
+        if result and result.action_failed and not conv.handoff and conv.status == 'bot':
             conv.handoff, conv.status = True, 'waiting'
             current.answer, current.sources, lead_fields = result.text, [], None
         elif turn.handoff or result is None or conv.handoff or conv.status == 'closed':

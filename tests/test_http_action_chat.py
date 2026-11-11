@@ -85,3 +85,21 @@ def test_action_failure_hands_widget_to_team_and_masks_codes(client, tenant, act
         assert turn.state == 'complete' and turn.message.endswith('[redacted]')
         assert db.get(fixtures.Conversation, conv).status == 'waiting'
         assert turn.answer == 'Our team will help.'
+
+
+def test_widget_code_replay_after_redaction(client, tenant):
+    base = '/api/v1/chat/' + tenant['public_key'] + '/widget'
+    body = {'request_id': uid(), 'message': 'VERIFY abcdef123456 123456'}
+    assert client.post(base + '/turns', json=body).status_code == 202
+    assert widget_turns.process_turn()
+    assert client.post(base + '/turns', json=body).status_code == 202
+    with Session() as db:
+        assert db.get(WidgetTurn, body['request_id']).message.endswith('[redacted]')
+
+
+def test_retried_model_arguments_cannot_repeat_a_write(client, tenant, action, monkeypatch):
+    receiver, conv = fixtures.prepare(client, tenant, action, monkeypatch,
+        {'method': 'POST', 'allow_changes': True, 'customer_confirmation': False})
+    first = fixtures.http_actions.start(tenant['tenant_id'], action['id'], {'sku': 'SKU'}, conv, 'same-source-turn')
+    second = fixtures.http_actions.start(tenant['tenant_id'], action['id'], {'sku': 'OTHER'}, conv, 'same-source-turn')
+    assert first['id'] == second['id'] and len(receiver.calls) == 1

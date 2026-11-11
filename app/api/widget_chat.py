@@ -14,6 +14,7 @@ from sqlalchemy.exc import IntegrityError
 from .. import rag
 from ..db import Conversation, Message, Session, Tenant, WidgetTurn, uid
 from ..observability import bind
+from ..services.http_action_chat import redact_command
 from .principal import tenant_for_role
 from .shared import origins
 
@@ -94,7 +95,7 @@ def update_settings(body: Theme, tenant: Tenant = Depends(tenant_for_role('admin
 
 
 def replay(turn, body):
-    if (turn.message != body.message or turn.handoff != body.handoff
+    if (redact_command(turn.message) != redact_command(body.message) or turn.handoff != body.handoff
             or (body.conversation_id and turn.conversation_id != str(body.conversation_id))):
         raise HTTPException(409, 'Request ID was already used for a different message')
     return view(turn)

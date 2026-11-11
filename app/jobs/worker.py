@@ -100,6 +100,7 @@ def process_inbound(event_id):
 
 
 def process_inbound_locked(event_id, tenant_id, contact):
+    from ..services.http_action_chat import redact_command
     with Session() as db:
         event = db.get(InboundEvent, event_id)
         if event.status in ('processed', 'merged', 'failed'):
@@ -125,6 +126,7 @@ def process_inbound_locked(event_id, tenant_id, contact):
             if exhausted:
                 for row in rows:
                     row.status = 'failed'
+                    row.payload = {**row.payload, 'text': redact_command(row.payload.get('text', ''))}
         if not exhausted:
             return True
         conv = whatsapp.conversation_for(tenant_id, contact)
@@ -144,7 +146,6 @@ def process_inbound_locked(event_id, tenant_id, contact):
             for row in db.scalars(select(InboundEvent).where(InboundEvent.tenant_id == tenant_id,
                                   InboundEvent.id.in_([item.id for item in batch]))):
                 row.status = 'processed' if row.id == event_id else 'merged'
-                from ..services.http_action_chat import redact_command
                 row.payload = {**row.payload, 'text': redact_command(row.payload.get('text', ''))}
                 row.last_error = None
     return False
