@@ -822,3 +822,10 @@ The retention sweep uses a partial expiry index and skips payloads already clear
 so the five-second worker sweep does not rewrite the full 30-day call history.
 
 T10.4a: typed CSV/XLSX imports, isolated tenant schemas and SELECT-only roles, atomic publication, source data deletion and orphan cleanup. Limits and database permissions documented; query service and controls follow in stacked parts.
+
+T10.4b: owner/admin catalog, preview, enable/pause, guarded query and reimport APIs.
+SQL accepts one bounded SELECT on one owned table; literals are bound separately.
+A dedicated role, read-only transaction, statement timeout and result bounds also
+apply independently of the parser. Failed reimport queueing remains retryable.
+Currency symbols are retained as units; mixed currencies stay text. Chat tools and
+English/Hindi controls follow.
