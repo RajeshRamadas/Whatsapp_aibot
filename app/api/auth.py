@@ -1,5 +1,6 @@
 """User registration and cookie-session authentication."""
 import secrets
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, EmailStr, Field
@@ -7,9 +8,10 @@ from sqlalchemy import delete, select
 
 from ..config import settings
 from ..db import AuthCode, Membership, Session, Tenant, User, UserSession, now, uid
+from ..models.mfa import MFAChallenge, UserMFA
 from ..rate_limits import RateLimiter
 from ..services import auth as security
-from ..services import email
+from ..services import email, mfa
 from ..services.analytics import record
 from ..services.audit import audit
 
@@ -17,6 +19,21 @@ router = APIRouter(prefix='/api/v1/auth', tags=['auth'])
 _auth_limiter = RateLimiter(5, window_seconds=900, namespace='auth')
 COOKIE = 'chatbot_session'
 CSRF_COOKIE = 'chatbot_csrf'
+MFA_COOKIE = 'chatbot_mfa'
+
+
+class UserView(BaseModel):
+    id: str
+    email: str
+    name: str
+    email_verified: bool
+    is_platform_admin: bool
+
+
+class MFARequired(BaseModel):
+    mfa_required: Literal[True] = True
+    challenge: str
+    expires_in: int = 300
 
 
 class Signup(BaseModel):
@@ -80,6 +97,9 @@ def _session(request: Request, *, allow_suspended=False) -> tuple[UserSession, U
         user = db.get(User, row.user_id)
         if not user:
             raise HTTPException(401, 'Authentication required')
+        factor = db.get(UserMFA, user.id)
+        if factor and factor.enabled_at and not row.mfa_verified:
+            raise HTTPException(401, 'Second factor required')
         if not allow_suspended:
             _active_account(db, user)
         row.expires_at = security.session_expiry()
@@ -103,6 +123,11 @@ def _set_cookies(response: Response, raw: str, csrf: str):
                         samesite='lax', max_age=age)
     response.set_cookie(CSRF_COOKIE, csrf, httponly=False, secure=settings.auth_cookie_secure,
                         samesite='lax', max_age=age)
+
+
+def _clear_challenge(response):
+    response.delete_cookie(MFA_COOKIE, path='/api', secure=settings.auth_cookie_secure,
+                           httponly=True, samesite='strict')
 
 
 def _rate_limit(request: Request, email_address: str, action: str):
@@ -137,12 +162,13 @@ def signup(body: Signup):
     return view
 
 
-@router.post('/login')
+@router.post('/login', response_model=UserView | MFARequired)
 def login(body: Credentials, request: Request, response: Response):
+    response.headers['Cache-Control'] = 'no-store'
     address = _email(str(body.email))
     _rate_limit(request, address, 'login')
     with Session.begin() as db:
-        user = db.scalar(select(User).where(User.email == address))
+        user = db.scalar(select(User).where(User.email == address).with_for_update())
         if not user or not security.verify_password(user.password_hash, body.password):
             if user:
                 tenant_ids = db.scalars(select(Membership.tenant_id).where(Membership.user_id == user.id)).all()
@@ -151,16 +177,30 @@ def login(body: Credentials, request: Request, response: Response):
                 db.commit()
             raise HTTPException(401, 'Invalid credentials')
         _active_account(db, user)
-        raw, csrf = security.new_token(), security.new_token()
-        db.add(UserSession(id_hash=security.hash_token(raw), user_id=user.id,
-                           csrf_hash=security.hash_token(csrf), expires_at=security.session_expiry(),
-                           ip=request.client.host if request.client else None,
-                           user_agent=request.headers.get('user-agent', '')[:512]))
-        view = _view(user)
+        factor = db.get(UserMFA, user.id)
+        requires_mfa = bool(factor and factor.enabled_at)
+        if requires_mfa:
+            raw, csrf = mfa.challenge(db, user)
+            previous = request.cookies.get(COOKIE)
+            if previous:
+                db.execute(delete(UserSession).where(UserSession.id_hash == security.hash_token(previous)))
+            view = {'mfa_required': True, 'challenge': csrf, 'expires_in': 300}
+        else:
+            raw, csrf = security.issue_session(db, user.id, request.client.host if request.client else None,
+                                               request.headers.get('user-agent', ''))
+            view = _view(user)
         tenant_ids = db.scalars(select(Membership.tenant_id).where(Membership.user_id == user.id)).all()
         for tenant_id in tenant_ids:
-            audit(db, tenant_id, 'auth.login_succeeded', actor_user_id=user.id)
-    _set_cookies(response, raw, csrf)
+            audit(db, tenant_id, 'auth.login_password_verified' if requires_mfa else 'auth.login_succeeded',
+                  actor_user_id=user.id)
+    if requires_mfa:
+        response.delete_cookie(COOKIE)
+        response.delete_cookie(CSRF_COOKIE)
+        response.set_cookie(MFA_COOKIE, raw, path='/api', httponly=True, secure=settings.auth_cookie_secure,
+                            samesite='strict', max_age=300)
+    else:
+        _clear_challenge(response)
+        _set_cookies(response, raw, csrf)
     return view
 
 
@@ -182,10 +222,11 @@ def logout(request: Request, response: Response):
         db.execute(delete(UserSession).where(UserSession.id_hash == row.id_hash))
     response.delete_cookie(COOKIE)
     response.delete_cookie(CSRF_COOKIE)
+    _clear_challenge(response)
 
 
 def _consume_code(db, address: str, code: str, purpose: str) -> User:
-    user = db.scalar(select(User).where(User.email == address))
+    user = db.scalar(select(User).where(User.email == address).with_for_update())
     if not user:
         raise HTTPException(400, 'Invalid or expired code')
     record = db.scalar(select(AuthCode).where(AuthCode.user_id == user.id, AuthCode.purpose == purpose))
@@ -227,4 +268,9 @@ def password_reset_confirm(body: ResetConfirm):
         user = _consume_code(db, _email(str(body.email)), body.code, 'reset')
         user.password_hash = password_hash
         db.execute(delete(UserSession).where(UserSession.user_id == user.id))
+        db.execute(delete(MFAChallenge).where(MFAChallenge.user_id == user.id))
+        factor = db.get(UserMFA, user.id)
+        if factor:
+            mfa.clear_pending(factor)
+            factor.version += 1
     return {'status': 'updated'}

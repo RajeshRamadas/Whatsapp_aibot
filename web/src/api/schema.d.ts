@@ -4,6 +4,109 @@
  */
 
 export interface paths {
+    "/api/v1/auth/mfa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Status */
+        get: operations["status_api_v1_auth_mfa_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/mfa/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Setup */
+        post: operations["setup_api_v1_auth_mfa_setup_post"];
+        /** Cancel Setup */
+        delete: operations["cancel_setup_api_v1_auth_mfa_setup_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/mfa/enable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Enable */
+        post: operations["enable_api_v1_auth_mfa_enable_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/mfa/recovery-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Regenerate */
+        post: operations["regenerate_api_v1_auth_mfa_recovery_codes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/mfa/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Disable */
+        post: operations["disable_api_v1_auth_mfa_disable_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/mfa/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify */
+        post: operations["verify_api_v1_auth_mfa_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/lead-sync": {
         parameters: {
             query?: never;
@@ -2935,6 +3038,11 @@ export interface components {
             /** Confirm */
             confirm: boolean;
         };
+        /** ConfirmInput */
+        ConfirmInput: {
+            /** Code */
+            code: string;
+        };
         /** ConnectInput */
         ConnectInput: {
             /** Label */
@@ -3241,6 +3349,69 @@ export interface components {
             /** Confirm */
             confirm: boolean;
         };
+        /** MFADisabled */
+        MFADisabled: {
+            /** Status */
+            status: string;
+        };
+        /** MFARecovery */
+        MFARecovery: {
+            /** Recovery Codes */
+            recovery_codes: string[];
+        };
+        /** MFARequired */
+        MFARequired: {
+            /**
+             * Mfa Required
+             * @default true
+             * @constant
+             */
+            mfa_required: true;
+            /** Challenge */
+            challenge: string;
+            /**
+             * Expires In
+             * @default 300
+             */
+            expires_in: number;
+        };
+        /** MFASetup */
+        MFASetup: {
+            /** Secret */
+            secret: string;
+            /** Uri */
+            uri: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+        };
+        /** MFAStatus */
+        MFAStatus: {
+            /** Enabled */
+            enabled: boolean;
+            /** Eligible */
+            eligible: boolean;
+            /** Configured */
+            configured: boolean;
+            /** Email Verified */
+            email_verified: boolean;
+            /** Recovery Remaining */
+            recovery_remaining: number;
+            /** Setup Pending */
+            setup_pending: boolean;
+        };
+        /** ManageInput */
+        ManageInput: {
+            /**
+             * Password
+             * Format: password
+             */
+            password: string;
+            /** Code */
+            code: string;
+        };
         /** MerchantInput */
         MerchantInput: {
             /** Label */
@@ -3395,6 +3566,14 @@ export interface components {
             question: string;
             /** Answer */
             answer: string;
+        };
+        /** PasswordInput */
+        PasswordInput: {
+            /**
+             * Password
+             * Format: password
+             */
+            password: string;
         };
         /** PaymentApproval */
         PaymentApproval: {
@@ -4326,6 +4505,19 @@ export interface components {
             /** Sha256 */
             sha256: string;
         };
+        /** UserView */
+        UserView: {
+            /** Id */
+            id: string;
+            /** Email */
+            email: string;
+            /** Name */
+            name: string;
+            /** Email Verified */
+            email_verified: boolean;
+            /** Is Platform Admin */
+            is_platform_admin: boolean;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -4338,6 +4530,13 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** VerifyInput */
+        VerifyInput: {
+            /** Challenge */
+            challenge: string;
+            /** Code */
+            code: string;
         };
         /** WebsiteInput */
         WebsiteInput: {
@@ -4455,6 +4654,209 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    status_api_v1_auth_mfa_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MFAStatus"];
+                };
+            };
+        };
+    };
+    setup_api_v1_auth_mfa_setup_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MFASetup"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_setup_api_v1_auth_mfa_setup_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    enable_api_v1_auth_mfa_enable_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MFARecovery"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    regenerate_api_v1_auth_mfa_recovery_codes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManageInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MFARecovery"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    disable_api_v1_auth_mfa_disable_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManageInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MFADisabled"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_api_v1_auth_mfa_verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     connections_api_v1_lead_sync_get: {
         parameters: {
             query?: never;
@@ -6073,7 +6475,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["UserView"] | components["schemas"]["MFARequired"];
                 };
             };
             /** @description Validation Error */

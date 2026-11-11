@@ -1136,4 +1136,16 @@ Recovery codes are random 128-bit values, stored only as user-bound hashes and c
 Enrollment is bound to the current session and password, expires after ten minutes and permits
 five proof attempts. Login challenges expire after five minutes and permit five attempts.
 Security changes rotate the current session, revoke other sessions and invalidate pending logins.
-Public enrollment/sign-in endpoints and English/Hindi controls follow in the next stacked parts.
+The account endpoints are cookie-session only: `GET /api/v1/auth/mfa`, `POST /auth/mfa/setup`
+(password), `POST /auth/mfa/enable` (authenticator code), `DELETE /auth/mfa/setup`, and
+`POST /auth/mfa/recovery-codes` or `/auth/mfa/disable` (password plus authenticator/recovery code).
+Secret keys and recovery codes appear only in their creation response, with `Cache-Control: no-store`.
+
+An enrolled account's `POST /auth/login` returns `{"mfa_required":true,"challenge":"...","expires_in":300}`
+and an HttpOnly challenge cookie, without a full session. Submit that body nonce and a code to
+`POST /auth/mfa/verify`; only success issues a full session. Five attempts per IP/account in fifteen
+minutes apply independently to sign-in, management and verification, with a separate durable
+five-attempt bound per challenge. Password reset revokes sessions/challenges and retains 2FA.
+Accounts keep their protection after role demotion and may manage it using their password and
+second factor. Existing API keys are independent credentials; account 2FA does not apply to them.
+English/Hindi controls and multiple-workspace browser verification follow in the next stacked part.
