@@ -803,3 +803,7 @@ T10.1 progress: part a adds the additive public v1 bearer boundary, granular key
 scopes, plan quotas, encrypted cursors and atomic 24-hour POST replay storage.
 Resource routes, background knowledge operations and the developer reference
 follow in stacked parts; T10.1 remains pending until those parts are complete.
+T10.1 part b adds typed cursor-paginated reads for all PAPI-6 resources and scoped
+contact, conversation, lead and evaluation-case writes. Every public POST requires
+an idempotency key. Contacts created through this API have no marketing opt-in;
+consent remains governed by existing consent workflows.
