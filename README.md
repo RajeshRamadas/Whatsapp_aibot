@@ -1198,3 +1198,11 @@ Temporary booking holds, queued sends, internal notes and duplicate receipts do 
 emit completion events. Payloads contain record IDs/statuses, not customer content.
 See the [outgoing event guide](docs/OUTGOING_WEBHOOKS.md) for subscriptions,
 receiver verification code, retries, retention and administrative API examples.
+
+Custom HTTP actions are configured by owners/admins at `/api/v1/http-actions`.
+Definitions include bounded scalar inputs, fixed-origin HTTPS URL/body templates,
+JSON response-field paths and write-only encrypted headers/authentication.
+Personal-data actions require identity checks; changing actions require explicit
+permission and default to customer confirmation. New or edited actions stay paused
+until their current revision is tested. Configure `MASTER_KEY`, `HTTP_ACTION_LIMIT`
+and `HTTP_ACTION_REQUESTS_PER_MINUTE` as needed.

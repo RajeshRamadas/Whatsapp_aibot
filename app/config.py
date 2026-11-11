@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     inbox_vapid_subject: str | None = None
     inbox_vapid_public_key: str | None = None
     public_api_default_requests_per_minute: int = Field(60, ge=1, le=6000)
+    http_action_limit: int = Field(20, ge=1, le=50)
+    http_action_requests_per_minute: int = Field(60, ge=1, le=6000)
     outgoing_webhook_max_endpoints: int = Field(10, ge=1, le=50)
     outgoing_webhook_requests_per_minute: int = Field(60, ge=1, le=6000)
     public_api_max_body_bytes: int = Field(1048576, ge=1024, le=10485760)

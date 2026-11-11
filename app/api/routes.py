@@ -18,6 +18,7 @@ from . import (
     evals,
     events,
     google_calendar,
+    http_actions,
     improvements,
     inbox,
     invoices,
@@ -49,7 +50,7 @@ from .shared import UPLOADS as UPLOADS
 from .shared import origins as origins
 
 router = APIRouter()
-for module in (outgoing_webhooks, mfa, lead_sync, payment_webhooks, payments, google_calendar,
+for module in (http_actions, outgoing_webhooks, mfa, lead_sync, payment_webhooks, payments, google_calendar,
                appointments, bot_messages, improvements,
                auth, audit, api_keys,
     workspaces, tenants, billing, channels,

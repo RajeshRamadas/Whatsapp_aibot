@@ -30,3 +30,4 @@ sentry-sdk[fastapi]>=2.74,<3
 
 # Include legacy IANA aliases on minimal Linux images.
 tzdata>=2025.2,<2027
+regex>=2024.11,<2027
