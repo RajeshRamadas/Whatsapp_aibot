@@ -4,6 +4,76 @@
  */
 
 export interface paths {
+    "/api/v1/webhook-endpoints": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listing */
+        get: operations["listing_api_v1_webhook_endpoints_get"];
+        put?: never;
+        /** Create */
+        post: operations["create_api_v1_webhook_endpoints_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/webhook-endpoints/{identity}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove */
+        delete: operations["remove_api_v1_webhook_endpoints__identity__delete"];
+        options?: never;
+        head?: never;
+        /** Enable */
+        patch: operations["enable_api_v1_webhook_endpoints__identity__patch"];
+        trace?: never;
+    };
+    "/api/v1/webhook-endpoints/{identity}/deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Deliveries */
+        get: operations["deliveries_api_v1_webhook_endpoints__identity__deliveries_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/webhook-endpoints/{identity}/deliveries/{delivery_id}/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resend */
+        post: operations["resend_api_v1_webhook_endpoints__identity__deliveries__delivery_id__resend_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/mfa": {
         parameters: {
             query?: never;
@@ -3110,6 +3180,36 @@ export interface components {
             /** Allowed Origins */
             allowed_origins?: string[];
         };
+        /** CreatedEndpoint */
+        CreatedEndpoint: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Url */
+            url: string;
+            /** Events */
+            events: ("message.received" | "message.sent" | "conversation.handoff" | "conversation.closed" | "lead.created" | "lead.updated" | "booking.created" | "payment.completed" | "campaign.completed")[];
+            /** Secret Last4 */
+            secret_last4: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Disabled Reason */
+            disabled_reason: string | null;
+            /** Failure Since */
+            failure_since: string | null;
+            /** Last Success At */
+            last_success_at: string | null;
+            /** Last Error */
+            last_error: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Secret */
+            secret: string;
+        };
         /** CreatedKey */
         CreatedKey: {
             /** Id */
@@ -3164,6 +3264,95 @@ export interface components {
             day: string;
             /** Channel */
             channel: string;
+        };
+        /** DeliveryPage */
+        DeliveryPage: {
+            /** Items */
+            items: components["schemas"]["DeliveryView"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
+        /** DeliveryView */
+        DeliveryView: {
+            /** Id */
+            id: string;
+            /** Endpoint Id */
+            endpoint_id: string;
+            /** State */
+            state: string;
+            /** Attempts */
+            attempts: number;
+            /** Response Code */
+            response_code: number | null;
+            /** Last Error */
+            last_error: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Next Attempt At
+             * Format: date-time
+             */
+            next_attempt_at: string;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** History */
+            history: {
+                [key: string]: unknown;
+            }[];
+        };
+        /** EndpointInput */
+        EndpointInput: {
+            /** Name */
+            name: string;
+            /** Url */
+            url: string;
+            /** Events */
+            events: ("message.received" | "message.sent" | "conversation.handoff" | "conversation.closed" | "lead.created" | "lead.updated" | "booking.created" | "payment.completed" | "campaign.completed")[];
+        };
+        /** EndpointUpdate */
+        EndpointUpdate: {
+            /** Enabled */
+            enabled: boolean;
+            /** Confirm Sharing */
+            confirm_sharing?: true | null;
+        };
+        /** EndpointView */
+        EndpointView: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Url */
+            url: string;
+            /** Events */
+            events: ("message.received" | "message.sent" | "conversation.handoff" | "conversation.closed" | "lead.created" | "lead.updated" | "booking.created" | "payment.completed" | "campaign.completed")[];
+            /** Secret Last4 */
+            secret_last4: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Disabled Reason */
+            disabled_reason: string | null;
+            /** Failure Since */
+            failure_since: string | null;
+            /** Last Success At */
+            last_success_at: string | null;
+            /** Last Error */
+            last_error: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /** EvalCaseInput */
         EvalCaseInput: {
@@ -3820,6 +4009,19 @@ export interface components {
             preview: {
                 [key: string]: string;
             }[];
+        };
+        /** Resend */
+        Resend: {
+            /**
+             * Request Key
+             * Format: uuid
+             */
+            request_key: string;
+            /**
+             * Confirm
+             * @constant
+             */
+            confirm: true;
         };
         /** ResetConfirm */
         ResetConfirm: {
@@ -4689,6 +4891,220 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    listing_api_v1_webhook_endpoints_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EndpointView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_api_v1_webhook_endpoints_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EndpointInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreatedEndpoint"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_api_v1_webhook_endpoints__identity__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    enable_api_v1_webhook_endpoints__identity__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EndpointUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EndpointView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deliveries_api_v1_webhook_endpoints__identity__deliveries_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                cursor?: string | null;
+            };
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeliveryPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resend_api_v1_webhook_endpoints__identity__deliveries__delivery_id__resend_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                identity: string;
+                delivery_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Resend"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeliveryView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     status_api_v1_auth_mfa_get: {
         parameters: {
             query?: never;

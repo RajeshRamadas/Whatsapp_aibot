@@ -1177,3 +1177,11 @@ Owners/admins can manage granular expiring keys in **Dashboard → Developer API
 (English/Hindi), save a new secret once, and revoke it. See the complete
 [public API guide](docs/PUBLIC_API.md) for resources, scopes, retries and examples,
 and the [generated OpenAPI contract](docs/public-api.openapi.json).
+
+Outgoing webhook destinations are managed by owners/admins at
+`/api/v1/webhook-endpoints`. They start paused; explicitly confirm metadata sharing
+to enable them. Save the signing secret from creation; it is encrypted at rest
+and never returned again. `MASTER_KEY` is required. Destinations must use public
+HTTPS on port 443. Limits use `OUTGOING_WEBHOOK_MAX_ENDPOINTS` and the shared
+`OUTGOING_WEBHOOK_REQUESTS_PER_MINUTE` delivery quota. Durable delivery logs retain
+30 days of metadata-only requests; manual resend preserves the original event ID.
