@@ -179,3 +179,39 @@ def test_timeout_has_no_automatic_write_retry(client, tenant, action, monkeypatc
     interrupted = http_actions.approve(tenant['tenant_id'], conv, pending['reference'])
     assert interrupted['state'] == 'unknown'
     assert http_actions.start(tenant['tenant_id'], action['id'], {'sku': 'SKU'}, conv, 'timeout')['state'] == 'unknown'
+
+
+def test_late_customer_confirmation_gets_a_fresh_execution_lease(client, tenant, action, monkeypatch):
+    receiver, conv = prepare(client, tenant, action, monkeypatch, {'method': 'POST', 'allow_changes': True})
+    pending = http_actions.start(tenant['tenant_id'], action['id'], {'sku': 'SKU'}, conv, 'late')
+    with Session.begin() as db:
+        db.get(HttpActionCall, pending['id']).created_at = now() - timedelta(minutes=4)
+    async def receive(*args, **kwargs):
+        http_actions.maintain()
+        return 200, receiver.raw
+    receiver.action = receive
+    assert http_actions.approve(tenant['tenant_id'], conv, pending['reference'])['state'] == 'complete'
+
+
+def test_failed_admin_test_keeps_raw_diagnostics_without_bot_data(client, tenant, action, monkeypatch):
+    class Rejected:
+        async def action(self, *args, **kwargs):
+            return 500, {'error': 'Synthetic failure'}
+    monkeypatch.setattr(http_actions, 'Client', Rejected)
+    response = client.post(BASE + '/' + action['id'] + '/test', headers=tenant['headers'],
+        json={'values': {'sku': 'SKU'}, 'request_key': uid()})
+    assert response.status_code == 200
+    assert response.json()['state'] == 'failed' and response.json()['data'] is None
+    assert response.json()['raw'] == {'error': 'Synthetic failure'}
+
+
+def test_pause_cancels_pending_approvals_even_after_reenable(client, tenant, action, monkeypatch):
+    receiver, conv = prepare(client, tenant, action, monkeypatch, {'method': 'POST', 'allow_changes': True})
+    pending = http_actions.start(tenant['tenant_id'], action['id'], {'sku': 'SKU'}, conv, 'pause')
+    for enabled in [False, True]:
+        assert client.patch(BASE + '/' + action['id'], headers=tenant['headers'],
+                            json={'enabled': enabled}).status_code == 200
+    assert http_actions.approve(tenant['tenant_id'], conv, pending['reference'])['state'] == 'failed'
+    assert not receiver.calls
+    with Session() as db:
+        assert db.get(HttpActionCall, pending['id']).inputs_enc is None

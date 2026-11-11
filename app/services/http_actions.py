@@ -76,7 +76,9 @@ def start(tenant_id, action_id, values, conversation_id, turn_key, *, is_test=Fa
     if is_test and definition.method != 'GET' and not confirm_changes:
         raise ActionError('confirm_test_changes', 422)
     packet = crypto.encrypt(tenant_id, json.dumps(values).encode())
-    key = digest([action_id, action.revision, conversation_id, turn_key, values, is_test])
+    # A retried source turn may produce different model arguments. Never repeat a write for that turn.
+    key = digest([action_id, action.revision, conversation_id, turn_key,
+                  values if definition.method == 'GET' or is_test else None, is_test])
     with Session.begin() as db:
         current = scoped(db, Action, tenant_id, action_id, True)
         if current.revision != action.revision or not is_test and (
@@ -128,7 +130,10 @@ async def perform(definition, private, values, identity, customer_phone, call, c
         except KeyError:
             raise ActionError('parameter_unavailable') from None
         if not 200 <= code < 300:
-            raise ActionError('auth_failed' if code in (401, 403) else 'http_rejected', code)
+            error = 'auth_failed' if code in (401, 403) else 'http_rejected'
+            if call.is_test:
+                return code, {'selected': None, 'raw': raw, 'identity': 'not_checked', 'test_error': error}, None
+            raise ActionError(error, code)
         identity_state, recipient = 'not_required', None
         if definition.identity != 'none':
             try:
@@ -187,6 +192,7 @@ def execute(tenant_id, identity, *, sample_phone=None, client=None):
                     return {'id': identity, 'state': 'failed', 'error': 'conversation_unavailable', 'untrusted': True}
                 customer_phone = phone(conv.external_user) if conv.channel == 'whatsapp' else None
             call.state, run = 'running', True
+            call.expires_at = now() + timedelta(minutes=2)
     if not run:
         return result(tenant_id, identity)
     began, error, status, outcome, recipient = time.monotonic(), None, None, None, None
@@ -285,6 +291,6 @@ def maintain():
     with Session.begin() as db:
         db.execute(update(Call).where(Call.expires_at <= now())
                    .values(inputs_enc=None, result_enc=None, code_hash=None))
-        db.execute(update(Call).where(Call.state == 'running', Call.created_at < now() - timedelta(minutes=2))
+        db.execute(update(Call).where(Call.state == 'running', Call.expires_at <= now())
                    .values(state='unknown', last_error='execution_interrupted'))
         db.execute(delete(Call).where(Call.created_at < now() - timedelta(days=30)))

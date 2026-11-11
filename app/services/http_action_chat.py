@@ -81,6 +81,7 @@ def tools(tenant, conversation_id, turn_key, question):
                 value = http_actions.start(tenant.id, row.id, values, conversation_id, turn_key)
             except (http_actions.ActionError, ValueError):
                 value = {'state': 'failed', 'error': 'action_unavailable'}
+            captured['used'] = True
             if value['state'] != 'complete':
                 captured.update(text=notice(value, copy), failed=value['state'] not in (
                     'awaiting_confirmation', 'awaiting_code'))
