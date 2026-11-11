@@ -813,3 +813,5 @@ use a read-only identity lookup before mutation. Confirmations/codes are bound t
 conversation, inputs and revision, expire, and cannot be supplied by the model.
 Ambiguous mutations are not retried automatically. The admin test endpoint shows
 redacted raw data and the gated bot projection; call logs contain metadata only.
+
+T10.3d progress: live background WhatsApp/widget tools expose only selected untrusted fields. Literal conversation-bound confirmations and OTP commands bypass the model; codes are masked from history. Previews/evaluations cannot execute HTTP actions. Four chat integration tests pass.
