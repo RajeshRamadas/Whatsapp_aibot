@@ -133,5 +133,6 @@
   "switchingWorkspace": "Switching workspace…",
   "switchFailed": "Could not switch workspaces. Your current workspace is still selected. Try again.",
   "logoutFailed": "Sign-out could not finish. Check your connection and try again.",
-  "developer": "Developer API"
+  "developer": "Developer API",
+  "actions": "Custom actions"
 }

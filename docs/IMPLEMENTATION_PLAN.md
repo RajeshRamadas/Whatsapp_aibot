@@ -815,3 +815,5 @@ Ambiguous mutations are not retried automatically. The admin test endpoint shows
 redacted raw data and the gated bot projection; call logs contain metadata only.
 
 T10.3d progress: live background WhatsApp/widget tools expose only selected untrusted fields. Literal conversation-bound confirmations and OTP commands bypass the model; codes are masked from history. Previews/evaluations cannot execute HTTP actions. Four chat integration tests pass.
+
+T10.3e progress: English/Hindi owner/admin dashboard at /dashboard/actions defines scalar inputs, selected response paths, all five authentication modes, privacy proofs and write approval policy. Testing shows redacted raw responses and selected bot fields; current-revision success gates enablement. Credential re-entry is required on edit. Frontend typecheck, lint and 48 unit tests pass.

@@ -1,0 +1,42 @@
+import { createElement } from 'react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, expect, it, vi } from 'vitest';
+import { HttpActions } from './http-actions';
+import { HttpActionForm } from './http-action-form';
+import { actionClient, type CustomAction } from '@/api/http-actions';
+vi.mock('@/api/http-actions', async importOriginal => ({ ...await importOriginal<typeof import('@/api/http-actions')>(), actionClient: { list: vi.fn(), enable: vi.fn(), save: vi.fn(), test: vi.fn(), calls: vi.fn() } }));
+afterEach(() => { cleanup(); vi.clearAllMocks(); });
+const row: CustomAction = { id: 'one', name: 'stock', definition: { description: 'Stock lookup', method: 'GET', url_template: 'https://example.com/stock', parameters: [], outputs: { stock: '$.stock' }, personal_data: false, identity: 'none', auth_kind: 'bearer' }, credential_last4: '1234', enabled: false, revision: 2, tested_revision: 1, status: 'needs_test', last_success_at: null, last_error: null };
+it('keeps a changed definition paused until the current version passes a test', async () => {
+  vi.mocked(actionClient.list).mockResolvedValueOnce([row]).mockResolvedValue([{ ...row, tested_revision: 2, status: 'connected' }]);
+  vi.mocked(actionClient.calls).mockResolvedValue([]);
+  vi.mocked(actionClient.test).mockResolvedValue({ id: 'call', reference: 'abc', state: 'complete', untrusted: true, data: { stock: 5 }, raw: { stock: 5, private: 'admin-only' } });
+  render(createElement(HttpActions, { workspaceId: 'workspace' }));
+  const enable = await screen.findByRole('button', { name: 'Enable action' }); expect((enable as HTMLButtonElement).disabled).toBe(true);
+  const details = screen.getByText('Test action and call history').closest('details')!;
+  details.open = true; fireEvent(details, new Event('toggle'));
+  fireEvent.click(await screen.findByRole('button', { name: 'Run test action' }));
+  await screen.findByText('Test passed. This version can be enabled.');
+  await waitFor(() => expect((enable as HTMLButtonElement).disabled).toBe(false));
+  expect(actionClient.test).toHaveBeenCalledWith('one', expect.objectContaining({ values: {}, confirm_changes: false }));
+  fireEvent.click(screen.getByRole('button', { name: 'Clear test response' }));
+  expect(screen.queryByText('admin-only', { exact: false })).toBeNull();
+});
+it('requires credentials to be re-entered and saves edits paused', async () => {
+  const saved = vi.fn(); vi.mocked(actionClient.save).mockResolvedValue(row);
+  render(createElement(HttpActionForm, { row, onSaved: saved, onCancel: vi.fn() }));
+  expect(screen.getByText(/Re-enter all credentials/)).toBeTruthy();
+  const token = screen.getByLabelText('API key or token') as HTMLInputElement;
+  expect(token.value).toBe(''); expect(token.required).toBe(true);
+  fireEvent.change(token, { target: { value: 'new-secret' } });
+  fireEvent.submit(screen.getByRole('form', { name: 'Edit action' }));
+  await waitFor(() => expect(saved).toHaveBeenCalled());
+  expect(actionClient.save).toHaveBeenCalledWith(expect.objectContaining({ auth: expect.objectContaining({ kind: 'bearer', value: 'new-secret' }), headers: {} }), 'one');
+  expect(actionClient.save).not.toHaveBeenCalledWith(expect.objectContaining({ auth_kind: expect.anything() }), 'one');
+});
+it('recovers list failures with refresh', async () => {
+  vi.mocked(actionClient.list).mockRejectedValueOnce(new Error('offline')).mockResolvedValue([]);
+  render(createElement(HttpActions, { workspaceId: 'workspace' })); await screen.findByRole('alert');
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh actions' }));
+  await screen.findByText('No custom actions yet.'); expect(screen.queryByRole('alert')).toBeNull();
+});
