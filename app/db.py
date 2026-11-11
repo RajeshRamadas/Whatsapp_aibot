@@ -270,6 +270,7 @@ class UserSession(Base):
     id_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
     user_id: Mapped[str] = mapped_column(ForeignKey('users.id', ondelete='CASCADE'), index=True)
     csrf_hash: Mapped[str] = mapped_column(String(64))
+    mfa_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
     user_agent: Mapped[str | None] = mapped_column(String(512), nullable=True)
@@ -639,4 +640,5 @@ from .models import appointments as _appointments  # noqa: E402, F401
 from .models import evaluations as _evaluations  # noqa: E402,F401
 from .models import google_calendar as _google_calendar  # noqa: E402, F401
 from .models import lead_sync as _lead_sync  # noqa: E402,F401
+from .models import mfa as _mfa  # noqa: E402,F401
 from .models import payments as _payments  # noqa: E402,F401
