@@ -24,6 +24,7 @@ from ..db import (
     now,
 )
 from ..models.google_calendar import GoogleTask
+from ..models.lead_sync import LeadDelivery
 from ..models.payments import PaymentEvent, PaymentRequest
 from ..services.audit import audit
 from ..services.usage import month_start
@@ -145,6 +146,8 @@ def suspend(tenant_id: UUID, body: Suspension, user: User = Depends(platform_adm
 def failed_jobs(limit: int = Query(25, ge=1, le=100), offset: int = Query(0, ge=0)):
     # Terminal records survive Redis job-result expiry. Deliberately omit raw errors and payloads.
     failures = union_all(
+        select(LeadDelivery.id, LeadDelivery.tenant_id, literal('lead_sync').label('kind'),
+               LeadDelivery.created_at.label('received_at')).where(LeadDelivery.state == 'failed'),
         select(PaymentRequest.id, PaymentRequest.tenant_id, literal('payment_link').label('kind'),
                PaymentRequest.created_at.label('received_at')).where(PaymentRequest.job_state == 'failed'),
         select(PaymentEvent.id, PaymentEvent.tenant_id, literal('payment_webhook'), PaymentEvent.created_at)

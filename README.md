@@ -1075,7 +1075,13 @@ Calendar credentials and account profile scopes are not requested. The arq worke
 authorization codes and refreshes access tokens early. Register
 `https://marketingadda.com/api/backend/lead-sync/google/callback` exactly in the Google OAuth app.
 Disconnect removes stored credentials; revoke provider access from the provider’s account settings
-if desired. Provider adapters, worker delivery and English/Hindi controls follow in stacked PRs.
+if desired. The worker discovers app-accessible spreadsheets, creates dedicated export files and appends
+lead versions as literal strings, preserving formulas as text and leaving existing rows untouched.
+It validates the export header and reconciles uncertain appends by stable event ID; uncertain
+writes are never blindly repeated. Use a fresh export tab after 50,000 rows. Successful delivery
+clears its extra customer-data snapshot; local leads remain authoritative. Five retries use
+backoff/jitter and Retry-After; terminal failures appear in platform administration.
+Credential failures notify workspace admins. Native CRM adapters and English/Hindi controls follow.
 
 `LEAD_SYNC_GOOGLE_CLIENT_ID`, `LEAD_SYNC_GOOGLE_CLIENT_SECRET` and
 `LEAD_SYNC_GOOGLE_REDIRECT_URI` configure the separate Google lead-export consent flow.

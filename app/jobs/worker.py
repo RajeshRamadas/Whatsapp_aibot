@@ -18,6 +18,7 @@ from ..services import (
     calendar_notifications,
     calendar_sync,
     google_jobs,
+    lead_sync_worker,
     media,
     payment_notifications,
     payment_processing,
@@ -366,9 +367,17 @@ async def dispatch_payments(ctx):
             break
 
 
+@observed_job
+async def dispatch_lead_sync(ctx):
+    for _ in range(10):
+        if not await asyncio.to_thread(lead_sync_worker.process_one):
+            break
+
+
 class WorkerSettings:
     on_startup = startup
-    cron_jobs = [cron(dispatch_payments, second=set(range(0, 60, 5)), timeout=600),
+    cron_jobs = [cron(dispatch_lead_sync, second=set(range(0, 60, 5)), timeout=900),
+                 cron(dispatch_payments, second=set(range(0, 60, 5)), timeout=600),
                  cron(dispatch_google_calendar, second=set(range(0, 60, 5)), timeout=600),
                  cron(dispatch_appointment_reminders, second={0, 15, 30, 45}),
                  cron(publish_improvement, second=set(range(0, 60, 5)), timeout=600),

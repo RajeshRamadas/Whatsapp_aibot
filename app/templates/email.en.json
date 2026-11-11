@@ -52,5 +52,11 @@
     "path": "/dashboard/appointments",
     "action": "Review calendar connection",
     "minutes": 1440
+  },
+  "Lead sync needs attention": {
+    "intro": "A lead export connection needs administrator attention.",
+    "path": "/dashboard/lead-sync",
+    "action": "Review lead sync",
+    "minutes": 1440
   }
 }
