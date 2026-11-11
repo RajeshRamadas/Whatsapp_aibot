@@ -804,3 +804,6 @@ T10.3 part a adds versioned HTTP action definitions, safe templates and bounded
 validation, encrypted credentials and conversation-bound call storage. CRUD is
 admin-only and scoped. Transport, identity/confirmation, bot tools and controls
 follow in stacked parts; T10.3 remains pending until the full stack is complete.
+T10.3 part b adds pinned public HTTPS JSON transport, 100,000-byte responses,
+request deadlines, all five authentication modes, idempotency headers for writes
+and credential-reflection redaction. All network tests use local fakes.
