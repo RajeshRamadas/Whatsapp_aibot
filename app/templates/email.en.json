@@ -64,5 +64,11 @@
     "path": "/dashboard/developer",
     "action": "Review event destinations",
     "minutes": 1440
+  },
+  "Verify custom action": {
+    "intro": "Use this one-time code only in the conversation where you requested an action.",
+    "path": "/",
+    "action": "Return to your conversation",
+    "minutes": 5
   }
 }

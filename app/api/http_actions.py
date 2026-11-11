@@ -4,7 +4,7 @@ from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
@@ -128,3 +128,52 @@ def remove(identity: UUID, p: Principal = Depends(require_role('admin'))):
             raise HTTPException(409, 'Wait for the running action to finish')
         audit(db, p.tenant.id, 'http_action.deleted', row.id, actor_user_id=p.user.id if p.user else None)
         db.delete(row)
+
+
+class ActionSample(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    values: dict = Field(max_length=12)
+    request_key: UUID
+    sample_phone: str | None = Field(None, pattern=r'^\+?[1-9][0-9]{6,14}$')
+    confirm_changes: bool = False
+
+
+class CallView(BaseModel):
+    id: str
+    reference: str
+    state: str
+    error: str | None = None
+    http_status: int | None = None
+    duration_ms: int | None = None
+    created_at: datetime | None = None
+    untrusted: bool = True
+    data: dict | None = None
+    raw: object | None = None
+    identity: str | None = None
+
+
+@router.post('/{identity}/test', response_model=CallView)
+def test_action(identity: UUID, body: ActionSample, response: Response,
+                p: Principal = Depends(require_role('admin'))):
+    from ..integrations.http_actions.transport import ActionError
+    from ..services import http_actions
+    response.headers['Cache-Control'] = 'no-store'
+    try:
+        return http_actions.start(p.tenant.id, str(identity), body.values, None, 'test:' + str(body.request_key),
+            is_test=True, confirm_changes=body.confirm_changes, sample_phone=body.sample_phone)
+    except ActionError as exc:
+        raise HTTPException(exc.status or 409, {'code': exc.code, 'message': 'Action could not be tested'}) from None
+    except ValueError:
+        raise HTTPException(422, 'Check sample parameter values') from None
+
+
+@router.get('/{identity}/calls', response_model=list[CallView])
+def call_history(identity: UUID, response: Response, p: Principal = Depends(require_role('admin'))):
+    response.headers['Cache-Control'] = 'no-store'
+    with Session() as db:
+        owned(db, p.tenant.id, identity)
+        return [{'id': call.id, 'reference': call.id.replace('-', '')[:12], 'state': call.state,
+                 'error': call.last_error, 'http_status': call.http_status, 'duration_ms': call.duration_ms,
+                 'created_at': call.created_at} for call in db.scalars(select(HttpActionCall).where(
+            HttpActionCall.tenant_id == p.tenant.id, HttpActionCall.action_id == str(identity))
+            .order_by(HttpActionCall.created_at.desc()).limit(30))]

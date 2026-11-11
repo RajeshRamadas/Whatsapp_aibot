@@ -807,3 +807,9 @@ follow in stacked parts; T10.3 remains pending until the full stack is complete.
 T10.3 part b adds pinned public HTTPS JSON transport, 100,000-byte responses,
 request deadlines, all five authentication modes, idempotency headers for writes
 and credential-reflection redaction. All network tests use local fakes.
+T10.3 part c adds encrypted call replay, shared request quotas, selected-field
+projection, server-bound phone checks and transactional email OTP. Personal writes
+use a read-only identity lookup before mutation. Confirmations/codes are bound to
+conversation, inputs and revision, expire, and cannot be supplied by the model.
+Ambiguous mutations are not retried automatically. The admin test endpoint shows
+redacted raw data and the gated bot projection; call logs contain metadata only.
