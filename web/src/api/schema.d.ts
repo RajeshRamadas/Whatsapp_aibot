@@ -3407,7 +3407,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "ingestion" | "whatsapp" | "widget" | "email" | "website" | "answer_review";
+            kind: "ingestion" | "whatsapp" | "widget" | "email" | "website" | "answer_review" | "outgoing_webhook";
             /**
              * Received At
              * Format: date-time

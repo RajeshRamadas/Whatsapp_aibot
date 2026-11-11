@@ -47,5 +47,6 @@
   "google_calendar": "Google कैलेंडर",
   "payment_link": "ग्राहक भुगतान लिंक",
   "payment_webhook": "ग्राहक भुगतान वेबहुक",
-  "lead_sync": "लीड सिंक"
+  "lead_sync": "लीड सिंक",
+  "outgoing_webhook": "बाहरी इवेंट डिलीवरी"
 }

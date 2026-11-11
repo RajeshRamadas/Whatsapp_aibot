@@ -47,5 +47,6 @@
   "google_calendar": "Google Calendar",
   "payment_link": "Customer payment link",
   "payment_webhook": "Customer payment webhook",
-  "lead_sync": "Lead sync"
+  "lead_sync": "Lead sync",
+  "outgoing_webhook": "Outgoing event delivery"
 }
