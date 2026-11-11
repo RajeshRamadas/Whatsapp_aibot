@@ -382,9 +382,19 @@ async def dispatch_evaluations(ctx):
             break
 
 
+@observed_job
+async def dispatch_public_operations(ctx):
+    from ..services import public_operations
+    await asyncio.to_thread(public_operations.expire)
+    for _ in range(5):
+        if not await asyncio.to_thread(public_operations.process_one):
+            break
+
+
 class WorkerSettings:
     on_startup = startup
-    cron_jobs = [cron(dispatch_evaluations, second=set(range(0, 60, 5)), timeout=900),
+    cron_jobs = [cron(dispatch_public_operations, second=set(range(0, 60, 5)), timeout=900),
+                 cron(dispatch_evaluations, second=set(range(0, 60, 5)), timeout=900),
                  cron(dispatch_lead_sync, second=set(range(0, 60, 5)), timeout=900),
                  cron(dispatch_payments, second=set(range(0, 60, 5)), timeout=600),
                  cron(dispatch_google_calendar, second=set(range(0, 60, 5)), timeout=600),

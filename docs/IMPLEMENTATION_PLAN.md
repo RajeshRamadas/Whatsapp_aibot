@@ -807,3 +807,6 @@ T10.1 part b adds typed cursor-paginated reads for all PAPI-6 resources and scop
 contact, conversation, lead and evaluation-case writes. Every public POST requires
 an idempotency key. Contacts created through this API have no marketing opt-in;
 consent remains governed by existing consent workflows.
+T10.1 part c implements durable source/Q&A creation, asynchronous Q&A updates,
+scoped operation polling and deletion. Worker claims, bounded retries, safe error
+codes, payload cleanup and replay retention are tested with fake embeddings.
