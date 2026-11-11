@@ -58,5 +58,11 @@
     "path": "/dashboard/lead-sync",
     "action": "Review lead sync",
     "minutes": 1440
+  },
+  "Webhook destination disabled": {
+    "intro": "An outgoing event destination needs administrator attention.",
+    "path": "/dashboard/developer",
+    "action": "Review event destinations",
+    "minutes": 1440
   }
 }

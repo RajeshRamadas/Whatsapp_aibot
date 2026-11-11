@@ -26,6 +26,7 @@ from ..db import (
 from ..models.google_calendar import GoogleTask
 from ..models.lead_sync import LeadDelivery
 from ..models.payments import PaymentEvent, PaymentRequest
+from ..models.webhooks import WebhookDelivery
 from ..services.audit import audit
 from ..services.usage import month_start
 from .auth import _csrf, _session
@@ -67,7 +68,7 @@ class PlatformTenants(BaseModel):
 class FailedJob(BaseModel):
     id: str
     tenant_id: str | None
-    kind: Literal['ingestion', 'whatsapp', 'widget', 'email', 'website', 'answer_review']
+    kind: Literal['ingestion', 'whatsapp', 'widget', 'email', 'website', 'answer_review', 'outgoing_webhook']
     received_at: datetime
 
 
@@ -146,6 +147,8 @@ def suspend(tenant_id: UUID, body: Suspension, user: User = Depends(platform_adm
 def failed_jobs(limit: int = Query(25, ge=1, le=100), offset: int = Query(0, ge=0)):
     # Terminal records survive Redis job-result expiry. Deliberately omit raw errors and payloads.
     failures = union_all(
+        select(WebhookDelivery.id, WebhookDelivery.tenant_id, literal('outgoing_webhook').label('kind'),
+               WebhookDelivery.created_at.label('received_at')).where(WebhookDelivery.state == 'failed'),
         select(LeadDelivery.id, LeadDelivery.tenant_id, literal('lead_sync').label('kind'),
                LeadDelivery.created_at.label('received_at')).where(LeadDelivery.state == 'failed'),
         select(PaymentRequest.id, PaymentRequest.tenant_id, literal('payment_link').label('kind'),

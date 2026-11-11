@@ -1185,3 +1185,9 @@ and never returned again. `MASTER_KEY` is required. Destinations must use public
 HTTPS on port 443. Limits use `OUTGOING_WEBHOOK_MAX_ENDPOINTS` and the shared
 `OUTGOING_WEBHOOK_REQUESTS_PER_MINUTE` delivery quota. Durable delivery logs retain
 30 days of metadata-only requests; manual resend preserves the original event ID.
+Outgoing deliveries run in the arq worker. Each attempt uses a fresh HMAC-SHA256
+`X-Signature` timestamp over the exact JSON body, a 10-second total request budget,
+validated/pinned public DNS and no redirects. Network errors, 408, 429 and 5xx retry
+with jitter and Retry-After for up to 24 hours; other non-2xx fail. Three days without
+a successful delivery after a failure disables the destination and queues an
+owner/admin email. Failed deliveries also appear in the platform failure queue.

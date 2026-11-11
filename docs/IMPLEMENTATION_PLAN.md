@@ -804,3 +804,6 @@ T10.2 part a: encrypted, initially paused HTTPS destinations, subscription selec
 transactional metadata outbox, tenant-isolated delivery logs and idempotent manual
 resend. Worker signing/retries, domain event producers and bilingual controls follow
 in stacked parts; T10.2 remains pending until the full stack is complete.
+T10.2 part b: pinned HTTPS signed delivery, exact-byte signatures, 10-second timeout,
+24-hour retry deadline, shared tenant quota, crash-lease recovery, safe failure logs,
+three-day automatic disablement and transactional administrator email staging.
