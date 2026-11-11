@@ -53,3 +53,7 @@ app.include_router(router)
 from .knowledge import router as knowledge_router  # noqa: E402
 
 app.include_router(knowledge_router)
+
+from .actions import router as actions_router  # noqa: E402
+
+app.include_router(actions_router)

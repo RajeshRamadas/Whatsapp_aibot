@@ -37,7 +37,7 @@ def api(client, tenant, monkeypatch):
                 'leads': Lead(tenant_id=other.id, conversation_id=conv.id),
                 'eval-cases': EvalCase(tenant_id=other.id, question='private'),
                 'eval-runs': EvalRun(tenant_id=other.id, request_key=uid(), label='Private',
-                                    cases=[], context={}, total=0),
+                                    cases=[], context={}, total=0, state='complete'),
                 'messages': Message(conversation_id=conv.id, role='user', content='private')}
         db.add_all(rows.values())
         db.flush()

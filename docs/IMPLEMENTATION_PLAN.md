@@ -810,3 +810,7 @@ consent remains governed by existing consent workflows.
 T10.1 part c implements durable source/Q&A creation, asynchronous Q&A updates,
 scoped operation polling and deletion. Worker claims, bounded retries, safe error
 codes, payload cleanup and replay retention are tested with fake embeddings.
+T10.1 part d adds idempotent text/template sends through the existing dispatcher,
+approved-template discovery, and atomic accuracy-run creation/cancellation. Existing
+WhatsApp window/consent rules apply. The dashboard proxy preserves quota, replay,
+version and authentication headers and rewrites public Location URLs to its prefix.
