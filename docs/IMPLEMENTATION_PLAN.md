@@ -870,3 +870,10 @@ Stacked implementation delivers EC-1/2/3 with fake Shopify/WooCommerce responses
 phone mismatch checks, grounded order tools and atomic full snapshots. Migration 0049
 rollback/up/check and full PostgreSQL/Redis/browser regressions run in CI.
 Live merchant-account checks remain deployment setup. See [guide](COMMERCE.md).
+
+T10.6d completes the EC-2 email-code alternative alongside the #110–#112 stack.
+Website and mismatched-phone customers can prove control of the order email with
+a literal, conversation-bound one-time code. Migration 0050 adds encrypted
+five-minute snapshots, single-use hashes, expiry and attempt limits. Codes never
+enter model history, and verified order facts still use independent grounding.
+Backend and authenticated queued-widget browser acceptance cover the proof flow.

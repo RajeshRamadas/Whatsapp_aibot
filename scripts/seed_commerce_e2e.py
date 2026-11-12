@@ -13,3 +13,12 @@ with Session.begin() as db:
         db.add(user)
         db.flush()
         db.add(Membership(tenant_id=tenant.id, user_id=user.id, role=role))
+    proof_tenant = Tenant(id=uid(), name='Order Proof Demo', public_key='pub_order_proof_demo',
+        admin_key_hash=hash_token(uid()), allowed_origins='["http://localhost:3000"]', bot_live=True)
+    db.add(proof_tenant)
+    db.flush()
+    owner = User(id=uid(), email='order-proof@example.com', name='Order Proof Owner', email_verified_at=now(),
+                 password_hash=hash_password('commerce-browser-passphrase'))
+    db.add(owner)
+    db.flush()
+    db.add(Membership(tenant_id=proof_tenant.id, user_id=owner.id, role='owner'))

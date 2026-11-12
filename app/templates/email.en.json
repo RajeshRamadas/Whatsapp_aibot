@@ -70,5 +70,11 @@
     "path": "/",
     "action": "Return to your conversation",
     "minutes": 5
+  },
+  "Verify order lookup": {
+    "intro": "Use this one-time code only in the conversation where you requested your order. It expires in five minutes.",
+    "path": "/",
+    "action": "Return to your conversation",
+    "minutes": 5
   }
 }

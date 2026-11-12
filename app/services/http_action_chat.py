@@ -14,7 +14,7 @@ from .customer_languages import locale_for
 COPY = {code: json.loads((Path(__file__).parents[1] / 'messages' / f'http-actions.{code}.json').read_text())
         for code in ('en', 'hi')}
 COMMAND = re.compile(r'(ACTION|VERIFY) ([a-f0-9]{12})(?: ([0-9]{6}))?', re.I)
-CODE = re.compile(r'\b(VERIFY [a-f0-9]{12}) [0-9]{6}\b', re.I)
+CODE = re.compile(r'\b((?:VERIFY|ORDER) [a-f0-9]{12}) [0-9]{6}\b', re.I)
 
 
 def redact_command(text):

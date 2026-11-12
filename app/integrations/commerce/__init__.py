@@ -88,7 +88,7 @@ class Provider:
             raise ActionError('invalid_order')
         if self.store.provider == 'shopify':
             data = await self.request(query='''query Order($search: String!) { orders(first: 2, query: $search) {
-                nodes { name phone billingAddress { phone } shippingAddress { phone }
+                nodes { name phone email billingAddress { phone } shippingAddress { phone }
                 displayFinancialStatus displayFulfillmentStatus
                 lineItems(first: 50) { nodes { title quantity } pageInfo { hasNextPage } }
                 fulfillments(first: 20) { status trackingInfo { company number url } } } } }''',
@@ -101,7 +101,8 @@ class Provider:
                 raise ActionError('order_too_large')
             phones = [r.get('phone'), (r.get('billingAddress') or {}).get('phone'),
                       (r.get('shippingAddress') or {}).get('phone')]
-            return {'phones': phones, 'number': r['name'], 'status': r['displayFinancialStatus'],
+            return {'phones': phones, 'email': r.get('email'),
+                'number': r['name'], 'status': r['displayFinancialStatus'],
                 'fulfilment': r['displayFulfillmentStatus'], 'items': r['lineItems']['nodes'],
                 'tracking': r['fulfillments']}
         data = await self.request('orders?' + urlencode({'search': number, 'per_page': 50}))
@@ -109,7 +110,8 @@ class Provider:
         if len(rows) != 1:
             return None
         r = rows[0]
-        return {'phones': [(r.get('billing') or {}).get('phone')], 'number': str(r['number']),
+        return {'phones': [(r.get('billing') or {}).get('phone')],
+            'email': (r.get('billing') or {}).get('email'), 'number': str(r['number']),
             'status': r['status'], 'fulfilment': r['status'],
             'items': [{'title': i['name'], 'quantity': i['quantity']} for i in r['line_items']],
             'tracking': []}  # Core WooCommerce has no standard shipment-tracking field.
