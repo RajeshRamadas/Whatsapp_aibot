@@ -60,7 +60,6 @@ for module in (knowledge_sync, commerce, spreadsheets, http_actions, outgoing_we
                auth, audit, api_keys,
     workspaces, tenants, billing, channels,
                knowledge,
-    knowledge_sync,
                onboarding, bot,
                jobs,
                chat, conversations, evals, events, inbox, invoices, leads, meta_signup, push, qa, templates, usage,
