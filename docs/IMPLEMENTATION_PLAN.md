@@ -853,3 +853,8 @@ Automated acceptance uses fake providers with real Postgres/Redis, and covers
 Inbox/review delivery, axe and 320 px layout. No migration. See
 [guide](GROUNDING.md) and [screenshot](screenshots/t10-5-grounding-handoff.png).
 Live-model calibration remains a launch check pending credentials.
+
+T10.6a: encrypted, admin-only store connection lifecycle and fixed read-only
+Shopify/WooCommerce adapters. Verified WhatsApp identity gates order fields;
+web/unknown/mismatched customers cannot retrieve orders. Durable product publication,
+bot evidence integration and English/Hindi controls follow in the remaining stack.
