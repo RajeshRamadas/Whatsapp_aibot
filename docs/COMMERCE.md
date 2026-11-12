@@ -23,7 +23,12 @@ selected status/items/fulfilment/tracking fields. Web identities and mismatched 
 missing orders disclose no order details. There is no public agent lookup API or
 OTP flow in this version. No provider keys are needed by automated tests.
 
+Shopify product pages contain five products so nested variant queries stay below
+the requested-cost limit. Provider throttling leaves the old snapshot intact and
+uses the durable retry schedule; it never publishes an incomplete catalogue.
+
 Provider references:
+- https://shopify.dev/docs/apps/build/apis/graphql-admin/rate-limits
 - https://shopify.dev/docs/api/admin-graphql/2026-10/queries/orders
 - https://shopify.dev/docs/apps/build/authentication-authorization/manage-access-scopes
 - https://developer.woocommerce.com/docs/apis/rest-api/authentication

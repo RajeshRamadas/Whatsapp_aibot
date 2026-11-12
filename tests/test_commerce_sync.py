@@ -141,6 +141,7 @@ def test_provider_product_and_order_payloads():
                     'lineItems': {'nodes': [{'title': 'Box', 'quantity': 2}], 'pageInfo': {'hasNextPage': False}},
                     'fulfillments': [{'status': 'SUCCESS', 'trackingInfo': [{'company': 'Courier', 'number': 'abc',
                                                                           'url': 'https://track.example/abc'}]}]}]}}}
+            assert 'products(first: 5,' in query  # Bound nested requested cost below Shopify’s per-query cap.
             return 200, {'data': {'shop': {'currencyCode': 'INR'}, 'products': {
                 'nodes': [{'id': 'gid://shopify/Product/1', 'title': 'Box', 'description': 'Shipping',
                     'variants': {'nodes': [{'title': 'Small', 'price': '50.00', 'inventoryQuantity': 3}],

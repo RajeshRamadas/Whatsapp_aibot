@@ -173,6 +173,9 @@ def _answer(tenant, conversation_id, question, *, whatsapp, language=None, actio
     platform_prompt = SYSTEM_PROMPT.split('\n\nKNOWLEDGE:', 1)[0].format(name=tenant.name)
     prompt = (platform_prompt + language_policy(tenant, question, language) + tenant_instructions(tenant)
               + '\n\nKNOWLEDGE:\n' + (evidence or '(none)'))
+    if any(match.filename == 'Product catalogue' for match in matches):
+        prompt += ('\nProduct catalogue entries are dated snapshots. State the snapshot date for stock/prices; '
+                   'never describe them as a live inventory check or reservation.')
     if faq is not None:
         prompt += (
             '\n\nUse the curated FAQ as the sole factual answer. Rephrase only for the customer’s '

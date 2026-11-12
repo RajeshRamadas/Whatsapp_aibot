@@ -121,10 +121,10 @@ class Provider:
             currency = (await self.request('settings/general/woocommerce_currency'))['value']
         # Publish only complete snapshots; never remove products after a partial/failed fetch.
         async with asyncio.timeout(180):
-            for page in range(1, 102):
+            for page in range(1, 202):
                 if self.store.provider == 'shopify':
                     data = await self.request(query='''query Products($after: String) {
-                        shop { currencyCode } products(first: 10, after: $after, query: "status:active") {
+                        shop { currencyCode } products(first: 5, after: $after, query: "status:active") {
                         nodes { id title description status variants(first: 100) {
                           nodes { title price inventoryQuantity } pageInfo { hasNextPage } } }
                         pageInfo { hasNextPage endCursor } } }''', variables={'after': cursor})
@@ -156,7 +156,7 @@ class Provider:
                                          'currency': currency, 'variants': variants})
                     if len(rows) < 10:
                         break
-                if len(products) > 1000 or page == 101:
+                if len(products) > 1000 or page == 201:
                     raise ActionError('catalogue_limit')
         if len(products) > 1000:
             raise ActionError('catalogue_limit')
