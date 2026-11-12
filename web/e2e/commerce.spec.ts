@@ -13,7 +13,7 @@ test('commerce: test credentials, sync products, localize, disconnect and reject
   await page.getByRole('button', { name: 'Save store', exact: true }).click();
   await expect(page.getByText('Connection test required', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Test store connection', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('The connection test or sync failed.');
+  await expect(page.getByRole('region', { name: 'Store connections', exact: true }).getByRole('alert')).toContainText('The connection test or sync failed.');
   expect(await page.getByRole('button', { name: 'Sync products now', exact: true }).isDisabled()).toBe(true);
   page.once('dialog', d => d.accept()); await page.getByRole('button', { name: 'Disconnect store', exact: true }).click();
   await expect(page.getByText('No store connected yet.', { exact: true })).toBeVisible();
