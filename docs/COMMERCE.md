@@ -49,5 +49,6 @@ Only published/active products are synced. Deletions disappear on the next full 
 `lookup_order` is registered only for verified WhatsApp conversations. Its selected
 results become immutable per-turn evidence for the independent grounding checker.
 No order fields enter shared knowledge. Web customers must ask staff for order help.
+Generated catalogues are managed only under Store connections, not document deletion.
 Catalogue answers cite Product catalogue; stock is a dated snapshot, not a reservation.
 Real store tests and live-model calibration require merchant credentials before launch.

@@ -74,7 +74,7 @@ def process_one():
         source = db.scalar(select(Source).where(Source.tenant_id == tenant_id, Source.id == current.source_id))
         if not source:
             source = Source(id=uid(), tenant_id=tenant_id, filename='Product catalogue', kind='commerce',
-                            file_path='', status='ready', url=current.url)
+                            file_path='commerce:' + identity, status='ready', url=current.url)
             db.add(source)
             db.flush()
             current.source_id = source.id

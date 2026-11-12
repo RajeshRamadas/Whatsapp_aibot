@@ -29,7 +29,8 @@ test('commerce: test credentials, sync products, localize, disconnect and reject
   const rows = await (await page.request.get('/api/backend/commerce')).json();
   expect(JSON.stringify(rows)).not.toContain('commerce-browser-token');
   const sources = await (await page.request.get('/api/backend/sources')).json();
-  expect(sources.some((s: { id: string }) => s.id === rows[0].source_id)).toBe(true);
+  expect(rows[0].source_id).toBeTruthy();
+  expect(sources.some((s: { id: string }) => s.id === rows[0].source_id)).toBe(false);
   await page.getByRole('button', { name: 'हिन्दी', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'स्टोर कनेक्शन', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'English', exact: true }).click();
