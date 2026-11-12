@@ -35,7 +35,7 @@ def test_notion_refresh_pause_expiry_revoke_and_disconnect(client, tenant, sync_
             raise SyncError('missing', status=404)
         if path.endswith('/markdown'):
             return {'markdown': data['body'], 'truncated': False, 'unknown_block_ids': []}
-        return {'properties': {'title': {'type': 'title', 'title': [{'plain_text': 'Policy'}]}},
+        return {'properties': {'title': {'type': 'title', 'title': [{'plain_text': data.get('title', 'Policy')}]}},
                 'last_edited_time': data['version']}
     monkeypatch.setattr(HTTP, 'request', fake)
     assert sync.process_one()
@@ -43,6 +43,14 @@ def test_notion_refresh_pause_expiry_revoke_and_disconnect(client, tenant, sync_
     matches = rag.retrieve(tenant['tenant_id'], 'refund')
     assert matches and matches[0].heading == 'Refunds' and '30 days' in matches[0].content
     assert client.get('/api/v1/sources', headers=headers).json() == []
+    with Session() as db:
+        old_chunk = db.scalar(select(Chunk.id).where(Chunk.tenant_id == tenant['tenant_id']))
+    data['title'] = 'Renamed policy'
+    connections.change(tenant['tenant_id'], identity)
+    assert sync.process_one()
+    with Session() as db:
+        assert db.scalar(select(Chunk.id).where(Chunk.tenant_id == tenant['tenant_id'])) != old_chunk
+        assert db.scalar(select(Source.filename).where(Source.tenant_id == tenant['tenant_id'])) == 'Renamed policy.md'
     data.update(version='v2', body='# Refunds\n\nRefunds accepted within 14 days.')
     connections.change(tenant['tenant_id'], identity)
     assert sync.process_one()

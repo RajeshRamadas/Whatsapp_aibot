@@ -45,7 +45,8 @@ def publish(snapshot, item, content):
         fenced(db, snapshot)
         previous = db.scalar(select(Source).where(Source.tenant_id == snapshot.tenant_id,
             Source.sync_connection_id == snapshot.id, Source.sync_external_id == item['id']))
-        if previous and previous.checksum == checksum and previous.kind == item['format']:
+        if (previous and previous.checksum == checksum and previous.kind == item['format']
+                and previous.filename == item['name']):
             previous.status, previous.error, previous.sync_version = 'ready', None, item['version']
             previous.filename, previous.url = item['name'], item['url']
             return
