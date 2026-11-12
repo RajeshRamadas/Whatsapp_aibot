@@ -877,3 +877,8 @@ a literal, conversation-bound one-time code. Migration 0050 adds encrypted
 five-minute snapshots, single-use hashes, expiry and attempt limits. Codes never
 enter model history, and verified order facts still use independent grounding.
 Backend and authenticated queued-widget browser acceptance cover the proof flow.
+
+T10.7a: tenant-scoped encrypted Drive/Notion connections and source provenance,
+session-bound read-only Drive OAuth and admin lifecycle APIs. Migration 0051.
+Provider traversal, durable sync/publication and English/Hindi controls follow in
+stacked parts. Automated checks use fake accounts; live consent is deployment setup.

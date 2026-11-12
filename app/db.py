@@ -102,12 +102,17 @@ class Source(Base):
     status: Mapped[str] = mapped_column(String(30), default='queued')
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     file_path: Mapped[str] = mapped_column(Text)
+    sync_connection_id: Mapped[str | None] = mapped_column(
+        ForeignKey('knowledge_connections.id', name='fk_sources_sync', ondelete='CASCADE'), index=True)
+    sync_external_id: Mapped[str | None] = mapped_column(String(128))
+    sync_version: Mapped[str | None] = mapped_column(String(200))
     website_id: Mapped[str | None] = mapped_column(ForeignKey('websites.id', ondelete='CASCADE'), index=True)
     url: Mapped[str | None] = mapped_column(Text)
     checksum: Mapped[str | None] = mapped_column(String(64))
     crawl_depth: Mapped[int | None] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
-    __table_args__ = (UniqueConstraint('website_id', 'url', name='uq_website_page'),)
+    __table_args__ = (UniqueConstraint('website_id', 'url', name='uq_website_page'),
+                      UniqueConstraint('sync_connection_id', 'sync_external_id', name='uq_sync_source'))
 
 
 class Chunk(Base):
@@ -641,6 +646,7 @@ from .models import commerce as _commerce  # noqa: E402,F401
 from .models import evaluations as _evaluations  # noqa: E402,F401
 from .models import google_calendar as _google_calendar  # noqa: E402, F401
 from .models import http_actions as _http_actions  # noqa: E402,F401
+from .models import knowledge_sync as _knowledge_sync  # noqa: E402,F401
 from .models import lead_sync as _lead_sync  # noqa: E402,F401
 from .models import mfa as _mfa  # noqa: E402,F401
 from .models import order_proofs as _order_proofs  # noqa: E402,F401

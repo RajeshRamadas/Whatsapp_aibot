@@ -1262,3 +1262,9 @@ for evidence boundaries, operational behavior and the live-model launch checks.
 Read-only workspace store connections use the existing `MASTER_KEY` encryption.
 See [commerce setup and limits](docs/COMMERCE.md). Live merchant credentials are
 configured per workspace; automated checks use fake provider responses.
+
+### Drive and Notion knowledge sync (T10.7)
+
+Workspace administrators can connect selected Google Drive folders and Notion pages
+using read-only access. See [setup, access boundaries and limits](docs/KNOWLEDGE_SYNC.md).
+Google Drive uses its own OAuth settings; Notion tokens are encrypted per workspace.
