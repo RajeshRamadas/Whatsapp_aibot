@@ -28,10 +28,10 @@ def test_live_tool_projection_and_preview_isolation(client, tenant, action, monk
         assert 'UNTRUSTED DATA' in system
         tool = next(t for t in tools if t.name == 'http_stock')
         captured.append(tool.handler({'sku': 'SKU'}))
-        return llm.ChatResult('Stock: 5', [])
+        return llm.ChatResult('Stock: 5 [1]', [])
     monkeypatch.setattr(chats['openai'], 'run', run)
     response = rag.answer(workspace, conv, 'stock', action_turn_key='real-turn')
-    assert response.text == 'Stock: 5' and captured[0]['untrusted_data'] == {'stock': 5}
+    assert response.text == 'Stock: 5 [1]' and captured[0]['untrusted_data'] == {'stock': 5}
     assert 'private' not in json.dumps(captured) and len(receiver.calls) == 1
     monkeypatch.setattr(chats['openai'], 'run', lambda *args: llm.ChatResult('Preview', []))
     rag.answer(workspace, conv, 'stock')

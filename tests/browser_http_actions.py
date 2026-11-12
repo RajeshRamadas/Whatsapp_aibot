@@ -30,7 +30,9 @@ def run(self, model, system, messages, tools):
         tool = next(t for t in tools if t.name == name)
         result = tool.handler({'sku': 'SKU'})
         _results.append(result)
-        return llm.ChatResult('Available: ' + str((result.get('untrusted_data') or {}).get('stock', 'pending')), [])
+        suffix = ' [' + str(result['source']['number']) + ']' if result.get('source') else ''
+        message = 'Available: ' + str((result.get('untrusted_data') or {}).get('stock', 'pending')) + suffix
+        return llm.ChatResult(message, [])
     return _original(self, model, system, messages, tools)
 
 

@@ -283,6 +283,9 @@ def handle(tenant_id: str, message: dict) -> None:
     if not can_send:
         save(incoming)
         return
+    if answer.grounding_blocked:
+        reply(copy['handoff'], review_answer=answer, lead_fields=answer.lead_fields, waiting=True)
+        return
     greeting = '' if has_history or answer.appointment or answer.transactional else copy['greeting'].format(
         bot=tenant.bot_name, business=tenant.name)
     sources = answer.sources if answer.text and not answer.uncertain else []
@@ -294,8 +297,14 @@ def handle(tenant_id: str, message: dict) -> None:
         if len(options) < 3:
             options.append(('handoff', copy['team']))
         body = answer.text or copy['error']
-    reply(body if answer.appointment or answer.transactional else format_reply(body, sources, copy, greeting),
-          options, sources, answer.lead_fields, answer, waiting=answer.action_failed)
+    try:
+        rendered = body if (answer.appointment or answer.transactional) and not answer.grounded else format_reply(
+            body, sources, copy, greeting, truncate=False)
+    except ValueError:
+        answer.grounding_blocked, answer.uncertain = True, True
+        reply(copy['handoff'], review_answer=answer, lead_fields=answer.lead_fields, waiting=True)
+        return
+    reply(rendered, options, sources, answer.lead_fields, answer, waiting=answer.action_failed)
 
 
 DELIVERY_RANK = {'sent': 1, 'delivered': 2, 'read': 3}

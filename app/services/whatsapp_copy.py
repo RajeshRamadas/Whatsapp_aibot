@@ -22,9 +22,10 @@ def handoff_notice(tenant, at, copy=None):
     return copy['handoff']
 
 
-def format_reply(text, sources, copy, greeting=''):
-    cited = {int(number) for number in re.findall(r'\[([0-9]{1,4})\]', text)}
-    text = re.sub(r'[ \t]*\[[0-9]{1,4}\]', '', text)
+def format_reply(text, sources, copy, greeting='', *, truncate=True):
+    groups = re.findall(r'\[([0-9]{1,4}(?:\s*,\s*[0-9]{1,4})*)\]', text)
+    cited = {int(number.strip()) for group in groups for number in group.split(',')}
+    text = re.sub(r'[ \t]*\[[0-9]{1,4}(?:\s*,\s*[0-9]{1,4})*\]', '', text)
     text = re.sub(r'\[([^\]\n]+)\]\((https?://[^\s)]+)\)', r'\1 (\2)', text)
     text = re.sub(r'^\s{0,3}#{1,6}\s+(.+)$', r'*\1*', text, flags=re.M)
     text = re.sub(r'\*\*(.+?)\*\*|__(.+?)__', lambda match: '*' + (match[1] or match[2]) + '*', text)
@@ -43,11 +44,13 @@ def format_reply(text, sources, copy, greeting=''):
             labels.append(label)
     suffix = '\n\n' + copy['from'] + '; '.join(labels) if labels else ''
     # Reserve space for a short citation line and a follow-up invitation.
-    if len(suffix) > 150:
+    if truncate and len(suffix) > 150:
         suffix = suffix[:149].rstrip() + '…'
     body = '\n\n'.join(part for part in (greeting, text.strip()) if part)
     budget = 600 - len(suffix)
     if len(body) > budget:
+        if not truncate:
+            raise ValueError('Verified reply would require truncation')
         short = body[:budget - len(copy['more']) - 3].rsplit(maxsplit=1)[0]
         body = short.rstrip() + '…\n' + copy['more']
     return body + suffix
