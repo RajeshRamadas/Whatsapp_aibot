@@ -37,6 +37,8 @@ def test_atomic_catalogue_replacement_retry_and_disconnect(client, tenant, store
         assert row.product_count == 1 and row.last_error is None
         assert 'Recycled box' in chunk.content and '<b>' not in chunk.content and 'snapshot_at' in chunk.content
         assert '50.00' in chunk.content and 'INR' in chunk.content
+    assert source_id not in [s['id'] for s in client.get('/api/v1/sources', headers=headers).json()]
+    assert client.delete('/api/v1/sources/' + source_id, headers=headers).status_code == 404
     assert not commerce_sync.process_one()  # Not due for another day.
     async def fail(self):
         raise ActionError('timeout')
@@ -139,6 +141,7 @@ def test_provider_product_and_order_payloads():
                     'lineItems': {'nodes': [{'title': 'Box', 'quantity': 2}], 'pageInfo': {'hasNextPage': False}},
                     'fulfillments': [{'status': 'SUCCESS', 'trackingInfo': [{'company': 'Courier', 'number': 'abc',
                                                                           'url': 'https://track.example/abc'}]}]}]}}}
+            assert 'products(first: 5,' in query  # Bound nested requested cost below Shopify’s per-query cap.
             return 200, {'data': {'shop': {'currencyCode': 'INR'}, 'products': {
                 'nodes': [{'id': 'gid://shopify/Product/1', 'title': 'Box', 'description': 'Shipping',
                     'variants': {'nodes': [{'title': 'Small', 'price': '50.00', 'inventoryQuantity': 3}],

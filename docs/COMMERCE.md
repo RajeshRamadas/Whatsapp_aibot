@@ -1,10 +1,12 @@
 # Read-only commerce integrations (T10.6)
 
-Owners/admins connect one Shopify or WooCommerce store per workspace. Tokens are
+Open **Knowledge → Store connections**. Owners/admins connect one Shopify or WooCommerce store per workspace. Tokens are
 encrypted with the existing MASTER_KEY; APIs return configuration/status only.
 Delete the connection before replacing credentials or changing store. Delete also
 removes generated product knowledge. No store writes, refunds or cancellations
-are supported. No order payloads, phone numbers or credentials are logged/stored.
+are supported. Credentials and raw order responses are never logged. Order results
+are not added to shared Knowledge; selected answers can be saved in the private
+conversation transcript under the existing retention policy.
 
 * Shopify: permanent `https://your-store.myshopify.com` origin, custom app token
   with `read_orders` and `read_products`; write scopes are rejected at test time.
@@ -23,7 +25,12 @@ selected status/items/fulfilment/tracking fields. Web identities and mismatched 
 missing orders disclose no order details. There is no public agent lookup API or
 OTP flow in this version. No provider keys are needed by automated tests.
 
+Shopify product pages contain five products so nested variant queries stay below
+the requested-cost limit. Provider throttling leaves the old snapshot intact and
+uses the durable retry schedule; it never publishes an incomplete catalogue.
+
 Provider references:
+- https://shopify.dev/docs/apps/build/apis/graphql-admin/rate-limits
 - https://shopify.dev/docs/api/admin-graphql/2026-10/queries/orders
 - https://shopify.dev/docs/apps/build/authentication-authorization/manage-access-scopes
 - https://developer.woocommerce.com/docs/apis/rest-api/authentication
@@ -49,5 +56,6 @@ Only published/active products are synced. Deletions disappear on the next full 
 `lookup_order` is registered only for verified WhatsApp conversations. Its selected
 results become immutable per-turn evidence for the independent grounding checker.
 No order fields enter shared knowledge. Web customers must ask staff for order help.
+Generated catalogues are managed only under Store connections, not document deletion.
 Catalogue answers cite Product catalogue; stock is a dated snapshot, not a reservation.
 Real store tests and live-model calibration require merchant credentials before launch.

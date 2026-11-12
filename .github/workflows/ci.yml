@@ -40,6 +40,10 @@ jobs:
           sudo apt-get install -y ffmpeg poppler-utils util-linux tesseract-ocr tesseract-ocr-eng tesseract-ocr-hin
       - run: ruff check app tests
       - run: alembic upgrade head
+      - name: Verify commerce migration rollback and upgrade
+        run: |
+          alembic downgrade 0048_spreadsheet_tables
+          alembic upgrade head
       - run: alembic check
       - run: pytest -q
       - name: Validate monitoring configuration
@@ -69,6 +73,7 @@ jobs:
           set +a
           python -m scripts.seed_inbox_e2e
           python -m scripts.seed_platform_e2e
+          python -m scripts.seed_commerce_e2e
           python -m scripts.seed_spreadsheets_e2e
           python -m scripts.seed_grounding_e2e
           python -m scripts.seed_http_actions_e2e
@@ -97,6 +102,14 @@ jobs:
             sleep 1
           done
           npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-acceptance
+          path: |
+            docs/screenshots/t10-6-commerce.png
+            web/test-results/
+          retention-days: 7
 
   web:
     runs-on: ubuntu-latest
