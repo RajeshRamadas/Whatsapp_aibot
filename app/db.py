@@ -103,7 +103,7 @@ class Source(Base):
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     file_path: Mapped[str] = mapped_column(Text)
     sync_connection_id: Mapped[str | None] = mapped_column(
-        ForeignKey('knowledge_connections.id', ondelete='CASCADE'), index=True)
+        ForeignKey('knowledge_connections.id', name='fk_sources_sync', ondelete='CASCADE'), index=True)
     sync_external_id: Mapped[str | None] = mapped_column(String(128))
     sync_version: Mapped[str | None] = mapped_column(String(200))
     website_id: Mapped[str | None] = mapped_column(ForeignKey('websites.id', ondelete='CASCADE'), index=True)

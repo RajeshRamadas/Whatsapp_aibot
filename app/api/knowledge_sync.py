@@ -61,7 +61,7 @@ class SourceView(BaseModel):
     sync_connection_id: str
 
 
-class Catalog(BaseModel):
+class KnowledgeSyncCatalog(BaseModel):
     drive_configured: bool
     connections: list[ConnectionView]
     sources: list[SourceView]
@@ -80,7 +80,7 @@ def run(fn, *args, **kwargs):
         raise HTTPException(503, 'Credential encryption unavailable') from None
 
 
-@router.get('', response_model=Catalog)
+@router.get('', response_model=KnowledgeSyncCatalog)
 def listing(response: Response, p: Principal = Depends(require_role('admin'))):
     response.headers['Cache-Control'] = 'no-store'
     return service.listing(p.tenant.id)
