@@ -9,6 +9,7 @@ from ..db import Session, Source, Tenant, uid
 from ..jobs.queue import enqueue
 from ..models.spreadsheets import SpreadsheetTable
 from ..services.audit import audit
+from ..services.knowledge_sync import usable as sync_usable
 from ..spreadsheets.query import QueryError, execute, owned
 from .principal import Principal, require_role
 
@@ -33,6 +34,7 @@ class TableView(BaseModel):
 
 
 class SheetSourceView(BaseModel):
+    sync_connection_id: str | None = None
     id: str
     filename: str
     status: str
@@ -81,7 +83,7 @@ def catalog(response: Response, p: Principal = Depends(require_role('admin'))):
     response.headers['Cache-Control'] = 'no-store'
     with Session() as db:
         sources = list(db.scalars(select(Source).where(Source.tenant_id == p.tenant.id,
-            Source.kind.in_(['csv', 'xlsx'])).order_by(Source.filename)))
+            Source.kind.in_(['csv', 'xlsx']), sync_usable()).order_by(Source.filename)))
         tables = db.scalars(select(SpreadsheetTable).where(SpreadsheetTable.tenant_id == p.tenant.id)
                             .order_by(SpreadsheetTable.source_id, SpreadsheetTable.position))
         return {'tables': [view(row) for row in tables],
@@ -132,6 +134,8 @@ async def reimport(identity: UUID, p: Principal = Depends(require_role('admin'))
                         .with_for_update())
         if row is None:
             raise HTTPException(404, 'Spreadsheet not found')
+        if row.sync_connection_id:
+            raise HTTPException(409, 'Refresh this file from Knowledge sync')
         if row.kind not in ('csv', 'xlsx'):
             raise HTTPException(422, 'Choose a CSV or XLSX source')
         if row.status not in ('ready', 'failed'):

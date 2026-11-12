@@ -21,6 +21,7 @@ from ..services import (
     commerce_sync,
     evaluation_runs,
     google_jobs,
+    knowledge_sync,
     lead_sync_worker,
     media,
     payment_notifications,
@@ -331,6 +332,13 @@ async def dispatch_commerce(ctx):
             break
 
 
+@observed_job
+async def dispatch_knowledge_sync(ctx):
+    for _ in range(3):
+        if not await asyncio.to_thread(knowledge_sync.process_one):
+            break
+
+
 async def startup(ctx):
     configure()
     validate_email()
@@ -429,7 +437,8 @@ async def clean_spreadsheet_storage(ctx):
 
 class WorkerSettings:
     on_startup = startup
-    cron_jobs = [cron(dispatch_commerce, second={0, 30}, timeout=900),
+    cron_jobs = [cron(dispatch_knowledge_sync, second={10, 40}, timeout=900),
+                 cron(dispatch_commerce, second={0, 30}, timeout=900),
                  cron(clean_spreadsheet_storage, minute=0, second=0),
                  cron(dispatch_outgoing_webhooks, second=set(range(0, 60, 5)), timeout=180),
                  cron(dispatch_public_operations, second=set(range(0, 60, 5)), timeout=900),

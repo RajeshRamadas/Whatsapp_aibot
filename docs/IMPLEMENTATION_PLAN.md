@@ -882,3 +882,9 @@ T10.7a: tenant-scoped encrypted Drive/Notion connections and source provenance,
 session-bound read-only Drive OAuth and admin lifecycle APIs. Migration 0051.
 Provider traversal, durable sync/publication and English/Hindi controls follow in
 stacked parts. Automated checks use fake accounts; live consent is deployment setup.
+
+T10.7b: bounded Drive changes feed/tree reconciliation and DOCX/XLSX/PDF exports;
+Notion Markdown polling; atomic changed-document publication, removal reconciliation,
+crash leases and retry backoff. Paused, revoked and expired knowledge is fenced from
+retrieval and exact SQL. Imported spreadsheets use the existing isolated table roles.
+English/Hindi controls and final browser acceptance follow in the last part.

@@ -24,6 +24,7 @@ from .services.bot_policy import tenant_instructions
 from .services.customer_languages import copy_for as customer_copy
 from .services.customer_languages import language_policy
 from .services.events import publish_sync
+from .services.knowledge_sync import usable as sync_usable
 from .services.leads import notify_created, save_lead
 from .services.usage import meter
 from .spreadsheets import chat as spreadsheet_chat
@@ -89,7 +90,7 @@ def retrieve(tenant_id: str, query: str, vector: list[float] | None = None) -> l
                Chunk.heading, Chunk.page)
     base = select(*columns).join(Source, Chunk.source_id == Source.id) \
         .where(Chunk.tenant_id == tenant_id, Source.tenant_id == tenant_id, Source.status == 'ready',
-               Source.kind.not_in(['csv', 'xlsx']))
+               Source.kind.not_in(['csv', 'xlsx']), sync_usable())
     limit = settings.retrieval_candidates
     with Session() as db:
         semantic = db.execute(base.where(distance <= settings.retrieval_max_distance)
