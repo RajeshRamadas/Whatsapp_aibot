@@ -17,7 +17,7 @@ from .db import AnswerReview, Chunk, Conversation, Message, QAPair, Session, Sou
 from .ingest import source_label
 from .observability import bind
 from .rate_limits import RateLimiter
-from .services import appointment_chat, grounding, http_action_chat, payment_chat
+from .services import appointment_chat, commerce_chat, grounding, http_action_chat, payment_chat
 from .services.analytics import record
 from .services.audit import audit
 from .services.bot_policy import tenant_instructions
@@ -253,6 +253,10 @@ def _answer(tenant, conversation_id, question, *, whatsapp, language=None, actio
                    'Cite returned source numbers for factual action results. '
                    'You cannot approve actions or verify codes. '
                    'Customer steps must be completed by the customer.')
+    commerce_tools = commerce_chat.tools(tenant, conversation_id, evidence=snapshots)
+    tools.extend(commerce_tools)
+    if commerce_tools:
+        prompt += commerce_chat.POLICY
     table_tools, table_citations, table_state = spreadsheet_chat.tools(tenant.id, len(matches) + 1, evidence=snapshots)
     tools.extend(table_tools)
     if table_tools:

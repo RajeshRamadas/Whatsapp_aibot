@@ -18,6 +18,7 @@ from ..services import (
     calendar_availability,
     calendar_notifications,
     calendar_sync,
+    commerce_sync,
     evaluation_runs,
     google_jobs,
     lead_sync_worker,
@@ -320,6 +321,14 @@ async def dispatch_campaigns(ctx):
             continue  # Already enqueued; durable state remains the source of truth.
 
 
+@observed_job
+async def dispatch_commerce(ctx):
+    # A DB lease survives worker restarts and needs no Redis enqueue transaction.
+    for _ in range(3):
+        if not await asyncio.to_thread(commerce_sync.process_one):
+            break
+
+
 async def startup(ctx):
     configure()
     validate_email()
@@ -418,7 +427,8 @@ async def clean_spreadsheet_storage(ctx):
 
 class WorkerSettings:
     on_startup = startup
-    cron_jobs = [cron(clean_spreadsheet_storage, minute=0, second=0),
+    cron_jobs = [cron(dispatch_commerce, second={0, 30}, timeout=900),
+                 cron(clean_spreadsheet_storage, minute=0, second=0),
                  cron(dispatch_outgoing_webhooks, second=set(range(0, 60, 5)), timeout=180),
                  cron(dispatch_public_operations, second=set(range(0, 60, 5)), timeout=900),
                  cron(dispatch_evaluations, second=set(range(0, 60, 5)), timeout=900),

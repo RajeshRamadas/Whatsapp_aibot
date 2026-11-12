@@ -116,6 +116,9 @@ class Provider:
 
     async def products(self):
         products, cursor = [], None
+        currency = None
+        if self.store.provider == 'woocommerce':
+            currency = (await self.request('settings/general/woocommerce_currency'))['value']
         # Publish only complete snapshots; never remove products after a partial/failed fetch.
         async with asyncio.timeout(180):
             for page in range(1, 102):
@@ -150,7 +153,7 @@ class Provider:
                                 'stock_quantity': v.get('stock_quantity')}
                                 for v in variants if v['status'] == 'publish']
                         products.append({'id': str(p['id']), 'title': p['name'], 'description': p['description'],
-                                         'variants': variants})
+                                         'currency': currency, 'variants': variants})
                     if len(rows) < 10:
                         break
                 if len(products) > 1000 or page == 101:
