@@ -4,9 +4,11 @@ Open **Knowledge → Store connections**. Owners/admins connect one Shopify or W
 encrypted with the existing MASTER_KEY; APIs return configuration/status only.
 Delete the connection before replacing credentials or changing store. Delete also
 removes generated product knowledge. No store writes, refunds or cancellations
-are supported. Credentials and raw order responses are never logged. Order results
-are not added to shared Knowledge; selected answers can be saved in the private
-conversation transcript under the existing retention policy.
+are supported. Credentials, codes and raw order responses are never logged. Order
+results are not added to shared Knowledge; selected verified answers can be saved
+in the private conversation transcript under the existing retention policy.
+Pending identity proofs retain only an encrypted five-minute order snapshot.
+
 
 * Shopify: permanent `https://your-store.myshopify.com` origin, custom app token
   with `read_orders` and `read_products`; write scopes are rejected at test time.
@@ -22,8 +24,7 @@ Test is the explicit external-IO exception; other configuration requests use DB 
 Customer lookup binds identity to the inbound WhatsApp conversation, compares the
 requested phone to that identity, then compares the order's phone before releasing
 selected status/items/fulfilment/tracking fields. Web identities and mismatched or
-missing orders disclose no order details. There is no public agent lookup API or
-OTP flow in this version. No provider keys are needed by automated tests.
+missing orders disclose no order details. There is no public agent lookup API. Conversation-bound email verification is described below. No provider keys are needed by automated tests.
 
 Shopify product pages contain five products so nested variant queries stay below
 the requested-cost limit. Provider throttling leaves the old snapshot intact and
@@ -53,9 +54,33 @@ chunks include prices, currency and stock, and carry their snapshot timestamp.
 WooCommerce requires read access to the currency setting as well as orders/products.
 Only published/active products are synced. Deletions disappear on the next full sync.
 
-`lookup_order` is registered only for verified WhatsApp conversations. Its selected
+`lookup_order` supports verified WhatsApp conversations and real queued website turns. Its selected
 results become immutable per-turn evidence for the independent grounding checker.
-No order fields enter shared knowledge. Web customers must ask staff for order help.
+No order fields enter shared knowledge. Website customers must complete email verification before any order data is shared.
 Generated catalogues are managed only under Store connections, not document deletion.
 Catalogue answers cite Product catalogue; stock is a dated snapshot, not a reservation.
 Real store tests and live-model calibration require merchant credentials before launch.
+
+## One-time order proof (EC-2)
+
+A model-provided phone cannot authorize a lookup. If the verified WhatsApp sender
+does not match, or the customer is using the website, a one-time code is sent to
+the **email on the order** using the existing SES transactional outbox. The customer
+cannot choose the recipient. Without configured `EMAIL_BACKEND=ses`, unverified
+customers receive a generic response and can ask staff for help.
+
+Reply literally with `ORDER <reference> <six-digit-code>` in the same conversation.
+A code expires after five minutes or five incorrect attempts, is single-use, and
+is rejected if the connection is removed or needs testing, or staff have taken
+over. Codes bypass the model and are masked in saved messages and worker payloads.
+The encrypted snapshot is cleared on success/lockout or the maintenance sweep;
+expired records are deleted after one day. No recipient address, phone or order
+fields are returned before successful proof. Order facts supplied to the model
+are selected, cited evidence and still pass independent grounding verification.
+
+Limits: 30 lookups per workspace/minute, five per conversation/minute, and three
+codes per order-email/five minutes. Replaying a source turn does not resend a code.
+Phone formatting separators are ignored; country codes are never guessed.
+Migration 0050 adds the tenant/conversation-bound short-lived proof records.
+The browser fixture uses a fake mail outbox; live SES and merchant-account checks
+remain deployment setup.

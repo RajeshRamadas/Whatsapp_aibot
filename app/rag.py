@@ -17,7 +17,7 @@ from .db import AnswerReview, Chunk, Conversation, Message, QAPair, Session, Sou
 from .ingest import source_label
 from .observability import bind
 from .rate_limits import RateLimiter
-from .services import appointment_chat, commerce_chat, grounding, http_action_chat, payment_chat
+from .services import appointment_chat, commerce_chat, grounding, http_action_chat, order_notices, payment_chat
 from .services.analytics import record
 from .services.audit import audit
 from .services.bot_policy import tenant_instructions
@@ -148,6 +148,8 @@ def answer(tenant: Tenant, conversation_id: str | None, question: str, *,
 
 
 def _answer(tenant, conversation_id, question, *, whatsapp, language=None, action_turn_key=None):
+    if (order_reply := order_notices.command(tenant, conversation_id, question, bool(action_turn_key))) is not None:
+        return Answer(order_reply, [], '', transactional=True)
     action_reply = http_action_chat.command(tenant, conversation_id, question, bool(action_turn_key))
     if action_reply is not None:
         return Answer(action_reply['text'], [], '', transactional=True, action_failed=action_reply['failed'])
@@ -256,7 +258,9 @@ def _answer(tenant, conversation_id, question, *, whatsapp, language=None, actio
                    'Cite returned source numbers for factual action results. '
                    'You cannot approve actions or verify codes. '
                    'Customer steps must be completed by the customer.')
-    commerce_tools = commerce_chat.tools(tenant, conversation_id, evidence=snapshots)
+    commerce_notice = {}
+    commerce_tools = commerce_chat.tools(tenant, conversation_id, evidence=snapshots,
+        turn_key=action_turn_key, question=question, notices=commerce_notice)
     tools.extend(commerce_tools)
     if commerce_tools:
         prompt += commerce_chat.POLICY
@@ -265,6 +269,8 @@ def _answer(tenant, conversation_id, question, *, whatsapp, language=None, actio
     if table_tools:
         prompt += spreadsheet_chat.POLICY
     text = chat.run(model, prompt, messages, tools).text if tools else chat.complete(model, prompt, messages)
+    if 'text' in commerce_notice:
+        return Answer(commerce_notice['text'], [], query, transactional=True)
     if 'text' in action_notice:
         return Answer(action_notice['text'], [], query, transactional=True, action_failed=action_notice['failed'])
     if table_state.get('failed') and not table_citations:

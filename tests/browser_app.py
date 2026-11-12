@@ -360,3 +360,5 @@ def commerce_sync_inline(tenant_id, identity):
 CommerceProvider.test = commerce_test
 CommerceProvider.products = commerce_products
 commerce_sync.queue = commerce_sync_inline
+
+from tests import browser_order_proof as browser_order_proof  # noqa: E402,F401

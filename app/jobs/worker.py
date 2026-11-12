@@ -323,6 +323,8 @@ async def dispatch_campaigns(ctx):
 
 @observed_job
 async def dispatch_commerce(ctx):
+    from ..services import order_lookup
+    await asyncio.to_thread(order_lookup.maintain)
     # A DB lease survives worker restarts and needs no Redis enqueue transaction.
     for _ in range(3):
         if not await asyncio.to_thread(commerce_sync.process_one):

@@ -1,0 +1,7 @@
+{
+  "code": "If this order is available, a one-time code was sent to the email on the order. Reply ORDER {reference} followed by the six-digit code within five minutes. Never share the code elsewhere.",
+  "unavailable": "I could not verify this order. Check the order number or ask our team for help.",
+  "order": "Order {number}\nPayment status: {status}\nFulfilment: {fulfilment}",
+  "noTracking": "Tracking details are not available from this store.",
+  "tooLarge": "This order has more details than I can safely display here. Please ask our team for the full order details."
+}

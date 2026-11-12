@@ -89,6 +89,7 @@ def lookup(tenant_id, identity, conversation_id, number, claimed_phone):
     result = asyncio.run(provider(store).order(number))
     if not result or not any(phone(p or '') == verified for p in result.pop('phones')):
         return None  # Absent order and wrong owner have identical responses.
+    result.pop('email', None)
     with Session() as db:
         current = db.scalar(select(Store.id).where(Store.tenant_id == tenant_id, Store.id == identity,
                                                   Store.status == 'connected'))
