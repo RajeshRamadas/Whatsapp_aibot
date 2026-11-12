@@ -44,7 +44,8 @@ def delivery_enabled():
 
 def undisclosed(key):
     # The same customer step is shown for unknown orders; no order-existence oracle.
-    return {'state': 'awaiting_code', 'reference': key[:12]} if delivery_enabled() else {'state': 'unavailable'}
+    return ({'state': 'awaiting_code', 'reference': code_hash('order-step', key)[:12]}
+            if delivery_enabled() else {'state': 'unavailable'})
 
 
 def lookup(tenant_id, store_id, conversation_id, turn_key, order_number, supplied_phone=None):
