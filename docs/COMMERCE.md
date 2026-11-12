@@ -4,7 +4,9 @@ Open **Knowledge → Store connections**. Owners/admins connect one Shopify or W
 encrypted with the existing MASTER_KEY; APIs return configuration/status only.
 Delete the connection before replacing credentials or changing store. Delete also
 removes generated product knowledge. No store writes, refunds or cancellations
-are supported. No order payloads, phone numbers or credentials are logged/stored.
+are supported. Credentials and raw order responses are never logged. Order results
+are not added to shared Knowledge; selected answers can be saved in the private
+conversation transcript under the existing retention policy.
 
 * Shopify: permanent `https://your-store.myshopify.com` origin, custom app token
   with `read_orders` and `read_products`; write scopes are rejected at test time.
