@@ -35,7 +35,7 @@ def test_notion_refresh_pause_expiry_revoke_and_disconnect(client, tenant, sync_
             raise SyncError('missing', status=404)
         if path.endswith('/markdown'):
             return {'markdown': data['body'], 'truncated': False, 'unknown_block_ids': []}
-        return {'properties': {'title': {'type': 'title', 'title': [{'plain_text': 'Policy'}]}},
+        return {'properties': {'title': {'type': 'title', 'title': [{'plain_text': data.get('title', 'Policy')}]}},
                 'last_edited_time': data['version']}
     monkeypatch.setattr(HTTP, 'request', fake)
     assert sync.process_one()
@@ -43,6 +43,14 @@ def test_notion_refresh_pause_expiry_revoke_and_disconnect(client, tenant, sync_
     matches = rag.retrieve(tenant['tenant_id'], 'refund')
     assert matches and matches[0].heading == 'Refunds' and '30 days' in matches[0].content
     assert client.get('/api/v1/sources', headers=headers).json() == []
+    with Session() as db:
+        old_chunk = db.scalar(select(Chunk.id).where(Chunk.tenant_id == tenant['tenant_id']))
+    data['title'] = 'Renamed policy'
+    connections.change(tenant['tenant_id'], identity)
+    assert sync.process_one()
+    with Session() as db:
+        assert db.scalar(select(Chunk.id).where(Chunk.tenant_id == tenant['tenant_id'])) != old_chunk
+        assert db.scalar(select(Source.filename).where(Source.tenant_id == tenant['tenant_id'])) == 'Renamed policy.md'
     data.update(version='v2', body='# Refunds\n\nRefunds accepted within 14 days.')
     connections.change(tenant['tenant_id'], identity)
     assert sync.process_one()
@@ -206,3 +214,29 @@ def test_drive_worker_exchanges_once_and_refreshes_outside_sessions(client, tena
         row.credentials_enc = packet
     connections.change(tenant['tenant_id'], identity)
     assert sync.process_one() and calls == ['authorization_code', 'refresh_token']
+
+
+def test_unknown_notion_markup_is_not_complete_content(monkeypatch):
+    import pytest
+    monkeypatch.setattr(HTTP, 'request', lambda *a, **kw: {
+        'markdown': '# Policy\n<unknown url="https://notion.so/hidden"/>', 'truncated': False,
+        'unknown_block_ids': []})
+    with pytest.raises(SyncError, match='document_limit'):
+        Notion('fake-token').content({'id': NOTION['pages'][0]})
+
+
+def test_repeat_refresh_preserves_active_lease(client, tenant, sync_setup):  # noqa: F811
+    headers, _ = sync_setup
+    identity = connect(client, headers)
+    with Session.begin() as db:
+        row = db.scalar(select(Connection).where(Connection.tenant_id == tenant['tenant_id']))
+        row.lease, row.next_run = 'active-worker', now() + timedelta(minutes=15)
+        due = row.next_run
+    assert client.post(BASE + '/' + identity, headers=headers, json={'action': 'sync'}).status_code == 202
+    with Session() as db:
+        row = db.scalar(select(Connection).where(Connection.tenant_id == tenant['tenant_id']))
+        assert row.lease == 'active-worker' and row.next_run == due
+    assert client.post(BASE + '/' + identity, headers=headers, json={'action': 'pause'}).status_code == 202
+    with Session() as db:
+        row = db.scalar(select(Connection).where(Connection.tenant_id == tenant['tenant_id']))
+        assert row.lease is None and not row.enabled

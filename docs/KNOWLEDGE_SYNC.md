@@ -30,8 +30,9 @@ Drive uses selected folders and descendants; shortcuts and unsupported MIME type
 are excluded. Notion sync is limited to explicitly selected page IDs; add child
 pages separately if their content is needed. Removing access or moving content out
 of selected scope removes its knowledge during the next successful metadata scan.
-Polling, document limits, change-feed handling and UI acceptance are delivered in
-the remaining stack. Live OAuth/Notion account verification requires tenant credentials.
+Open **Knowledge → Drive and Notion sync** to choose content, request a refresh,
+pause/resume or disconnect. Changing accounts, credentials or selections requires
+disconnect and reconnect. Live OAuth/Notion verification requires tenant credentials.
 
 Provider references:
 - https://developers.google.com/workspace/drive/api/guides/manage-changes

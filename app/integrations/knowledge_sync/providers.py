@@ -140,6 +140,6 @@ class Notion:
         if data.get('truncated', True) or data.get('unknown_block_ids') or data.get('warnings'):
             raise SyncError('incomplete_page')
         text = data['markdown']
-        if not isinstance(text, str) or len(text.encode()) > 1_000_000:
+        if not isinstance(text, str) or re.search(r'<unknown\b', text) or len(text.encode()) > 1_000_000:
             raise SyncError('document_limit')
         return text.encode()

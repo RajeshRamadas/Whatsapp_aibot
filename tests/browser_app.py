@@ -362,3 +362,6 @@ CommerceProvider.products = commerce_products
 commerce_sync.queue = commerce_sync_inline
 
 from tests import browser_order_proof as browser_order_proof  # noqa: E402,F401
+from tests.browser_knowledge_sync import install as install_knowledge_sync  # noqa: E402
+
+install_knowledge_sync(app)
