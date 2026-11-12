@@ -12,6 +12,7 @@ from ..db import Chunk, Session, Source, Tenant, now, uid
 from ..integrations.http_actions.transport import ActionError
 from ..models.commerce import Store
 from .commerce import provider, scoped, view
+from .usage import meter
 
 
 def queue(tenant_id, identity):
@@ -52,8 +53,9 @@ def process_one():
         if len({str(p['id']) for p in products}) != len(products) or sum(map(len, texts)) > 2_000_000:
             raise ActionError('catalogue_limit')
         # Batch provider embedding calls without a checked-out DB connection.
-        for start in range(0, len(texts), 50):
-            embeddings.extend(llm.embedder().embed(texts[start:start + 50]))
+        with meter(tenant_id):
+            for start in range(0, len(texts), 50):
+                embeddings.extend(llm.embedder().embed(texts[start:start + 50]))
         if len(embeddings) != len(texts):
             raise ActionError('embedding_failed')
     except (ActionError, ValueError, KeyError, TypeError, TimeoutError) as exc:

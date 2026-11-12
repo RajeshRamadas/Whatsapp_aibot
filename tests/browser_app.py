@@ -324,6 +324,9 @@ async def payment_worker_fixture(request, call_next):
     return response
 
 # Import after the app and earlier fakes are configured; never loaded by production.
+# Commerce acceptance uses the real lifecycle, durable sync and knowledge tables.
+from app.integrations.commerce import Provider as CommerceProvider  # noqa: E402
+from app.services import commerce_sync  # noqa: E402
 from tests import browser_accuracy as browser_accuracy  # noqa: E402
 from tests import browser_grounding as browser_grounding  # noqa: E402
 from tests import browser_http_actions as browser_http_actions  # noqa: E402
@@ -331,3 +334,29 @@ from tests import browser_lead_sync as browser_lead_sync  # noqa: E402
 from tests import browser_security as browser_security  # noqa: E402
 from tests import browser_spreadsheets as browser_spreadsheets  # noqa: E402
 from tests import browser_webhooks as browser_webhooks  # noqa: E402
+
+
+async def commerce_test(self):
+    if self.credentials['token'] != 'commerce-browser-token':
+        from app.integrations.http_actions.transport import ActionError
+        raise ActionError('auth_failed')
+
+
+async def commerce_products(self):
+    return [{'id': 'demo-product', 'title': 'Shipping box', 'description': 'Recycled shipping box',
+             'currency': 'INR', 'variants': [{'title': 'Small', 'price': '50.00', 'inventoryQuantity': 3}]}]
+
+
+commerce_queue = commerce_sync.queue
+
+
+def commerce_sync_inline(tenant_id, identity):
+    commerce_queue(tenant_id, identity)
+    commerce_sync.process_one()
+    from app.services.commerce import listing
+    return listing(tenant_id)[0]
+
+
+CommerceProvider.test = commerce_test
+CommerceProvider.products = commerce_products
+commerce_sync.queue = commerce_sync_inline

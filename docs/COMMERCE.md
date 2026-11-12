@@ -1,6 +1,6 @@
 # Read-only commerce integrations (T10.6)
 
-Owners/admins connect one Shopify or WooCommerce store per workspace. Tokens are
+Open **Knowledge → Store connections**. Owners/admins connect one Shopify or WooCommerce store per workspace. Tokens are
 encrypted with the existing MASTER_KEY; APIs return configuration/status only.
 Delete the connection before replacing credentials or changing store. Delete also
 removes generated product knowledge. No store writes, refunds or cancellations

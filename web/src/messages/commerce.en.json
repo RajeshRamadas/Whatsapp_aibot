@@ -1,0 +1,14 @@
+{
+  "title": "Store connections", "intro": "Connect Shopify or WooCommerce to answer order questions and sync products daily.",
+  "privacy": "Order details are shared only when the order phone matches the customer's verified WhatsApp number. Website visitors must contact your team. Product prices and stock are dated snapshots.",
+  "refresh": "Refresh stores", "loading": "Loading store connections…", "loadError": "Could not load stores. Refresh to try again.",
+  "actionError": "Could not complete the action. Check your connection and credentials, then retry.",
+  "empty": "No store connected yet.", "provider": "Store provider", "url": "HTTPS store origin", "key": "Consumer key",
+  "token": "Admin API access token", "secret": "Consumer secret", "readOnly": "I configured these credentials with read-only permissions.",
+  "shopifyHelp": "Use your permanent myshopify.com address. Grant read_orders and read_products only. Shopify's order-history and customer-data access limits apply.",
+  "wooHelp": "Use a WooCommerce v3 Read key with access to orders, products and the currency setting. Core WooCommerce tracking data is unavailable.",
+  "connect": "Save store", "saving": "Saving…", "test": "Test store connection", "sync": "Sync products now", "disconnect": "Disconnect store",
+  "disconnectPrompt": "Disconnect this store and delete its synced product knowledge?", "connected": "Connected", "needsTest": "Connection test required",
+  "syncing": "Syncing products…", "products": "Synced products", "lastSync": "Last successful sync", "nextSync": "Next sync or retry",
+  "never": "Not yet", "syncError": "The connection test or sync failed. Check permissions and credentials. Large catalogues may exceed the documented limits. The last successful snapshot is kept until disconnect."
+}
