@@ -4,7 +4,6 @@ from pydantic import BaseModel
 
 from app.api.principal import Principal, require_role
 from app.config import settings
-from app.db import engine
 from app.integrations.knowledge_sync.http import HTTP
 from app.services import knowledge_connections, knowledge_sync
 
@@ -15,7 +14,8 @@ state = {'removed': False, 'version': 1}
 
 
 def fake(self, provider, method, path, **kwargs):
-    assert engine.pool.checkedout() == 0
+    # Parallel browser requests may legitimately hold other pool connections.
+    # The serial provider tests check that sync itself releases its DB session.
     if provider == 'oauth':
         return {'access_token': 'browser-drive-access', 'refresh_token': 'browser-drive-refresh',
                 'expires_in': 3600, 'scope': knowledge_connections.SCOPE}
