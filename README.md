@@ -1256,3 +1256,5 @@ WhatsApp and the widget, enter the staff queue and appear as unanswered reviews.
 Checked WhatsApp replies that exceed the rendering budget also hand off rather
 than lose a verified condition through truncation. See [Grounding](docs/GROUNDING.md)
 for evidence boundaries, operational behavior and the live-model launch checks.
+
+Store integrations: [Shopify and WooCommerce setup](docs/ECOMMERCE.md).

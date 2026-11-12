@@ -7,6 +7,7 @@ import logging
 import re
 from collections import defaultdict
 from dataclasses import dataclass
+from datetime import timedelta
 from functools import reduce
 
 from sqlalchemy import func, literal_column, or_, select
@@ -15,6 +16,7 @@ from . import llm
 from .config import settings
 from .db import AnswerReview, Chunk, Conversation, Message, QAPair, Session, Source, Tenant, now
 from .ingest import source_label
+from .models.ecommerce import StoreConnection
 from .observability import bind
 from .rate_limits import RateLimiter
 from .services import appointment_chat, grounding, http_action_chat, payment_chat
@@ -89,7 +91,10 @@ def retrieve(tenant_id: str, query: str, vector: list[float] | None = None) -> l
                Chunk.heading, Chunk.page)
     base = select(*columns).join(Source, Chunk.source_id == Source.id) \
         .where(Chunk.tenant_id == tenant_id, Source.tenant_id == tenant_id, Source.status == 'ready',
-               Source.kind.not_in(['csv', 'xlsx']))
+               Source.kind.not_in(['csv', 'xlsx']),
+               or_(Source.kind != 'ecommerce', Source.id.in_(select(StoreConnection.source_id).where(
+                   StoreConnection.tenant_id == tenant_id, StoreConnection.enabled,
+                   StoreConnection.last_success_at >= now() - timedelta(hours=24)))))
     limit = settings.retrieval_candidates
     with Session() as db:
         semantic = db.execute(base.where(distance <= settings.retrieval_max_distance)

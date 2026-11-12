@@ -411,6 +411,12 @@ async def dispatch_outgoing_webhooks(ctx):
 
 
 @observed_job
+async def dispatch_stores(ctx):
+    from ..services import ecommerce
+    for tenant_id, identity in await asyncio.to_thread(ecommerce.pending):
+        await asyncio.to_thread(ecommerce.sync, tenant_id, identity)
+
+
 async def clean_spreadsheet_storage(ctx):
     from ..spreadsheets.store import cleanup
     await asyncio.to_thread(cleanup)
@@ -419,6 +425,7 @@ async def clean_spreadsheet_storage(ctx):
 class WorkerSettings:
     on_startup = startup
     cron_jobs = [cron(clean_spreadsheet_storage, minute=0, second=0),
+                 cron(dispatch_stores, minute=set(range(0, 60, 5)), second=0, timeout=900),
                  cron(dispatch_outgoing_webhooks, second=set(range(0, 60, 5)), timeout=180),
                  cron(dispatch_public_operations, second=set(range(0, 60, 5)), timeout=900),
                  cron(dispatch_evaluations, second=set(range(0, 60, 5)), timeout=900),

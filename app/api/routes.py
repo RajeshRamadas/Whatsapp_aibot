@@ -14,6 +14,7 @@ from . import (
     chat,
     contacts,
     conversations,
+    ecommerce,
     email_feedback,
     evals,
     events,
@@ -51,7 +52,7 @@ from .shared import UPLOADS as UPLOADS
 from .shared import origins as origins
 
 router = APIRouter()
-for module in (spreadsheets, http_actions, outgoing_webhooks, mfa, lead_sync, payment_webhooks, payments,
+for module in (ecommerce, spreadsheets, http_actions, outgoing_webhooks, mfa, lead_sync, payment_webhooks, payments,
                google_calendar,
                appointments, bot_messages, improvements,
                auth, audit, api_keys,

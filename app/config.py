@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     public_api_default_requests_per_minute: int = Field(60, ge=1, le=6000)
     grounding_timeout_seconds: float = Field(10, ge=1, le=30)
     grounding_models: dict[str, str] = Field(default_factory=dict)
+    ecommerce_max_products: int = Field(1000, ge=1, le=1000)
     spreadsheet_max_rows: int = Field(20000, ge=1, le=100000)
     spreadsheet_query_timeout_ms: int = Field(1500, ge=100, le=5000)
     spreadsheet_query_row_limit: int = Field(100, ge=1, le=200)
