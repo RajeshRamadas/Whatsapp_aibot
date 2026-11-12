@@ -1256,3 +1256,9 @@ WhatsApp and the widget, enter the staff queue and appear as unanswered reviews.
 Checked WhatsApp replies that exceed the rendering budget also hand off rather
 than lose a verified condition through truncation. See [Grounding](docs/GROUNDING.md)
 for evidence boundaries, operational behavior and the live-model launch checks.
+
+### Shopify and WooCommerce (T10.6)
+
+Read-only workspace store connections use the existing `MASTER_KEY` encryption.
+See [commerce setup and limits](docs/COMMERCE.md). Live merchant credentials are
+configured per workspace; automated checks use fake provider responses.
