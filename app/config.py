@@ -66,6 +66,9 @@ class Settings(BaseSettings):
     campaign_max_recipients: int = Field(1000, ge=1, le=10000)
     campaign_sends_per_second: int = Field(1, ge=1, le=80)
     campaign_daily_limit: int = Field(250, ge=1, le=100000)
+    knowledge_google_client_id: str = ''
+    knowledge_google_client_secret: str = ''
+    knowledge_google_redirect_uri: str = ''
     master_key: str | None = None
     master_key_version: int = 1
     master_key_previous: dict[str, str] = {}
