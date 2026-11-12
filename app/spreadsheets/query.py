@@ -16,6 +16,7 @@ from ..config import settings
 from ..db import Session, Source, engine
 from ..models.spreadsheets import SpreadsheetTable
 from ..services.audit import audit
+from ..services.knowledge_sync import usable as sync_usable
 from .store import q, role, schema
 
 ALLOWED = {getattr(exp, name) for name in (
@@ -35,7 +36,7 @@ class QueryError(ValueError):
 def owned(db, tenant_id, identity):
     pair = db.execute(select(SpreadsheetTable, Source).join(Source, Source.id == SpreadsheetTable.source_id)
         .where(SpreadsheetTable.id == str(identity), SpreadsheetTable.tenant_id == tenant_id,
-               Source.tenant_id == tenant_id)).first()
+               Source.tenant_id == tenant_id, sync_usable())).first()
     if pair is None:
         raise QueryError('table_not_found', 404)
     return pair

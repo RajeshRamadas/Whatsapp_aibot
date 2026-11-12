@@ -5,6 +5,7 @@ from sqlalchemy import Text, cast, or_, select
 from .. import llm
 from ..db import Session, Source
 from ..models.spreadsheets import SpreadsheetTable as Table
+from ..services.knowledge_sync import usable as sync_usable
 from .query import QueryError, execute
 
 POLICY = ('\n\nSPREADSHEET ANSWERS: Use list_tables to discover enabled table names, column aliases, types and '
@@ -26,7 +27,8 @@ def tools(tenant_id, first_number, *, evidence=None):
         if not isinstance(search, str) or len(search) > 80 or type(offset) is not int or not 0 <= offset <= 10000:
             return {'error': 'invalid_catalog_request'}
         query = select(Table, Source.filename).join(Source, Source.id == Table.source_id).where(
-            Table.tenant_id == tenant_id, Source.tenant_id == tenant_id, Table.enabled, Source.status == 'ready')
+            Table.tenant_id == tenant_id, Source.tenant_id == tenant_id, Table.enabled,
+            Source.status == 'ready', sync_usable())
         if search:
             pattern = '%' + search.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_') + '%'
             query = query.where(or_(Table.title.ilike(pattern), Source.filename.ilike(pattern),
@@ -39,7 +41,8 @@ def tools(tenant_id, first_number, *, evidence=None):
                 'next_offset': offset + 8 if len(rows) > 8 else None}
     with Session() as db:
         available = db.scalar(select(Table.id).join(Source, Source.id == Table.source_id).where(
-            Table.tenant_id == tenant_id, Source.tenant_id == tenant_id, Table.enabled, Source.status == 'ready')
+            Table.tenant_id == tenant_id, Source.tenant_id == tenant_id, Table.enabled,
+            Source.status == 'ready', sync_usable())
             .limit(1))
     if not available:
         return [], citations, state

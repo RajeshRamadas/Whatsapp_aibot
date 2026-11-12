@@ -63,7 +63,8 @@ async def upload(file: UploadFile = File(...),
 def list_sources(tenant: Tenant = Depends(tenant_for_role('admin'))):
     with Session() as db:
         sources = db.scalars(select(Source).where(Source.tenant_id == tenant.id,
-                             Source.website_id.is_(None), Source.kind != 'commerce')
+                             Source.website_id.is_(None), Source.kind != 'commerce',
+                             Source.sync_connection_id.is_(None))
                              .order_by(Source.created_at))
         return [{'id': s.id, 'filename': s.filename, 'status': s.status, 'error': s.error} for s in sources]
 
@@ -73,7 +74,8 @@ def delete_source(source_id: str, principal: Principal = Depends(require_role('a
     tenant = principal.tenant
     with Session.begin() as db:
         src = db.scalar(select(Source).where(Source.id == source_id, Source.tenant_id == tenant.id,
-                                             Source.website_id.is_(None), Source.kind != 'commerce'))
+                                             Source.website_id.is_(None), Source.kind != 'commerce',
+                                             Source.sync_connection_id.is_(None)))
         if not src:
             raise HTTPException(404, 'Source not found')
         path = src.file_path
