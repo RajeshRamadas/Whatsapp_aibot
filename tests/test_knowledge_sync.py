@@ -206,3 +206,12 @@ def test_drive_worker_exchanges_once_and_refreshes_outside_sessions(client, tena
         row.credentials_enc = packet
     connections.change(tenant['tenant_id'], identity)
     assert sync.process_one() and calls == ['authorization_code', 'refresh_token']
+
+
+def test_unknown_notion_markup_is_not_complete_content(monkeypatch):
+    import pytest
+    monkeypatch.setattr(HTTP, 'request', lambda *a, **kw: {
+        'markdown': '# Policy\n<unknown url="https://notion.so/hidden"/>', 'truncated': False,
+        'unknown_block_ids': []})
+    with pytest.raises(SyncError, match='document_limit'):
+        Notion('fake-token').content({'id': NOTION['pages'][0]})
