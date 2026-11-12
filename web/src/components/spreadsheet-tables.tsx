@@ -6,6 +6,7 @@ import { Button } from './ui/button';
 import { field } from './appointment-settings';
 export function SpreadsheetTables({ workspaceId }: { workspaceId: string }) {
   const copy = useCopy('spreadsheets');
+  const syncCopy = useCopy('knowledgeSync');
   const [data, setData] = useState<SheetCatalog>(), [version, refresh] = useState(0), [loadError, setLoadError] = useState(false);
   const [busy, setBusy] = useState(false), [error, setError] = useState(false);
   const pending = data?.sources.some(s => ['queued', 'processing', 'uploading'].includes(s.status));
@@ -26,7 +27,7 @@ export function SpreadsheetTables({ workspaceId }: { workspaceId: string }) {
       <p>{source.status === 'ready' ? copy.ready : source.status === 'failed' ? copy.failed : copy.processing}</p>
       {source.error && <p role="alert" className="break-words text-sm">{source.error}</p>}
       {!data.tables.some(t => t.source_id === source.id) && source.status === 'ready' && <p>{copy.needsImport}</p>}
-      <Button variant="secondary" disabled={busy || !['ready', 'failed'].includes(source.status)} onClick={() => { if (window.confirm(copy.reimportPrompt)) void act(() => tableClient.reimport(source.id)); }}>{copy.reimport}</Button>
+      {source.sync_connection_id ? <p className="text-sm text-muted">{syncCopy.sheetRefresh}</p> : <Button variant="secondary" disabled={busy || !['ready', 'failed'].includes(source.status)} onClick={() => { if (window.confirm(copy.reimportPrompt)) void act(() => tableClient.reimport(source.id)); }}>{copy.reimport}</Button>}
       {data.tables.filter(t => t.source_id === source.id).map(table => <TableCard key={table.id} table={table} ready={source.status === 'ready'} busy={busy} onEnable={() => act(() => tableClient.enable(table.id, !table.enabled))} />)}
     </section>)}
   </section>;

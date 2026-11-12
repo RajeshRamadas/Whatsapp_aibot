@@ -4,6 +4,92 @@
  */
 
 export interface paths {
+    "/api/v1/knowledge-sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listing */
+        get: operations["listing_api_v1_knowledge_sync_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/knowledge-sync/drive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Drive */
+        post: operations["drive_api_v1_knowledge_sync_drive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/knowledge-sync/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Callback */
+        get: operations["callback_api_v1_knowledge_sync_callback_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/knowledge-sync/notion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Notion */
+        post: operations["notion_api_v1_knowledge_sync_notion_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/knowledge-sync/{identity}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Change */
+        post: operations["change_api_v1_knowledge_sync__identity__post"];
+        /** Disconnect */
+        delete: operations["disconnect_api_v1_knowledge_sync__identity__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/commerce": {
         parameters: {
             query?: never;
@@ -3439,6 +3525,14 @@ export interface components {
             /** Sources */
             sources: components["schemas"]["SheetSourceView"][];
         };
+        /** ChangeInput */
+        ChangeInput: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "sync" | "pause" | "resume";
+        };
         /** ChannelUpdate */
         ChannelUpdate: {
             /** Access Token */
@@ -3493,6 +3587,29 @@ export interface components {
         ConnectURL: {
             /** Url */
             url: string;
+        };
+        /** ConnectionView */
+        ConnectionView: {
+            /** Id */
+            id: string;
+            /** Provider */
+            provider: string;
+            /** Label */
+            label: string;
+            /** Selection */
+            selection: string[];
+            /** Enabled */
+            enabled: boolean;
+            /** Status */
+            status: string;
+            /** Last Success */
+            last_success: string | null;
+            /** Last Error */
+            last_error: string | null;
+            /** Next Run */
+            next_run: string | null;
+            /** Lease */
+            lease: string | null;
         };
         /** ConsentInput */
         ConsentInput: {
@@ -3736,6 +3853,13 @@ export interface components {
                 [key: string]: unknown;
             }[];
         };
+        /** DriveInput */
+        DriveInput: {
+            /** Label */
+            label: string;
+            /** Folders */
+            folders: string[];
+        };
         /** EndpointInput */
         EndpointInput: {
             /** Name */
@@ -3960,6 +4084,15 @@ export interface components {
             revoked_at: string | null;
             /** Expires At */
             expires_at: string | null;
+        };
+        /** KnowledgeSyncCatalog */
+        KnowledgeSyncCatalog: {
+            /** Drive Configured */
+            drive_configured: boolean;
+            /** Connections */
+            connections: components["schemas"]["ConnectionView"][];
+            /** Sources */
+            sources: components["schemas"]["SourceView"][];
         };
         /** Labels */
         Labels: {
@@ -4202,6 +4335,20 @@ export interface components {
         Note: {
             /** Text */
             text: string;
+        };
+        /** NotionInput */
+        NotionInput: {
+            /** Label */
+            label: string;
+            /** Pages */
+            pages: string[];
+            /**
+             * Token
+             * Format: password
+             */
+            token: string;
+            /** Read Only */
+            read_only: boolean;
         };
         /** PageView */
         PageView: {
@@ -4773,6 +4920,8 @@ export interface components {
         };
         /** SheetSourceView */
         SheetSourceView: {
+            /** Sync Connection Id */
+            sync_connection_id?: string | null;
             /** Id */
             id: string;
             /** Filename */
@@ -4865,6 +5014,17 @@ export interface components {
             state: string;
             /** Expires At */
             expires_at: string | null;
+        };
+        /** SourceView */
+        SourceView: {
+            /** Id */
+            id: string;
+            /** Filename */
+            filename: string;
+            /** Status */
+            status: string;
+            /** Sync Connection Id */
+            sync_connection_id: string;
         };
         /** StaffInput */
         StaffInput: {
@@ -5237,6 +5397,11 @@ export interface components {
              */
             handoff: boolean;
         };
+        /** URLView */
+        URLView: {
+            /** Url */
+            url: string;
+        };
         /**
          * UpdateTenant
          * @description Only the fields sent are changed. Send null to reset chat_provider / chat_model to the server default.
@@ -5438,6 +5603,211 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    listing_api_v1_knowledge_sync_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeSyncCatalog"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    drive_api_v1_knowledge_sync_drive_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DriveInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["URLView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    callback_api_v1_knowledge_sync_callback_get: {
+        parameters: {
+            query: {
+                state: string;
+                code?: string | null;
+                error?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            307: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    notion_api_v1_knowledge_sync_notion_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotionInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectionView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_api_v1_knowledge_sync__identity__post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectionView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    disconnect_api_v1_knowledge_sync__identity__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     listing_api_v1_commerce_get: {
         parameters: {
             query?: never;
