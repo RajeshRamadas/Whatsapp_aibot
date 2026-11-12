@@ -4,7 +4,7 @@ import json
 
 from sqlalchemy import delete, select
 
-from ..db import Conversation, Session, Source, Tenant
+from ..db import Conversation, Session, Source, Tenant, now
 from ..integrations.commerce import Provider
 from ..integrations.http_actions.transport import ActionError
 from ..models.commerce import Store
@@ -60,9 +60,10 @@ def test_connection(tenant_id, identity):
     with Session.begin() as db:
         row = scoped(db, tenant_id, identity, lock=True)
         if error:
-            row.last_error = error
+            row.status, row.last_error, row.lease, row.next_run = 'needs_test', error, None, None
         else:
             row.status, row.last_error = 'connected', None
+            row.next_run = now()
         return view(row)
 
 

@@ -858,3 +858,8 @@ T10.6a: encrypted, admin-only store connection lifecycle and fixed read-only
 Shopify/WooCommerce adapters. Verified WhatsApp identity gates order fields;
 web/unknown/mismatched customers cannot retrieve orders. Durable product publication,
 bot evidence integration and English/Hindi controls follow in the remaining stack.
+
+T10.6b: durable daily full-catalogue publication with crash leases, atomic replacement,
+retry backoff and disconnect fencing. Products become cited knowledge; live order
+results are bound to WhatsApp identity and independent grounding evidence. Dashboard
+controls and end-to-end browser acceptance follow in T10.6c.

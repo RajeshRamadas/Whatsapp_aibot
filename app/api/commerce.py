@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from ..integrations.commerce import StoreInput
 from ..integrations.http_actions.transport import ActionError
-from ..services import commerce
+from ..services import commerce, commerce_sync
 from .principal import Principal, require_role
 
 router = APIRouter(prefix='/api/v1/commerce', tags=['commerce'])
@@ -54,3 +54,8 @@ def test(identity: UUID, p: Principal = Depends(require_role('admin'))):
 def disconnect(identity: UUID, p: Principal = Depends(require_role('admin'))):
     run(p, commerce.disconnect, str(identity))
     return Response(status_code=204)
+
+
+@router.post('/{identity}/sync', response_model=StoreView, status_code=202)
+def sync(identity: UUID, p: Principal = Depends(require_role('admin'))):
+    return run(p, commerce_sync.queue, str(identity))
