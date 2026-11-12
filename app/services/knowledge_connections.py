@@ -116,6 +116,8 @@ def change(tenant_id, identity, *, selection=None, enabled=None, disconnect=Fals
             db.delete(row)  # Local disconnect destroys credentials; remote token revocation is user-managed.
             audit(db, tenant_id, 'knowledge_sync.disconnected', identity, actor_type='admin')
             return
+        if row.lease and selection is None and enabled is None:
+            return view(row)  # Repeated refresh clicks cannot invalidate an active OAuth/sync lease.
         if selection is not None:
             purge(db, row)
             row.selection, row.cursor, row.last_success = selection, None, None

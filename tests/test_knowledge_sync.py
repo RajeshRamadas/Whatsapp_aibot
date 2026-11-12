@@ -215,3 +215,20 @@ def test_unknown_notion_markup_is_not_complete_content(monkeypatch):
         'unknown_block_ids': []})
     with pytest.raises(SyncError, match='document_limit'):
         Notion('fake-token').content({'id': NOTION['pages'][0]})
+
+
+def test_repeat_refresh_preserves_active_lease(client, tenant, sync_setup):  # noqa: F811
+    headers, _ = sync_setup
+    identity = connect(client, headers)
+    with Session.begin() as db:
+        row = db.scalar(select(Connection).where(Connection.tenant_id == tenant['tenant_id']))
+        row.lease, row.next_run = 'active-worker', now() + timedelta(minutes=15)
+        due = row.next_run
+    assert client.post(BASE + '/' + identity, headers=headers, json={'action': 'sync'}).status_code == 202
+    with Session() as db:
+        row = db.scalar(select(Connection).where(Connection.tenant_id == tenant['tenant_id']))
+        assert row.lease == 'active-worker' and row.next_run == due
+    assert client.post(BASE + '/' + identity, headers=headers, json={'action': 'pause'}).status_code == 202
+    with Session() as db:
+        row = db.scalar(select(Connection).where(Connection.tenant_id == tenant['tenant_id']))
+        assert row.lease is None and not row.enabled

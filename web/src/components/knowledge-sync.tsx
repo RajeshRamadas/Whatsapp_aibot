@@ -37,7 +37,7 @@ export function KnowledgeSync({ workspaceId }: { workspaceId: string }) {
       <p>{copy.fileCount}: {data.sources.filter(s => s.sync_connection_id === c.id).length}</p>
       <ul className="space-y-2">{data.sources.filter(s => s.sync_connection_id === c.id).map(s => <li key={s.id} className="break-words">{s.filename} · {s.status === 'ready' ? copy.ready : copy.processing}</li>)}</ul>
       <div className="flex flex-wrap gap-3">
-        <Button disabled={busy || !c.enabled || c.status === 'requested' || c.status === 'needs_attention'} onClick={() => void act(() => client.change(c.id, 'sync'))}>{copy.sync}</Button>
+        <Button disabled={busy || !!c.lease || !c.enabled || c.status === 'requested' || c.status === 'needs_attention'} onClick={() => void act(() => client.change(c.id, 'sync'))}>{copy.sync}</Button>
         <Button variant="secondary" disabled={busy || c.status === 'requested'} onClick={() => void act(() => client.change(c.id, c.enabled ? 'pause' : 'resume'))}>{c.enabled ? copy.pause : copy.resume}</Button>
         <Button variant="secondary" disabled={busy} onClick={() => { if (window.confirm(copy.disconnectPrompt)) void act(() => client.disconnect(c.id)); }}>{copy.disconnect}</Button>
       </div>
