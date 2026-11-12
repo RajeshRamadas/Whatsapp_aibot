@@ -28,7 +28,7 @@ test('cloud knowledge: selected Notion pages, Drive consent, refresh, pause and 
   page.once('dialog', d => d.accept()); await notion.getByRole('button', { name: 'Disconnect knowledge', exact: true }).click();
   await expect(notion).toHaveCount(0);
   expect((await page.request.post('/api/backend/_test/knowledge-sync', { headers: { 'X-CSRF-Token': csrf }, data: { removed: false } })).ok()).toBe(true);
-  await panel.getByLabel('Knowledge provider', { exact: true }).selectOption('drive');
+  await panel.getByRole('combobox', { name: 'Knowledge provider', exact: true }).selectOption('drive');
   await panel.getByLabel('Connection name', { exact: true }).fill('Drive policies');
   await panel.getByLabel('Drive folder IDs (one per line)', { exact: true }).fill('rootfolder123');
   await page.route('https://accounts.google.com/**', route => {
