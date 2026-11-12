@@ -1243,3 +1243,13 @@ The bot discovers enabled spreadsheet schemas and answers through the guarded
 `query_table` tool with filename/sheet citations. See the
 [spreadsheet guide](docs/SPREADSHEET_ANSWERS.md) for data preparation, supported SQL,
 upgrade steps, permissions and exact count examples.
+
+Grounding checks use a separate, tool-free provider request with strict JSON
+verdicts. Each factual claim must be supported by the answer's own cited snapshots.
+Malformed/unknown citations, oversized context, malformed verdicts or provider
+failures are blocked. Nonfactual greetings/questions/acknowledgements may pass.
+The check uses the draft's provider/model by default; `GROUNDING_MODELS` can map
+provider names to other configured models, and `GROUNDING_TIMEOUT_SECONDS` bounds
+the SDK request timeout (no automatic verifier retries). Verifier calls are metered
+through the existing usage ledger. Customer delivery integration follows in the
+remaining T10.5 stack.

@@ -838,3 +838,8 @@ comments cannot expose query content; blank records also count toward scan limit
 Full backend regression, frontend unit/build/lint/type checks and browser acceptance
 cover real Postgres/Redis with fake providers. See
 [guide](SPREADSHEET_ANSWERS.md) and [screenshot](screenshots/t10-4-spreadsheet-answers.png).
+
+T10.5a: independent, tool-free grounding verifier with strict verdict/citation
+validation, immutable evidence snapshots, fail-closed limits and provider transport
+caps. Uses existing provider credentials and usage metering; no migration. Customer
+delivery, tool evidence and handoff integration follow in the remaining stack.
