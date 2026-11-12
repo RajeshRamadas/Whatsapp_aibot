@@ -75,7 +75,8 @@ is rejected if the connection is removed or needs testing, or staff have taken
 over. Codes bypass the model and are masked in saved messages and worker payloads.
 The encrypted snapshot is cleared on success/lockout or the maintenance sweep;
 expired records are deleted after one day. No recipient address, phone or order
-fields are returned before successful proof. Order facts supplied to the model
+fields are returned before successful proof. Unknown orders show the same code
+step without sending email, so the prompt does not reveal order existence. Order facts supplied to the model
 are selected, cited evidence and still pass independent grounding verification.
 
 Limits: 30 lookups per workspace/minute, five per conversation/minute, and three

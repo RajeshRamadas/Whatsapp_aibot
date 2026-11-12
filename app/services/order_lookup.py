@@ -42,6 +42,11 @@ def delivery_enabled():
     return settings.email_backend == 'ses'
 
 
+def undisclosed(key):
+    # The same customer step is shown for unknown orders; no order-existence oracle.
+    return {'state': 'awaiting_code', 'reference': key[:12]} if delivery_enabled() else {'state': 'unavailable'}
+
+
 def lookup(tenant_id, store_id, conversation_id, turn_key, order_number, supplied_phone=None):
     # supplied_phone is deliberately ignored: a model argument is not identity proof.
     key = digest([store_id, conversation_id, turn_key, order_number])
@@ -57,7 +62,7 @@ def lookup(tenant_id, store_id, conversation_id, turn_key, order_number, supplie
             raise ActionError('rate_limited')
         packet = asyncio.run(commerce.provider(row).order(order_number))
         if not packet:
-            return {'state': 'unavailable'}
+            return undisclosed(key)
         data = {k: v for k, v in packet.items() if k not in ('phones', 'email')}
         encoded = json.dumps(data, ensure_ascii=False, allow_nan=False)
         if len(encoded) > 16000:
@@ -74,7 +79,10 @@ def lookup(tenant_id, store_id, conversation_id, turn_key, order_number, supplie
             return {'state': 'complete', 'data': data}
         if not delivery_enabled():
             return {'state': 'unavailable'}
-        recipient = normalize(packet.get('email') or '')
+        try:
+            recipient = normalize(packet.get('email') or '')
+        except ValueError:
+            return undisclosed(key)
         if not RateLimiter(3, 300, namespace='store-order-codes').allow(tenant_id + ':' + digest(recipient)):
             raise ActionError('rate_limited')
         identity, code = uid(), f'{secrets.randbelow(1000000):06d}'
@@ -94,7 +102,7 @@ def lookup(tenant_id, store_id, conversation_id, turn_key, order_number, supplie
             db.flush()
             return pending(proof)
     except Exception:
-        # Never expose provider diagnostics, recipient addresses or order existence.
+        # Never expose provider diagnostics or recipient addresses.
         return {'state': 'unavailable'}
 
 

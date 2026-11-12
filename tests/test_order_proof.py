@@ -144,3 +144,14 @@ def test_console_delivery_and_provider_failure_reveal_nothing(client, tenant, pr
         raise TimeoutError('sensitive provider data')
     monkeypatch.setattr(Provider, 'order', fail)
     assert order_lookup.lookup(tenant['tenant_id'], identity, conv, 'two', '1001') == {'state': 'unavailable'}
+
+
+def test_unknown_orders_use_the_same_customer_step_without_sending_mail(client, tenant, proof, monkeypatch):
+    identity, conv, sent, _ = proof
+    async def absent(self, number):
+        return None
+    monkeypatch.setattr(Provider, 'order', absent)
+    pending = order_lookup.lookup(tenant['tenant_id'], identity, conv, 'absent', '1002')
+    assert pending['state'] == 'awaiting_code' and not sent and 'data' not in pending
+    assert order_lookup.lookup(tenant['tenant_id'], identity, conv, 'absent', '1002') == pending
+    assert order_lookup.verify(tenant['tenant_id'], conv, pending['reference'], '123456')['state'] == 'unavailable'
