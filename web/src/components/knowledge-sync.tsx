@@ -30,9 +30,9 @@ export function KnowledgeSync({ workspaceId }: { workspaceId: string }) {
     {data?.connections.length === 0 && <p>{copy.empty}</p>}
     {data?.connections.map(c => <section key={c.id} aria-label={c.label} className="min-w-0 space-y-3 rounded-xl border border-border p-4">
       <h3 className="break-words text-lg font-semibold">{c.label}</h3><p>{c.provider === 'drive' ? copy.drive : copy.notion}</p>
-      <p role="status">{!c.enabled ? copy.paused : c.last_error ? copy.attention : c.lease ? copy.syncing : c.last_success ? copy.connected : copy.pending}</p>
+      <p role="status">{!c.enabled ? copy.paused : (c.last_error || c.status === 'needs_attention') ? copy.attention : c.lease ? copy.syncing : c.last_success ? copy.connected : copy.pending}</p>
       <p>{copy.lastSync}: {date(c.last_success)}</p><p>{copy.nextSync}: {date(c.next_run)}</p>
-      {c.last_error && <p role="alert">{copy.syncError}</p>}
+      {(c.last_error || c.status === 'needs_attention') && <p role="alert">{copy.syncError}</p>}
       <details><summary className="min-h-11 cursor-pointer">{copy.selected}</summary><ul className="space-y-2 break-all text-sm">{c.selection.map(id => <li key={id}>{id}</li>)}</ul></details>
       <p>{copy.fileCount}: {data.sources.filter(s => s.sync_connection_id === c.id).length}</p>
       <ul className="space-y-2">{data.sources.filter(s => s.sync_connection_id === c.id).map(s => <li key={s.id} className="break-words">{s.filename} · {s.status === 'ready' ? copy.ready : copy.processing}</li>)}</ul>
