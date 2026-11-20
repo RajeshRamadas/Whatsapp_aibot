@@ -7,7 +7,7 @@ from sqlalchemy import func, or_, select
 
 from .. import whatsapp
 from ..config import settings
-from ..db import CannedReply, Contact, Conversation, Membership, Message, Session, now, uid
+from ..db import CannedReply, Channel, Contact, Conversation, Membership, Message, Session, now, uid
 from ..observability import bind
 from ..services.channels import whatsapp_channel
 from ..services.events import publish_sync
