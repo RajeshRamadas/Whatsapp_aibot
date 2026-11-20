@@ -18,7 +18,8 @@ class ChannelUpdate(BaseModel):
 
 def view(channel):
     has_token = channel.credentials_enc is not None
-    configured = settings.whatsapp_enabled and (has_token or bool(settings.whatsapp_access_token))
+    configured = (has_token if channel.kind in ('instagram', 'messenger') else
+                  settings.whatsapp_enabled and (has_token or bool(settings.whatsapp_access_token)))
     return {'id': channel.id, 'kind': channel.kind, 'external_id': channel.external_id,
             'display_name': channel.display_name, 'last_webhook_at': channel.last_webhook_at,
             'campaign_quality': channel.campaign_quality, 'campaign_verified_limit': channel.campaign_limit,
