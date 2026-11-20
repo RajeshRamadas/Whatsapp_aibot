@@ -166,7 +166,8 @@ def dispatch_agent_reply() -> bool:
             select(Message, Conversation, Tenant)
             .join(Conversation, Conversation.id == Message.conversation_id)
             .join(Tenant, Tenant.id == Conversation.tenant_id)
-            .where(Message.role == 'agent', Message.delivery_status == 'queued')
+            .where(Message.role == 'agent', Message.delivery_status == 'queued',
+                   Conversation.channel == 'whatsapp')
             .order_by(Message.id).limit(1).with_for_update(skip_locked=True, of=Message)
         ).first()
         if row is None:
@@ -243,6 +244,15 @@ async def dispatch_agent_replies(ctx: dict) -> None:
         ).values(delivery_status='unknown', error='WhatsApp delivery could not be confirmed'))
     for _ in range(20):
         if not await asyncio.to_thread(dispatch_agent_reply):
+            break
+
+
+@observed_job
+async def dispatch_meta_dm_replies(ctx):
+    from ..services.meta_dm_replies import dispatch_one, expire_stale
+    await asyncio.to_thread(expire_stale)
+    for _ in range(20):
+        if not await asyncio.to_thread(dispatch_one):
             break
 
 
@@ -445,7 +455,8 @@ async def dispatch_meta_dm(ctx):
 
 class WorkerSettings:
     on_startup = startup
-    cron_jobs = [cron(dispatch_meta_dm, second=set(range(0, 60, 5))),
+    cron_jobs = [cron(dispatch_meta_dm_replies, second={0, 10, 20, 30, 40, 50}),
+                 cron(dispatch_meta_dm, second=set(range(0, 60, 5))),
                  cron(dispatch_knowledge_sync, second={10, 40}, timeout=900),
                  cron(dispatch_commerce, second={0, 30}, timeout=900),
                  cron(clean_spreadsheet_storage, minute=0, second=0),
