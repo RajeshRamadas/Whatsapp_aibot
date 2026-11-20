@@ -66,8 +66,9 @@ def test_meta_dm_dispatch_rechecks_window(client, tenant, monkeypatch):
     monkeypatch.setattr('app.api.inbox.publish_sync', lambda *args: None)
     monkeypatch.setattr(meta_dm_replies, 'publish_sync', lambda *args: None)
     channel_id, conv_id = setup_conversation(tenant['tenant_id'])
+    token = encrypt(tenant['tenant_id'], 'fake-token')
     with Session.begin() as db:
-        db.get(Channel, channel_id).credentials_enc = encrypt(tenant['tenant_id'], 'fake-token')
+        db.get(Channel, channel_id).credentials_enc = token
     response = client.post(f'/api/v1/inbox/conversations/{conv_id}/reply',
                            headers=tenant['headers'], json={'message': 'Late'})
     assert response.status_code == 200
