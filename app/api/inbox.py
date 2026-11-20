@@ -161,6 +161,14 @@ def reply(conversation_id: str, body: Reply, principal: Principal = Depends(requ
             if not settings.whatsapp_enabled or not (settings.whatsapp_access_token or
                                                       (channel and channel.credentials_enc)):
                 raise HTTPException(503, 'WhatsApp is not configured')
+        elif conv.channel in ('instagram', 'messenger'):
+            channel = db.scalar(select(Channel).where(Channel.tenant_id == principal.tenant.id,
+                                                       Channel.kind == conv.channel))
+            if not channel or not channel.credentials_enc:
+                raise HTTPException(503, 'This Meta messaging channel is not connected')
+            if not conv.last_inbound_at or conv.last_inbound_at <= now() - timedelta(hours=24):
+                raise HTTPException(409, {'code': 'meta_dm_window_expired',
+                                          'message': 'The 24-hour messaging window has expired'})
         elif conv.channel != 'web':
             raise HTTPException(409, 'This channel does not support agent replies')
         delivery = 'sent' if conv.channel == 'web' else 'queued'
