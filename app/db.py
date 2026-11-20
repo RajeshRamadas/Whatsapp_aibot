@@ -229,6 +229,22 @@ class EvalCase(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
+
+
+class MetaDmEvent(Base):
+    """Durable, deduplicated Instagram/Messenger inbound messages."""
+    __tablename__ = 'meta_dm_events'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'), index=True)
+    channel: Mapped[str] = mapped_column(String(20))
+    provider_message_id: Mapped[str] = mapped_column(String(255), unique=True)
+    recipient_id: Mapped[str] = mapped_column(String(64))
+    sender_id: Mapped[str] = mapped_column(String(64))
+    text: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(20), default='queued')
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
 class InboundEvent(Base):
     """Durable, deduplicated inbound WhatsApp events."""
     __tablename__ = 'inbound_events'
