@@ -60,8 +60,14 @@ def test_signed_durable_receipts_update_only_status(client, tenant, inbox, kind,
         db.get(Conversation, conv).channel = kind
         inbound_at = db.get(Conversation, conv).last_inbound_at
     payload = data(kind, status, watermark=int((now() - timedelta(seconds=1)).timestamp() * 1000))
+    if kind == 'instagram':
+        long_mid = 'meta-' + 'a' * 240
+        with Session.begin() as db:
+            db.get(Message, mid).channel_message_id = long_mid
+        payload['entry'][0]['messaging'][0]['read']['mid'] = long_mid
     post(client, payload)
     post(client, payload)
+    assert service.store(payload) == 0
     with Session() as db:
         assert db.scalar(select(func.count()).select_from(MetaReceipt)) == 1
         assert db.get(Message, mid).delivery_status == 'sent'
@@ -183,7 +189,7 @@ def test_signature_validation_malformed_events_and_retention(client, inbox):
     assert client.post('/webhooks/meta-dm', content=raw, headers=headers).status_code == 401
     post(client, {'entry': None})
     for payload in [data(status='read', watermark=True), data(status='read', watermark=10**99),
-                    data(status='read', watermark='invalid'), data(mids=['x' * 129]), data(mids=[1]),
+                    data(status='read', watermark='invalid'), data(mids=['x' * 256]), data(mids=[1]),
                     {'object':'page','entry':[{'messaging':None}]}, {'object':'page','entry':42},
                     {'object':{}, 'entry':[]}]:
         post(client, payload)

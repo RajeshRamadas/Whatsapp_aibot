@@ -199,7 +199,7 @@ class Message(Base):
     direction: Mapped[str] = mapped_column(String(12), default='inbound')
     author_user_id: Mapped[str | None] = mapped_column(ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     kind: Mapped[str] = mapped_column(String(20), default='text')
-    channel_message_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    channel_message_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     sources: Mapped[list] = mapped_column(JSONB, default=list)
     reply_key: Mapped[str | None] = mapped_column(String(128))
     template_payload: Mapped[dict | None] = mapped_column(JSONB)

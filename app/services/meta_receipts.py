@@ -44,7 +44,7 @@ def extract(payload):
                     continue
                 mids = [body['mid']] if kind == 'instagram' and 'mid' in body else body.get('mids', [])
                 if (not isinstance(mids, list) or len(mids) > 100 or any(
-                        not isinstance(mid, str) or not 1 <= len(mid) <= 128 for mid in mids)):
+                        not isinstance(mid, str) or not 1 <= len(mid) <= 255 for mid in mids)):
                     continue
                 mids = [] if kind == 'messenger' and key == 'read' else sorted(set(mids))
                 watermark = stamp(body.get('watermark')) if kind == 'messenger' else None
@@ -69,8 +69,8 @@ def store(payload):
             result = db.execute(insert(MetaReceipt).values(id=uid(), tenant_id=channel.tenant_id,
                 channel_id=channel.id, sender_id=sender, kind=status, mids=mids, watermark=watermark,
                 dedupe_key=digest, status='queued', received_at=now(), next_attempt_at=now())
-                .on_conflict_do_nothing(constraint='uq_meta_receipt'))
-            accepted += result.rowcount
+                .on_conflict_do_nothing(constraint='uq_meta_receipt').returning(MetaReceipt.id))
+            accepted += int(result.scalar_one_or_none() is not None)
     return accepted
 
 

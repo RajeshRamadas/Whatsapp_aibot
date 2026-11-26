@@ -125,7 +125,9 @@ providers. See [the account picker](screenshots/t10-8-meta-oauth.png).
 
 ## Delivery and read receipts (T10.8i)
 
-Apply migration `0055_meta_receipts` before restarting API/workers. New connections
+Apply migration `0055_meta_receipts` before restarting API/workers. It also widens
+provider message IDs to 255 characters for Instagram; downgrade refuses stored IDs
+longer than the previous 128-character limit instead of truncating them. New connections
 subscribe Messenger to `messages,message_deliveries,message_reads` and Instagram
 to `messages,messaging_seen`. Enable the corresponding app webhook fields at Meta.
 For existing assets, update their subscribed fields at Meta as well; reconnecting

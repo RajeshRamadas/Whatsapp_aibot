@@ -9,6 +9,7 @@ branch_labels = depends_on = None
 
 
 def upgrade():
+    op.alter_column('messages', 'channel_message_id', existing_type=sa.String(128), type_=sa.String(255))
     op.add_column('conversations', sa.Column('meta_read_watermark', sa.DateTime(timezone=True)))
     op.add_column('messages', sa.Column('meta_acknowledged_at', sa.DateTime(timezone=True)))
     op.create_table('meta_receipts',
@@ -27,6 +28,9 @@ def upgrade():
 
 
 def downgrade():
+    if op.get_bind().scalar(sa.text("SELECT EXISTS (SELECT 1 FROM messages WHERE length(channel_message_id) > 128)")):
+        raise RuntimeError('Reconcile long provider message IDs before downgrade; they must not be truncated')
     op.drop_table('meta_receipts')
     op.drop_column('messages', 'meta_acknowledged_at')
     op.drop_column('conversations', 'meta_read_watermark')
+    op.alter_column('messages', 'channel_message_id', existing_type=sa.String(255), type_=sa.String(128))
