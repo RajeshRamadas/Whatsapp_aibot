@@ -1277,15 +1277,16 @@ disconnect cancels queued work. Ordered workers recheck eligibility and close da
 sessions before HTTP. Unconfirmed sends are never retried automatically. Apply
 migration `0053_meta_dm_binding`; old unbound Meta history stays read-only until a
 fresh signed inbound message creates a bound conversation. See [Meta DM setup and
-limits](docs/META_DM.md). OAuth, bot replies, media and live permission verification
-remain subsequent work. No additional environment variables are required.
+limits](docs/META_DM.md). Automatic token refresh, bot replies, media and live
+permission verification remain subsequent work.
 
 Workspace owners/admins can manage Instagram and Messenger under **Messaging
 accounts**. The English/Hindi controls verify supplied account tokens, display
 connection status and disconnect accounts. Inbox filters, text-length feedback and
 24-hour-window notices support staff replies. Tokens clear after each connection
-attempt and workspace changes clear the private view. OAuth and live Meta permission
-approval remain separate setup; these controls use pre-provisioned account tokens.
+attempt and workspace changes clear the private view. Manual setup accepts
+pre-provisioned tokens; the authorization flow below provides account discovery.
+Live Meta permission approval remains deployment setup.
 
 Meta connections verify the configured app ID and provider account type before
 subscribing. Failed saves compensate newly created subscriptions, while existing
@@ -1300,3 +1301,6 @@ Meta user-token authorization now queues code exchange and account discovery in
 the worker. Configure `META_DM_OAUTH_REDIRECT_URI` to the public
 `/api/backend/meta-dm/oauth/callback`; see [authorization setup](docs/META_DM.md).
 Migration 0054 stores short-lived, session-bound encrypted attempts.
+
+Messaging accounts now offers **Authorize with Meta** and a server-validated
+account picker in English/Hindi. Manual token entry remains available.

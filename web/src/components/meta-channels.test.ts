@@ -4,6 +4,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { MetaChannels } from './meta-channels';
 import { metaClient } from '@/api/meta-dm';
 import { ApiRequestError } from '@/lib/api';
+vi.mock('./meta-authorization', () => ({ MetaAuthorization: () => null }));
 vi.mock('@/api/meta-dm', () => ({ metaClient: { list: vi.fn(), connect: vi.fn(), disconnect: vi.fn() } }));
 afterEach(() => { cleanup(); vi.resetAllMocks(); vi.restoreAllMocks(); });
 const row = { id: 'channel', kind: 'instagram', external_id: '12345', display_name: 'Shop account', status: 'configured' };

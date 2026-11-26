@@ -111,6 +111,7 @@ jobs:
           path: |
             docs/screenshots/t10-6-commerce.png
             docs/screenshots/t10-7-knowledge-sync.png
+            docs/screenshots/t10-8-meta-oauth.png
             web/test-results/
           retention-days: 7
 

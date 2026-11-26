@@ -730,7 +730,7 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 | T10.5 | Grounding check | BOT-5 | T5.1 |
 | T10.6 | Shopify and WooCommerce | EC-1 to EC-3 | T10.3 |
 | T10.7 | Drive and Notion sync | KN-6, SYNC-1 to SYNC-3 | T2.2 |
-| T10.8 | Instagram and Messenger (inbound, verified connections, guarded agent replies and channel UI delivered; OAuth, bot/media/status support pending) | CH-4, META-1 | T6.1 |
+| T10.8 | Instagram and Messenger (inbound, verified connections, guarded agent replies, channel UI and OAuth account picker delivered; refresh, bot/media/status support pending) | CH-4, META-1 | T6.1 |
 | T10.9 | White-label and agency billing; impersonation | ADM-2, ADM-3 | T7.2 |
 | T10.10 | Lead follow-ups | LEAD-4 | T9.2 |
 
@@ -933,3 +933,9 @@ reuses verified enrollment with atomic completion and cancellation compensation.
 Secrets are encrypted and wiped on termination. Migration up/down/up/check and
 fake-provider authorization, isolation, revocation and interruption tests pass.
 Account-picker controls follow; live grant checks require Meta app setup.
+
+T10.8h: English/Hindi Meta authorization controls and account picker resume the
+session-bound flow, poll background work and expose cancellation/recovery. Browser
+acceptance uses fake Meta grants and covers denial, cancellation, selection, viewer
+restrictions, privacy, axe and narrow layout. T10.8 remains open for automatic token
+refresh, bot/media/status support and live permission/delivery checks.
