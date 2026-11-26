@@ -1291,3 +1291,7 @@ Meta connections verify the configured app ID and provider account type before
 subscribing. Failed saves compensate newly created subscriptions, while existing
 connections are preserved. Disconnect reports a conflict until in-flight replies
 finish. Localized recovery messages explain setup, permission and cleanup failures.
+
+Meta enrollment uses a shared service for verification, subscription compensation
+and transaction guards. The manual connection API retains its existing behavior;
+OAuth authorization and account selection build on the same enrollment checks.

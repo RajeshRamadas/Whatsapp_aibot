@@ -7,6 +7,7 @@ from sqlalchemy.exc import OperationalError
 
 from app.api import meta_dm_connections as api
 from app.db import Channel, Conversation, Message, Session, Tenant, engine, now, uid
+from app.services import meta_connections as service
 from app.services import meta_dm_replies as replies
 from app.services.meta_signup import MetaSignup, MetaSignupError
 from tests import test_meta_dm_connections as connections
@@ -27,7 +28,7 @@ def test_failed_save_cleans_new_subscriptions_and_preserves_existing(client, adm
     graph.subscribed = existing
     def fail(*args):
         raise OperationalError('synthetic save', {}, RuntimeError('private detail'))
-    monkeypatch.setattr(api, 'persist_connection', fail)
+    monkeypatch.setattr(service, 'persist_connection', fail)
     response = client.post(BASE, headers=admin, json=PAYLOAD)
     assert response.status_code == 503 and 'private detail' not in response.text
     assert graph.subscribed is existing
@@ -35,11 +36,11 @@ def test_failed_save_cleans_new_subscriptions_and_preserves_existing(client, adm
 
 
 def test_cleanup_does_not_remove_a_committed_connection(client, admin, monkeypatch, graph):
-    original = api.persist_connection
+    original = service.persist_connection
     def uncertain(*args):
         original(*args)
         raise OperationalError('commit acknowledgement lost', {}, RuntimeError())
-    monkeypatch.setattr(api, 'persist_connection', uncertain)
+    monkeypatch.setattr(service, 'persist_connection', uncertain)
     assert client.post(BASE, headers=admin, json=PAYLOAD).status_code == 503
     assert graph.subscribed and not any(call[-1] == 'DELETE' for call in graph.calls)
     with Session() as db:
@@ -55,7 +56,7 @@ def test_cleanup_failure_is_actionable_without_provider_details(client, admin, m
     monkeypatch.setattr(graph, 'request', request)
     def fail(*args):
         raise OperationalError('save', {}, RuntimeError())
-    monkeypatch.setattr(api, 'persist_connection', fail)
+    monkeypatch.setattr(service, 'persist_connection', fail)
     response = client.post(BASE, headers=admin, json=PAYLOAD)
     assert response.status_code == 424 and 'private cleanup detail' not in response.text
 
@@ -63,7 +64,7 @@ def test_cleanup_failure_is_actionable_without_provider_details(client, admin, m
 def test_encryption_fails_before_any_provider_change(client, admin, monkeypatch, graph):
     def unavailable(*args):
         raise ValueError('private encryption detail')
-    monkeypatch.setattr(api, 'encrypt', unavailable)
+    monkeypatch.setattr(service, 'encrypt', unavailable)
     assert client.post(BASE, headers=admin, json=PAYLOAD).status_code == 503
     assert graph.calls == []
 
