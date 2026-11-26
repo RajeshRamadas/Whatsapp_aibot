@@ -1309,3 +1309,7 @@ Meta DMs now show provider-confirmed **Delivered**/**Read** states in Inbox.
 Signed receipts are queued, scoped to the original account/customer and applied
 without regressing statuses or reopening reply windows. Apply migration 0055 and
 subscribe the provider fields described in [Meta setup](docs/META_DM.md).
+
+The shared answer pipeline supports a knowledge-only mode for upcoming Meta bot
+replies, with transactional commands/tools excluded and an explicit history cutoff
+for inbound messages already persisted by the inbox worker.

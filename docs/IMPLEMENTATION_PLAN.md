@@ -951,3 +951,9 @@ receipts. Workers preserve monotonic statuses, correlate early callbacks without
 resending, retain conservative Messenger read watermarks and publish inbox updates.
 English/Hindi status labels are reused. Bot/media and automatic refresh remain
 future slices; live receipt checks require Meta field subscriptions/test assets.
+
+T10.8j1: restricted knowledge answering excludes transactional commands, customer
+record tools and lead capture while retaining retrieval, read-only spreadsheets,
+language policy and grounding. A history cutoff avoids repeating a pre-recorded
+Meta inbound turn. Default widget/WhatsApp behavior is preserved. Opt-in controls
+and durable Meta bot processing follow in stacked parts.
