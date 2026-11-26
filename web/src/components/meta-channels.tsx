@@ -1,4 +1,5 @@
 'use client';
+import { MetaAuthorization } from './meta-authorization';
 import { useEffect, useState } from 'react';
 import { metaClient, type MetaChannel } from '@/api/meta-dm';
 import { useCopy } from '@/i18n/provider';
@@ -33,6 +34,7 @@ export function MetaChannels({ workspaceId }: { workspaceId: string }) {
   }
   return <section className="mt-6 grid min-w-0 gap-4" aria-label={copy.title}>
     <p>{copy.help}</p>
+    <MetaAuthorization key={workspaceId} available={available} onConnected={() => refresh(value => value + 1)} />
     <Button className="w-fit" variant="secondary" disabled={busy} onClick={() => refresh(v => v + 1)}>{copy.refresh}</Button>
     {!rows && !loadError && <p role="status">{copy.loading}</p>}
     {loadError && <p role="alert">{copy.loadError}</p>}{error && <p role="alert">{copy[error]}</p>}

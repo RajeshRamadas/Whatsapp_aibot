@@ -12,12 +12,17 @@ from app.api import meta_dm_connections
 from app.config import settings
 from app.db import now, uid
 from app.main import app
-from app.services import meta_dm, meta_dm_replies
+from app.services import meta_dm, meta_dm_replies, meta_oauth
 from app.services.meta_signup import MetaSignupError
 
 
 class Graph:
     def request(self, path, **kwargs):
+        if path == 'oauth/access_token':
+            return {'access_token': 'synthetic-meta-oauth-token'}
+        if path == 'me/accounts':
+            return {'data': [{'id': '888100', 'name': 'Demo Facebook Page', 'access_token': 'synthetic-page-token',
+                             'instagram_business_account': {'id': '888111', 'name': 'Demo Instagram'}}]}
         if path == 'debug_token':
             return {'data': {'is_valid': True, 'app_id': settings.whatsapp_app_id}}
         if path.startswith('999'):
@@ -25,10 +30,13 @@ class Graph:
         if path.endswith('/subscribed_apps'):
             return {'success': True} if kwargs.get('payload') is not None or kwargs.get('method') else {'data': []}
         marker = 'ig_id' if 'ig_id' in (kwargs.get('params') or {}).get('fields', '') else 'category'
-        return {'id': path, 'name': 'Meta demo account', marker: path if marker == 'ig_id' else 'Business'}
+        return {'id': path, 'name': 'Demo Instagram' if path == '888111' else 'Meta demo account',
+                marker: path if marker == 'ig_id' else 'Business'}
 
 
 meta_dm_connections.MetaSignup = Graph
+meta_oauth.MetaSignup = Graph
+settings.meta_dm_oauth_redirect_uri = 'http://localhost:3000/api/backend/meta-dm/oauth/callback'
 settings.whatsapp_app_id = settings.whatsapp_app_id or '123'
 meta_dm_replies.send = lambda *args: 'meta-sent-' + uid()
 
@@ -56,4 +64,8 @@ async def reply_worker(request, call_next):
     response = await call_next(request)
     if request.method == 'POST' and request.url.path.endswith('/reply') and response.status_code == 200:
         await asyncio.to_thread(meta_dm_replies.dispatch_one)
+    if '/api/v1/meta-dm/oauth/' in request.url.path and response.status_code < 400:
+        for _ in range(3):
+            if not await asyncio.to_thread(meta_oauth.process_one):
+                break
     return response

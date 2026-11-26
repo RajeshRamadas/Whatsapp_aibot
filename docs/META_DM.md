@@ -110,3 +110,15 @@ denial, account selection and signed inbound/staff reply with a Meta test accoun
 before launch. Automated checks use fakes; live grants remain pending app setup.
 Automatic token refresh, bot replies, media and delivery-status support remain
 future T10.8 work.
+
+### Account picker
+
+Open **Messaging accounts → Authorize with Meta**, choose Instagram/Messenger,
+grant access at Meta, then select the returned account. Authorization resumes only
+in the initiating browser session/workspace. A cancelled or expired attempt needs
+a new authorization. The screen displays safe permission, setup and account errors
+and clears the return marker after cancellation or successful connection.
+
+English/Hindi browser acceptance exercises denial, cancellation, account selection,
+viewer restrictions, secret-free responses, axe and 320 px layout with fake Meta
+providers. See [the account picker](screenshots/t10-8-meta-oauth.png).
