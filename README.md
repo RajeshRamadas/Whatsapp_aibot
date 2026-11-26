@@ -1268,3 +1268,14 @@ configured per workspace; automated checks use fake provider responses.
 Workspace administrators can connect selected Google Drive folders and Notion pages
 using read-only access. See [setup, access boundaries and limits](docs/KNOWLEDGE_SYNC.md).
 Google Drive uses its own OAuth settings; Notion tokens are encrypted per workspace.
+
+### Instagram and Messenger replies (T10.8)
+
+Verified workspace assets receive signed text DMs into the shared staff inbox.
+Agent replies are bound to that asset and its provider-timestamp messaging window;
+disconnect cancels queued work. Ordered workers recheck eligibility and close database
+sessions before HTTP. Unconfirmed sends are never retried automatically. Apply
+migration `0053_meta_dm_binding`; old unbound Meta history stays read-only until a
+fresh signed inbound message creates a bound conversation. See [Meta DM setup and
+limits](docs/META_DM.md). OAuth, bot replies, media and live permission verification
+remain subsequent work. No additional environment variables are required.

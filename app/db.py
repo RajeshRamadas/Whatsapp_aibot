@@ -169,6 +169,7 @@ class Conversation(Base):
     channel: Mapped[str] = mapped_column(String(20), default='web')  # web | whatsapp
     # The WhatsApp user ID (phone number) for WhatsApp conversations.
     external_user: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    meta_channel_id: Mapped[str | None] = mapped_column(ForeignKey('channels.id', ondelete='SET NULL'))
     # True while a human agent owns the conversation; the bot stays silent.
     handoff: Mapped[bool] = mapped_column(Boolean, default=False)
     analytics_handoff: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text('false'))
@@ -179,7 +180,12 @@ class Conversation(Base):
     last_inbound_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_message_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
-    __table_args__ = (UniqueConstraint('tenant_id', 'channel', 'external_user'),)
+    __table_args__ = (
+        Index('uq_conversations_non_meta', 'tenant_id', 'channel', 'external_user', unique=True,
+              postgresql_where=text("channel NOT IN ('instagram', 'messenger')")),
+        Index('uq_conversations_meta', 'tenant_id', 'meta_channel_id', 'external_user', unique=True,
+              postgresql_where=text("channel IN ('instagram', 'messenger')")),
+    )
 
 
 class Message(Base):
@@ -237,6 +243,8 @@ class MetaDmEvent(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
     tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'), index=True)
     channel: Mapped[str] = mapped_column(String(20))
+    channel_id: Mapped[str | None] = mapped_column(ForeignKey('channels.id', ondelete='SET NULL'))
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     provider_message_id: Mapped[str] = mapped_column(String(255), unique=True)
     recipient_id: Mapped[str] = mapped_column(String(64))
     sender_id: Mapped[str] = mapped_column(String(64))

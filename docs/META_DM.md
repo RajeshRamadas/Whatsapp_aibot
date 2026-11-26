@@ -1,53 +1,53 @@
-# Instagram and Messenger (T10.8a foundation)
+# Instagram and Messenger (T10.8)
 
-This phase receives signed text DMs and records them in the shared inbox. It does **not**
-connect a Meta Page/Instagram account through OAuth, send replies, or run bot responses.
+Signed text DMs from verified workspace assets enter the shared inbox and wait for
+staff. Human agents can send short text replies within the conservative 24-hour
+customer messaging window. Bot replies, attachments, receipts, OAuth onboarding
+and automatic token refresh remain later slices.
 
-- Subscribe the Meta app to the appropriate Messenger/Instagram messaging webhook events.
-- Webhook URL: `/webhooks/meta-dm`. Verification uses `WHATSAPP_VERIFY_TOKEN`;
-  signatures use `WHATSAPP_APP_SECRET` from the same Meta app.
-- An inbound recipient ID must already match a workspace-owned `channels` record
-  with kind `messenger` or `instagram`. Unknown IDs are acknowledged and ignored.
-- Duplicate provider message IDs are recorded once. The worker publishes new inbound
-  text messages to the tenant's inbox and SSE stream. Echoes, attachments and
-  delivery receipts are ignored in this phase.
-- This is not ready for live Meta connection: T10.8b must add authenticated Meta
-  connection/disconnection, token encryption/refresh, subscription verification,
-  outbound sends, messaging-window enforcement, and attachment/status handling.
-  T10.8c should add channel setup and inbox UX with full browser acceptance.
+## Connect an asset
 
-No extra environment variables are introduced; deploy migration
-`0052_meta_dm_events` before restarting API and workers.
+Configure the Meta app's messaging permissions and subscribe its webhook to
+`/webhooks/meta-dm`. Verification uses `WHATSAPP_VERIFY_TOKEN`; signatures use
+`WHATSAPP_APP_SECRET`. A signed-in workspace owner/admin can call
+`POST /api/v1/meta-dm/channels` with `kind` (`messenger` or `instagram`), numeric
+`external_id` and a pre-provisioned `access_token`. The server tests asset access
+and webhook subscription before encrypting the token. Tokens are never returned.
+Only one asset of each kind can be connected per workspace, and assets cannot be
+shared by workspaces. Generic channel updates cannot replace Meta tokens without
+verification. Deleting `/api/v1/meta-dm/channels/{id}` disconnects locally; the
+Meta administrator must revoke provider permissions separately if desired.
 
-## T10.8b: Verified connection API (first slice)
+## Reply guarantees
 
-Signed-in workspace admins can call `POST /api/v1/meta-dm/channels` with
-`kind` (`messenger` or `instagram`), numeric `external_id`, and `access_token`.
-The server checks the asset ID and webhook subscription through Meta Graph before
-encrypting and storing the token. The token is never returned in the API response.
-One asset of each kind is allowed per workspace; an asset cannot be claimed by
-multiple workspaces. `DELETE /api/v1/meta-dm/channels/{id}` disconnects it locally
-and immediately stops webhook routing. It does not revoke the token at Meta or
-unsubscribe the app: the Meta administrator should revoke permissions if desired.
+- Conversations and inbound events bind to the original channel record. Replacing
+  an asset cannot inherit the previous asset's recipients, history or queued sends.
+  Disconnecting fails queued replies and ignores queued events for that channel.
+- The signed provider timestamp determines the reply window. Delayed or older
+  events cannot reopen or move it backwards. Missing, malformed or future timestamps
+  may be retained as messages but never open a sending window.
+- The reply endpoint and worker enforce tenant ownership, connected credentials,
+  the messaging window and conservative UTF-8 text budgets: 1,000 bytes for
+  Instagram and 2,000 for Messenger. Text is never silently shortened.
+- Workers serialize replies per conversation, recheck current eligibility after
+  claiming a message and close database sessions before Meta HTTP calls. As with
+  other channels, a provider call already in progress cannot be cancelled.
+- Confirmed sends become `sent` with a provider ID. Unconfirmed requests become
+  `unknown`, never automatically retried. Ineligible unsent messages become
+  `failed`. Stale `sending` messages become `unknown` and publish inbox updates.
+- WhatsApp retains its own dispatcher; Meta replies never enter that sender.
 
-This first slice does not implement OAuth code exchange or automatic token refresh;
-administrators supply a pre-provisioned Page/Instagram access token with the
-required messaging and subscription permissions. The next PR adds delivery and
-messaging-window checks; UI onboarding and production Meta permission review
-remain outstanding. Use a real Meta test asset before production enablement.
+## Migration and acceptance
 
-## T10.8c: Agent text replies
+Apply migrations `0052_meta_dm_events` and `0053_meta_dm_binding` before restarting
+API/workers. Existing Meta records remain unbound and cannot send: guessing their
+original asset could deliver to the wrong recipient. A fresh signed inbound message
+creates an asset-bound conversation; old history remains available. Rollback to the
+older unique identity constraint refuses conflicting histories across replacement
+assets instead of deleting them; reconcile those identities before downgrading.
 
-The existing inbox reply endpoint accepts Messenger and Instagram conversations
-only when a channel is connected and the last customer inbound message is less
-than 24 hours old. A dedicated worker rechecks channel ownership, tenant
-suspension, human handoff, and the 24-hour window immediately before sending
-via Meta Graph. Accepted messages are marked `sent` with the provider ID;
-unconfirmed sends become `unknown` and are never automatically retried, to
-avoid duplicate customer messages. Expired/disconnected sends become `failed`.
-WhatsApp delivery remains on its existing dedicated dispatcher.
-
-This release supports **human-agent text replies only**, not bot replies,
-attachments, templates, or extended messaging windows. Production Meta
-permissions, live Meta integration tests, and channel onboarding UX are still
-required before enabling it for customers.
+Automated regression checks use real Postgres/Redis and fake providers. They cover
+replacement/disconnection, timestamps, eligibility, text limits, session-free HTTP,
+reply ordering, unknown delivery and stale inbox events. Real Meta test assets,
+production permission approval and live delivery verification are still required
+before customer launch. Never paste access tokens into chat or commit them.

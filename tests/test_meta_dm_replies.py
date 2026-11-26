@@ -11,6 +11,7 @@ def setup_conversation(tenant_id, *, channel='messenger', hours=1):
         channel_row = Channel(id=uid(), tenant_id=tenant_id, kind=channel, external_id='123456')
         db.add(channel_row)
         conv = Conversation(id=uid(), tenant_id=tenant_id, channel=channel, external_user='987654',
+                            meta_channel_id=channel_row.id,
                             last_inbound_at=now() - timedelta(hours=hours))
         db.add(conv)
         return channel_row.id, conv.id

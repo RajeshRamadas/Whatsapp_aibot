@@ -3,12 +3,13 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, SecretStr, StringConstraints
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
 from ..config import settings
-from ..db import Channel, Session, Tenant
+from ..db import Channel, Conversation, Message, MetaDmEvent, Session, Tenant
 from ..services.crypto import encrypt
+from ..services.events import publish_sync
 from ..services.meta_signup import MetaSignup, MetaSignupError
 from .channels import view
 from .principal import Principal, require_role
@@ -83,9 +84,20 @@ def connect(body: Connect, principal: Principal = Depends(admin)):
 @router.delete('/channels/{channel_id}', status_code=204)
 def disconnect(channel_id: str, principal: Principal = Depends(admin)):
     with Session.begin() as db:
+        db.get(Tenant, principal.tenant.id, with_for_update=True)
         channel = db.scalar(select(Channel).where(Channel.id == channel_id,
                                                    Channel.tenant_id == principal.tenant.id,
                                                    Channel.kind.in_(('instagram', 'messenger'))))
         if channel is None:
             raise HTTPException(404, 'Meta channel not found')
+        conversations = db.scalars(select(Conversation.id).where(
+            Conversation.tenant_id == principal.tenant.id, Conversation.meta_channel_id == channel.id)).all()
+        db.execute(update(Message).where(Message.conversation_id.in_(conversations),
+            Message.role == 'agent', Message.delivery_status == 'queued').values(
+                delivery_status='failed', error='Meta channel disconnected before delivery'))
+        db.execute(update(MetaDmEvent).where(MetaDmEvent.tenant_id == principal.tenant.id,
+            MetaDmEvent.channel_id == channel.id, MetaDmEvent.status == 'queued').values(status='ignored'))
         db.delete(channel)
+    for identity in conversations:
+        publish_sync(principal.tenant.id, 'message.updated', {'conversation_id': identity})
+        publish_sync(principal.tenant.id, 'conversation.updated', {'conversation_id': identity})

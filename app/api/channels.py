@@ -51,7 +51,9 @@ def channel_status(channel_id: str, tenant: Tenant = Depends(tenant_for_role('vi
 @router.patch('/{channel_id}')
 def update_channel(channel_id: str, body: ChannelUpdate, tenant: Tenant = Depends(tenant_for_role('admin'))):
     with Session() as db:
-        scoped(db, tenant.id, channel_id)
+        current = scoped(db, tenant.id, channel_id)
+        if current.kind in ('instagram', 'messenger') and 'access_token' in body.model_fields_set:
+            raise HTTPException(409, 'Reconnect this Meta asset through the verified connection flow')
     encrypted = None
     if body.access_token is not None:
         token = body.access_token.get_secret_value()
