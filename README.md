@@ -1313,3 +1313,8 @@ subscribe the provider fields described in [Meta setup](docs/META_DM.md).
 The shared answer pipeline supports a knowledge-only mode for upcoming Meta bot
 replies, with transactional commands/tools excluded and an explicit history cutoff
 for inbound messages already persisted by the inbox worker.
+
+Meta accounts can opt into grounded bot text replies with
+`PUT /api/v1/meta-dm/channels/{id}/bot` (`enabled: true/false`). Migration 0056
+starts every existing account with this off. The workspace bot must also be live.
+Generation and delivery recheck ownership, connection, quota and the reply window.

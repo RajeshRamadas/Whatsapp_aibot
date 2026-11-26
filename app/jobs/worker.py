@@ -468,9 +468,17 @@ async def dispatch_meta_oauth(ctx):
             break
 
 
+@observed_job
+async def dispatch_meta_bot(ctx):
+    from ..services.meta_bot import expire_stale, process_one
+    await asyncio.to_thread(expire_stale)
+    await asyncio.to_thread(process_one)
+
+
 class WorkerSettings:
     on_startup = startup
-    cron_jobs = [cron(dispatch_meta_oauth, second=set(range(0, 60, 5)), timeout=900),
+    cron_jobs = [cron(dispatch_meta_bot, second=set(range(0, 60, 5)), timeout=900),
+                 cron(dispatch_meta_oauth, second=set(range(0, 60, 5)), timeout=900),
                  cron(dispatch_meta_dm_replies, second={0, 10, 20, 30, 40, 50}),
                  cron(dispatch_meta_dm, second=set(range(0, 60, 5))),
                  cron(dispatch_knowledge_sync, second={10, 40}, timeout=900),
