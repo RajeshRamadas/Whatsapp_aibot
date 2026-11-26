@@ -35,3 +35,19 @@ administrators supply a pre-provisioned Page/Instagram access token with the
 required messaging and subscription permissions. The next PR adds delivery and
 messaging-window checks; UI onboarding and production Meta permission review
 remain outstanding. Use a real Meta test asset before production enablement.
+
+## T10.8c: Agent text replies
+
+The existing inbox reply endpoint accepts Messenger and Instagram conversations
+only when a channel is connected and the last customer inbound message is less
+than 24 hours old. A dedicated worker rechecks channel ownership, tenant
+suspension, human handoff, and the 24-hour window immediately before sending
+via Meta Graph. Accepted messages are marked `sent` with the provider ID;
+unconfirmed sends become `unknown` and are never automatically retried, to
+avoid duplicate customer messages. Expired/disconnected sends become `failed`.
+WhatsApp delivery remains on its existing dedicated dispatcher.
+
+This release supports **human-agent text replies only**, not bot replies,
+attachments, templates, or extended messaging windows. Production Meta
+permissions, live Meta integration tests, and channel onboarding UX are still
+required before enabling it for customers.
