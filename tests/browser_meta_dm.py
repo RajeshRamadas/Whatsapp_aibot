@@ -12,7 +12,7 @@ from app.api import meta_dm_connections
 from app.config import settings
 from app.db import now, uid
 from app.main import app
-from app.services import meta_dm, meta_dm_replies, meta_oauth
+from app.services import meta_bot, meta_dm, meta_dm_replies, meta_oauth
 from app.services.meta_signup import MetaSignupError
 
 
@@ -48,13 +48,18 @@ async def incoming(body: dict):
         'sender': {'id': 'meta-expired-customer' if old else 'meta-test-customer'},
         'recipient': {'id': body['external_id']},
         'timestamp': int((now() - timedelta(hours=25 if old else 0)).timestamp() * 1000),
-        'message': {'mid': uid(), 'text': 'Could you help with my order?'}}]}]}
+        'message': {'mid': uid(), 'text': body.get('text', 'Could you help with my order?')}}]}]}
     raw = json.dumps(data).encode()
     signature = hmac.new(settings.whatsapp_app_secret.encode(), raw, hashlib.sha256).hexdigest()
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
         response = await client.post('/webhooks/meta-dm', content=raw,
                                      headers={'x-hub-signature-256': 'sha256=' + signature})
     while await asyncio.to_thread(meta_dm.process_one):
+        pass
+    for _ in range(10):
+        if not await asyncio.to_thread(meta_bot.process_one):
+            break
+    while await asyncio.to_thread(meta_dm_replies.dispatch_one):
         pass
     return JSONResponse(response.json(), status_code=response.status_code)
 

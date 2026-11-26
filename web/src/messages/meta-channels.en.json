@@ -1,7 +1,7 @@
 {
   "title": "Instagram and Messenger",
   "intro": "Connect an account and reply to its customers from Inbox.",
-  "help": "Staff can send text replies for 24 hours after a customer message. Automated replies and attachments are not available yet.",
+  "help": "Staff can send text replies for 24 hours after a customer message. Bot text replies are optional per account. Attachments are not available yet.",
   "refresh": "Refresh channels",
   "loading": "Loading channels…",
   "loadError": "Could not load channels. Refresh to try again.",
@@ -47,5 +47,11 @@
   "oauthConnect": "Connect selected account",
   "oauthCancel": "Cancel authorization",
   "oauthChannel": "Channel to authorize",
-  "oauthAuthorize": "Authorize with Meta"
+  "oauthAuthorize": "Authorize with Meta",
+  "botEnabled": "Bot replies enabled for this account",
+  "botDisabled": "Bot replies off for this account",
+  "botEnable": "Enable bot replies",
+  "botDisable": "Disable bot replies",
+  "botHelp": "The workspace bot must also be live. Answers use your workspace knowledge and AI quota. Existing staff conversations need Hand back to bot in Inbox; requests needing other help go to staff.",
+  "botBusyError": "A bot reply is being sent. Wait for it to finish before changing bot replies."
 }
