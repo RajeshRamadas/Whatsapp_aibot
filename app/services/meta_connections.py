@@ -157,5 +157,3 @@ def connect_asset(body, tenant_id, lease, graph=None, guard=None, finalize=None)
         if isinstance(exc, ConnectionError):
             raise
         raise ConnectionError(503, 'The connection could not be saved') from None
-
-
