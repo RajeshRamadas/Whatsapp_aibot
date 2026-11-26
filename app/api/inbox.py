@@ -26,8 +26,9 @@ def conversation(db, tenant_id: str, conversation_id: str) -> Conversation:
 
 
 def can_reply(conv: Conversation) -> bool:
-    return bool(conv.channel == 'whatsapp' and conv.last_inbound_at
-                and conv.last_inbound_at > now() - timedelta(hours=24))
+    return bool(conv.channel in ('whatsapp', 'instagram', 'messenger') and conv.last_inbound_at
+                and (conv.channel == 'whatsapp' or conv.meta_channel_id)
+                and now() - timedelta(hours=24) < conv.last_inbound_at <= now())
 
 
 def view(conv: Conversation) -> dict:
@@ -163,10 +164,14 @@ def reply(conversation_id: str, body: Reply, principal: Principal = Depends(requ
                 raise HTTPException(503, 'WhatsApp is not configured')
         elif conv.channel in ('instagram', 'messenger'):
             channel = db.scalar(select(Channel).where(Channel.tenant_id == principal.tenant.id,
+                                                       Channel.id == conv.meta_channel_id,
                                                        Channel.kind == conv.channel))
             if not channel or not channel.credentials_enc:
                 raise HTTPException(503, 'This Meta messaging channel is not connected')
-            if not conv.last_inbound_at or conv.last_inbound_at <= now() - timedelta(hours=24):
+            limit = 1000 if conv.channel == 'instagram' else 2000
+            if len(body.message.encode('utf-8')) > limit:
+                raise HTTPException(422, f'This channel accepts at most {limit} UTF-8 bytes per text reply')
+            if not can_reply(conv):
                 raise HTTPException(409, {'code': 'meta_dm_window_expired',
                                           'message': 'The 24-hour messaging window has expired'})
         elif conv.channel != 'web':

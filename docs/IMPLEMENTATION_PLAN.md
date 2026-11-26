@@ -730,7 +730,7 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 | T10.5 | Grounding check | BOT-5 | T5.1 |
 | T10.6 | Shopify and WooCommerce | EC-1 to EC-3 | T10.3 |
 | T10.7 | Drive and Notion sync | KN-6, SYNC-1 to SYNC-3 | T2.2 |
-| T10.8 | Instagram and Messenger (T10.8a webhook foundation merged #118; T10.8b connection API pending) | CH-4, META-1 | T6.1 |
+| T10.8 | Instagram and Messenger (inbound, verified connections and agent reply API merged; guarded dispatch and channel UI in progress) | CH-4, META-1 | T6.1 |
 | T10.9 | White-label and agency billing; impersonation | ADM-2, ADM-3 | T7.2 |
 | T10.10 | Lead follow-ups | LEAD-4 | T9.2 |
 
@@ -896,3 +896,11 @@ keeps headings and rejects partial content. Local real-Postgres/Redis regression
 CI cover scope/session isolation, refresh/deletion, stale leases, exact sums and
 browser accessibility/mobile acceptance. See [guide](KNOWLEDGE_SYNC.md).
 Live tenant Google OAuth/Notion verification remains deployment setup.
+
+T10.8d: asset-bound conversations/events, provider timestamps, disconnect fencing,
+ordered session-free dispatch, conservative text limits and live stale-status updates
+address the #120 review findings. Migration 0053 leaves ambiguous legacy history
+read-only and preserves it across asset replacement. Real-Postgres fake-provider
+regressions cover routing, timing, concurrent ordering and unknown outcomes.
+Channel controls/browser acceptance follow; OAuth, bot/media replies and live Meta
+permission validation remain pending. See [guide](META_DM.md).

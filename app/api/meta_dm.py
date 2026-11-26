@@ -3,6 +3,7 @@ import hashlib
 import hmac
 import json
 import secrets
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.concurrency import run_in_threadpool
@@ -47,17 +48,22 @@ def extract(payload: dict):
             if not (1 <= len(mid) <= 240 and 1 <= len(body) <= 4000
                     and 1 <= len(sid) <= 64 and 1 <= len(rid) <= 64):
                 continue
-            yield channel, mid, sid, rid, body
+            stamp = event.get('timestamp')
+            sent_at = None
+            if isinstance(stamp, int) and not isinstance(stamp, bool) and 0 < stamp <= int(now().timestamp() * 1000):
+                sent_at = datetime.fromtimestamp(stamp / 1000, timezone.utc)
+            yield channel, mid, sid, rid, body, sent_at
 
 
 def store(payload: dict) -> int:
     accepted = 0
-    for channel, mid, sender, recipient, body in extract(payload):
+    for channel, mid, sender, recipient, body, sent_at in extract(payload):
         with Session() as db:
             owner = db.scalar(select(Channel).where(Channel.kind == channel, Channel.external_id == recipient))
             if owner is None:
                 continue
             row = MetaDmEvent(id=uid(), tenant_id=owner.tenant_id, channel=channel,
+                              channel_id=owner.id, sent_at=sent_at,
                               provider_message_id=channel + ':' + mid, recipient_id=recipient,
                               sender_id=sender, text=body, status='queued', received_at=now())
             db.add(row)

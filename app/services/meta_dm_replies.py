@@ -1,7 +1,8 @@
-"""Send tenant-scoped Meta DM agent replies with a conservative 24-hour window."""
+"""Ordered, asset-bound Meta replies; every provider call runs without a Session."""
 from datetime import timedelta
 
-from sqlalchemy import select, update
+from sqlalchemy import exists, select, update
+from sqlalchemy.orm import aliased
 
 from ..db import Channel, Conversation, Message, Session, Tenant, now
 from .crypto import decrypt
@@ -11,69 +12,81 @@ from .meta_signup import MetaSignup, MetaSignupError
 
 def send(channel: Channel, recipient: str, content: str) -> str:
     token = decrypt(channel.tenant_id, channel.credentials_enc).decode()
-    # Messenger Send API and Instagram Messaging API both accept this payload.
     result = MetaSignup().request(f'{channel.external_id}/messages', token=token, payload={
-        'recipient': {'id': recipient}, 'messaging_type': 'RESPONSE',
-        'message': {'text': content},
-    })
+        'recipient': {'id': recipient}, 'messaging_type': 'RESPONSE', 'message': {'text': content}})
     mid = result.get('message_id')
     if not isinstance(mid, str) or not mid:
         raise MetaSignupError('Meta did not confirm the message')
     return mid
 
 
+def eligible(message, conv, tenant, channel):
+    limit = 1000 if conv.channel == 'instagram' else 2000
+    return bool(not tenant.suspended and conv.status == 'agent' and conv.handoff and conv.external_user
+                and channel and channel.id == conv.meta_channel_id and channel.tenant_id == tenant.id
+                and channel.kind == conv.channel and channel.credentials_enc and conv.last_inbound_at
+                and now() - timedelta(hours=24) < conv.last_inbound_at <= now()
+                and len(message.content.encode('utf-8')) <= limit)
+
+
 def dispatch_one() -> bool:
+    other = aliased(Message)
     with Session.begin() as db:
         row = db.execute(select(Message, Conversation, Tenant)
-                         .join(Conversation, Conversation.id == Message.conversation_id)
-                         .join(Tenant, Tenant.id == Conversation.tenant_id)
-                         .where(Message.role == 'agent', Message.delivery_status == 'queued',
-                                Conversation.channel.in_(('instagram', 'messenger')))
-                         .order_by(Message.id).limit(1)
-                         .with_for_update(skip_locked=True, of=Message)).first()
+            .join(Conversation, Conversation.id == Message.conversation_id)
+            .join(Tenant, Tenant.id == Conversation.tenant_id)
+            .where(Message.role == 'agent', Message.kind == 'text', Message.delivery_status == 'queued',
+                   Conversation.channel.in_(('instagram', 'messenger')),
+                   ~exists(select(other.id).where(other.conversation_id == Conversation.id,
+                                                 other.role == 'agent', other.delivery_status == 'sending')))
+            .order_by(Message.id).limit(1)
+            .with_for_update(skip_locked=True, of=(Message, Conversation))).first()
         if row is None:
             return False
         message, conv, tenant = row
-        channel = db.scalar(select(Channel).where(Channel.tenant_id == tenant.id,
-                                                   Channel.kind == conv.channel))
-        eligible = bool(not tenant.suspended and conv.status == 'agent' and conv.handoff
-                        and conv.external_user and channel and channel.credentials_enc
-                        and conv.last_inbound_at
-                        and conv.last_inbound_at > now() - timedelta(hours=24))
         message_id, conversation_id, tenant_id = message.id, conv.id, tenant.id
-        recipient, content = conv.external_user, message.content
-        if eligible:
-            message.delivery_status = 'sending'
-            message.dispatch_started_at = now()
-            channel_id = channel.id
-        else:
-            message.delivery_status = 'failed'
-            message.error = 'Meta DM reply is no longer eligible or the messaging window expired'
-    if eligible:
-        provider_id = None
-        try:
-            with Session() as db:
-                current = db.get(Channel, channel_id)
-                if current is not None and current.tenant_id == tenant_id and current.credentials_enc:
-                    provider_id = send(current, recipient, content)
-        except (MetaSignupError, ValueError, RuntimeError):
-            pass
-        with Session.begin() as db:
+        message.delivery_status, message.dispatch_started_at = 'sending', now()
+    # A later dispatcher sees 'sending' and cannot overtake this conversation.
+    attempted, provider_id = False, None
+    try:
+        with Session() as db:
             message = db.get(Message, message_id)
-            if message:
-                message.channel_message_id = provider_id
-                message.delivery_status = 'sent' if provider_id else 'unknown'
-                if not provider_id:
-                    message.error = 'Meta delivery could not be confirmed; do not automatically retry'
+            conv = db.scalar(select(Conversation).where(Conversation.id == conversation_id,
+                                                        Conversation.tenant_id == tenant_id))
+            tenant = db.get(Tenant, tenant_id)
+            channel = db.scalar(select(Channel).where(Channel.id == conv.meta_channel_id,
+                                                       Channel.tenant_id == tenant_id)) if conv else None
+            ready = bool(message and conv and tenant and message.delivery_status == 'sending'
+                         and eligible(message, conv, tenant, channel))
+            recipient, content = (conv.external_user, message.content) if ready else (None, None)
+        # Detached scalar channel data; no database connection survives the HTTP call.
+        if ready:
+            attempted = True
+            provider_id = send(channel, recipient, content)
+    except (MetaSignupError, ValueError, RuntimeError):
+        pass
+    with Session.begin() as db:
+        message = db.get(Message, message_id)
+        if message is not None:
+            message.channel_message_id = provider_id
+            message.delivery_status = 'sent' if provider_id else ('unknown' if attempted else 'failed')
+            message.error = None if provider_id else (
+                'Meta delivery could not be confirmed; do not automatically retry' if attempted else
+                'Meta DM reply is no longer eligible or the messaging window expired')
     publish_sync(tenant_id, 'message.updated', {'conversation_id': conversation_id})
     return True
 
 
 def expire_stale() -> None:
     with Session.begin() as db:
-        db.execute(update(Message).where(
+        rows = db.execute(update(Message).where(
             Message.id.in_(select(Message.id).join(Conversation)
                            .where(Conversation.channel.in_(('instagram', 'messenger')))),
             Message.role == 'agent', Message.delivery_status == 'sending',
             Message.dispatch_started_at < now() - timedelta(minutes=2),
-        ).values(delivery_status='unknown', error='Meta delivery could not be confirmed'))
+        ).values(delivery_status='unknown', error='Meta delivery could not be confirmed')
+          .returning(Message.conversation_id)).scalars().all()
+        events = db.execute(select(Conversation.tenant_id, Conversation.id)
+                            .where(Conversation.id.in_(set(rows)))).all() if rows else []
+    for tenant_id, conversation_id in events:
+        publish_sync(tenant_id, 'message.updated', {'conversation_id': conversation_id})
