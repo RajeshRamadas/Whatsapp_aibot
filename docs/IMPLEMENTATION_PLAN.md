@@ -904,3 +904,13 @@ read-only and preserves it across asset replacement. Real-Postgres fake-provider
 regressions cover routing, timing, concurrent ordering and unknown outcomes.
 Channel controls/browser acceptance follow; OAuth, bot/media replies and live Meta
 permission validation remain pending. See [guide](META_DM.md).
+
+T10.8e acceptance: owner/admin Messaging accounts controls verify/connect and
+disconnect pre-provisioned Instagram/Messenger tokens. English/Hindi Inbox filters,
+byte-budget feedback and expired-window notices support staff-only replies; token
+fields clear after attempts and workspace changes clear private state. Provider
+names survive subscription verification. Browser coverage includes fake Meta
+permission failures, signed inbound events, confirmed/expired staff replies,
+role restrictions, axe and 320 px layout. OAuth/refresh, bot/media/status support
+and live Meta permission/delivery checks remain pending; T10.8 is not fully complete.
+See [guide](META_DM.md) and [screenshot](screenshots/t10-8-meta-accounts.png).

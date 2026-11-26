@@ -1,3 +1,5 @@
+import metaChannels from '@/messages/meta-channels.en.json';
+import metaChannelsHi from '@/messages/meta-channels.hi.json';
 import knowledgeSync from '@/messages/knowledge-sync.en.json';
 import knowledgeSyncHi from '@/messages/knowledge-sync.hi.json';
 import commerce from '@/messages/commerce.en.json';
@@ -55,8 +57,8 @@ import baseHi from '@/messages/hi.json';
 import faqHi from '@/messages/faq.hi.json';
 import errorsHi from '@/messages/errors.hi.json';
 
-export const english = { knowledgeSync, commerce, spreadsheets, actions, webhooks, developer, security, accuracy, leadSync, payments, appointments, inbox, widget, botMessages, base, websites, campaigns, platform, invoices, analytics, billing, errors, templates, improvements, faq, media, leads, signup };
-export const hindi: typeof english = { ...english, knowledgeSync: knowledgeSyncHi, commerce: commerceHi, spreadsheets: spreadsheetsHi, actions: actionsHi, webhooks: webhooksHi, developer: developerHi, security: securityHi, accuracy: accuracyHi, leadSync: leadSyncHi, payments: paymentsHi, appointments: appointmentsHi, websites: websitesHi, campaigns: campaignsHi, platform: platformHi, invoices: invoicesHi, analytics: analyticsHi, billing: billingHi, templates: templatesHi, improvements: improvementsHi, media: mediaHi, leads: leadsHi, signup: signupHi, inbox: inboxHi, widget: widgetHi, botMessages: botMessagesHi, base: baseHi, faq: faqHi, errors: errorsHi };
+export const english = { metaChannels, knowledgeSync, commerce, spreadsheets, actions, webhooks, developer, security, accuracy, leadSync, payments, appointments, inbox, widget, botMessages, base, websites, campaigns, platform, invoices, analytics, billing, errors, templates, improvements, faq, media, leads, signup };
+export const hindi: typeof english = { ...english, metaChannels: metaChannelsHi, knowledgeSync: knowledgeSyncHi, commerce: commerceHi, spreadsheets: spreadsheetsHi, actions: actionsHi, webhooks: webhooksHi, developer: developerHi, security: securityHi, accuracy: accuracyHi, leadSync: leadSyncHi, payments: paymentsHi, appointments: appointmentsHi, websites: websitesHi, campaigns: campaignsHi, platform: platformHi, invoices: invoicesHi, analytics: analyticsHi, billing: billingHi, templates: templatesHi, improvements: improvementsHi, media: mediaHi, leads: leadsHi, signup: signupHi, inbox: inboxHi, widget: widgetHi, botMessages: botMessagesHi, base: baseHi, faq: faqHi, errors: errorsHi };
 export type Locale = 'en' | 'hi';
 export type Catalog = typeof english;
 export const translatedNamespaces = Object.keys(english) as (keyof Catalog)[];

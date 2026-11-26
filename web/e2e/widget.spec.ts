@@ -5,7 +5,7 @@ test('embedded widget survives an offline send and reload', async ({ page, conte
   page.on('pageerror', error => browserErrors.push(error.message));
   const host = 'http://localhost:3000/widget-fixture';
   const api = 'http://localhost:3000/api/v1/chat/fixture/widget';
-  const bundle = await page.request.get('http://127.0.0.1:8000/widget.js');
+  const bundle = await page.request.get((process.env.API_INTERNAL_URL ?? 'http://127.0.0.1:8000') + '/widget.js');
   expect(bundle.ok()).toBeTruthy();
   await page.route('http://localhost:3000/widget.js', route => route.fulfill({ response: bundle }));
   await page.addInitScript(() => Reflect.deleteProperty(window, 'EventSource'));

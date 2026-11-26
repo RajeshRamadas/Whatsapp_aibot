@@ -42,6 +42,7 @@ def test_connect_verified_and_disconnect(client, admin, monkeypatch):
     channel_id = result.json()['id']
     assert result.json()['status'] == 'configured'
     assert result.json()['kind'] == 'messenger'
+    assert result.json()['display_name'] == 'Example Page'
     assert 'secret-page-token' not in result.text
     with Session() as db:
         row = db.get(Channel, channel_id)

@@ -60,5 +60,9 @@
   "lastOpen": "Last open conversation",
   "reconnectHelp": "Reconnect to load your inbox.",
   "pushTitle": "Inbox needs attention",
-  "pushBody": "Open the inbox to review the latest activity."
+  "pushBody": "Open the inbox to review the latest activity.",
+  "instagram": "Instagram",
+  "messenger": "Messenger",
+  "metaTooLong": "This message is too long for this channel. Shorten it before sending.",
+  "metaWindow": "Replies require a connected account and a customer message within the last 24 hours."
 }

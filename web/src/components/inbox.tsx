@@ -48,6 +48,8 @@ export function Inbox({ canAct }: { canAct: boolean }) {
   const active = page?.items.find(item => item.id === selected)
     ?? (linkedConversation?.id === selected ? linkedConversation : undefined);
   const draft = drafts[selected] ?? '';
+  const isMeta = !!active && ['instagram', 'messenger'].includes(active.channel);
+  const tooLong = isMeta && new TextEncoder().encode(draft.trim()).length > (active?.channel === 'instagram' ? 1000 : 2000);
 
   useEffect(() => {
     const linked = new URLSearchParams(window.location.search).get('conversation');
@@ -190,6 +192,7 @@ export function Inbox({ canAct }: { canAct: boolean }) {
           </select>
           <select className={field} aria-label={copy.channel} value={channel} onChange={event => setChannel(event.target.value)}>
             <option value="">{copy.allChannels}</option><option value="whatsapp">{copy.whatsapp}</option><option value="web">{copy.web}</option>
+            <option value="instagram">{copy.instagram}</option><option value="messenger">{copy.messenger}</option>
           </select>
           <input className={field} aria-label={copy.assignee} placeholder={copy.assigneeHint}
             value={assignee} onChange={event => setAssignee(event.target.value)} />
@@ -211,7 +214,7 @@ export function Inbox({ canAct }: { canAct: boolean }) {
           <h2 className="break-all text-lg font-semibold">{active.user}</h2>
           {canAct && <div className="my-3 flex flex-wrap gap-2">
             <button className={field} disabled={busy} onClick={() => action('take-over')}>{copy.takeOver}</button>
-            <button className={field} disabled={busy} onClick={() => action('hand-back')}>{copy.handBack}</button>
+            {!isMeta && <button className={field} disabled={busy} onClick={() => action('hand-back')}>{copy.handBack}</button>}
             <button className={field} disabled={busy} onClick={() => action(active.status === 'closed' ? 'reopen' : 'close')}>
               {active.status === 'closed' ? copy.reopen : copy.close}
             </button>
@@ -233,7 +236,7 @@ export function Inbox({ canAct }: { canAct: boolean }) {
           </ol>
           {canAct && <form className="grid gap-2" onSubmit={event => {
             event.preventDefault();
-            if (draft.trim() && active.can_reply_freely && active.status !== 'closed' && !busy) {
+            if (draft.trim() && !tooLong && active.can_reply_freely && active.status !== 'closed' && !busy) {
               const text = draft.trim();
               if (pendingReply.current?.conversation !== selected || pendingReply.current.text !== text) {
                 pendingReply.current = { conversation: selected, text, key: crypto.randomUUID() };
@@ -263,12 +266,14 @@ export function Inbox({ canAct }: { canAct: boolean }) {
                   onClick={() => setDrafts(old => ({ ...old, [selected]: item.body }))}>{item.title}</button></li>)}
             </ul>}
             <div className="flex flex-wrap gap-2">
-              <button type="submit" className={field} disabled={busy || !draft.trim() || !active.can_reply_freely
+              <button type="submit" className={field} disabled={busy || tooLong || !draft.trim() || !active.can_reply_freely
                 || active.status === 'closed'}>{copy.send}</button>
               <button type="button" className={field} disabled={busy || !draft.trim()}
                 onClick={() => action('note', { text: draft.trim() })}>{copy.addNote}</button>
             </div>
           </form>}
+          {tooLong && <p role="alert">{copy.metaTooLong}</p>}
+          {isMeta && !active.can_reply_freely && <p role="status">{copy.metaWindow}</p>}
           {canAct && active.channel === 'whatsapp' && active.can_reply_freely && active.status !== 'closed' &&
             <InboxMedia key={selected} conversationId={selected} recipient={active.user} onQueued={() => refresh(value => value + 1)} />}
           {canAct && active.channel === 'whatsapp' && !active.can_reply_freely && active.status !== 'closed' &&
