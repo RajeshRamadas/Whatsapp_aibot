@@ -110,12 +110,14 @@ def retrieve(tenant_id: str, query: str, vector: list[float] | None = None) -> l
     return [Match(rows[i].content, rows[i].filename, rows[i].heading, rows[i].page) for i in best]
 
 
-def history(conversation_id: str, before_id: int | None = None) -> list[dict]:
+def history(conversation_id: str, before_id: int | None = None, *, confirmed_only: bool = False) -> list[dict]:
     with Session() as db:
         rows = db.scalars(select(Message).where(Message.conversation_id == conversation_id,
                                                 Message.role.in_(('user', 'assistant', 'agent')),
                                                 Message.id < before_id if before_id is not None else True,
                                                 Message.kind != 'note',
+                                                or_(Message.role == 'user', Message.delivery_status.in_(
+                                                    ('sent', 'delivered', 'read'))) if confirmed_only else True,
                                                 or_(Message.role != 'agent', Message.channel_message_id.is_not(None)))
                           .order_by(Message.id.desc()).limit(settings.history_messages)).all()
     turns = [{'role': 'assistant' if m.role == 'agent' else m.role,
@@ -161,10 +163,11 @@ def _answer(tenant, conversation_id, question, *, whatsapp, language=None, actio
         question = http_action_chat.redact_command(question)
         if (reply := appointment_chat.command(tenant, conversation_id, question)) is not None:
             return Answer(reply, [], question, appointment=True)
-    question = http_action_chat.redact_command(question)
+    else:
+        question = http_action_chat.redact_command(question)
     provider, model = llm.resolve_chat(tenant.chat_provider, tenant.chat_model)
     chat = llm.chat_provider(provider)
-    turns = history(conversation_id, history_before) if conversation_id else []
+    turns = history(conversation_id, history_before, confirmed_only=knowledge_only) if conversation_id else []
     query = standalone_query(chat, model, turns, question) if turns and settings.query_rewrite else question
     vector = llm.embedder().embed([query], query=True)[0]
     distance = QAPair.embedding.cosine_distance(vector)

@@ -43,3 +43,17 @@ def test_pre_recorded_turn_excludes_itself_and_newer_messages_from_history(clien
     turns = rag.history(conv.id, cutoff)
     assert turns == [{'role': 'user', 'content': 'older question'}]
     assert len(rag.history(conv.id)) == 3
+
+
+def test_knowledge_history_never_contains_undelivered_drafts(client, tenant):
+    with Session.begin() as db:
+        conv = Conversation(id=uid(), tenant_id=tenant['tenant_id'], channel='instagram', external_user='customer')
+        db.add(conv)
+        db.flush()
+        db.add(Message(conversation_id=conv.id, role='user', content='question'))
+        for state in ['queued', 'failed', 'sent']:
+            db.add(Message(conversation_id=conv.id, role='assistant', direction='outbound',
+                           delivery_status=state, content=state))
+    assert rag.history(conv.id, confirmed_only=True) == [
+        {'role': 'user', 'content': 'question'}, {'role': 'assistant', 'content': 'sent'}]
+    assert len(rag.history(conv.id)) == 4
