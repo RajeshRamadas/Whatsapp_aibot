@@ -5,7 +5,7 @@ import { MetaChannels } from './meta-channels';
 import { metaClient } from '@/api/meta-dm';
 import { ApiRequestError } from '@/lib/api';
 vi.mock('./meta-authorization', () => ({ MetaAuthorization: () => null }));
-vi.mock('@/api/meta-dm', () => ({ metaClient: { list: vi.fn(), connect: vi.fn(), disconnect: vi.fn() } }));
+vi.mock('@/api/meta-dm', () => ({ metaClient: { list: vi.fn(), connect: vi.fn(), disconnect: vi.fn(), setBot: vi.fn() } }));
 afterEach(() => { cleanup(); vi.resetAllMocks(); vi.restoreAllMocks(); });
 const row = { id: 'channel', kind: 'instagram', external_id: '12345', display_name: 'Shop account', status: 'configured' };
 it('verifies on submission, clears the token and disconnects explicitly', async () => {
@@ -73,4 +73,23 @@ it('clears private fields when the workspace changes', async () => {
   await waitFor(() => expect((screen.getByLabelText('Access token') as HTMLInputElement).value).toBe(''));
   expect((screen.getByLabelText('Meta account or Page ID') as HTMLInputElement).value).toBe('');
   expect(metaClient.connect).not.toHaveBeenCalled();
+});
+
+it('enables bot replies explicitly and refreshes the confirmed account mode', async () => {
+  vi.mocked(metaClient.list).mockResolvedValueOnce([row]).mockResolvedValueOnce([{ ...row, meta_bot_enabled: true }]);
+  vi.mocked(metaClient.setBot).mockResolvedValue({ channel_id: row.id, enabled: true });
+  render(createElement(MetaChannels, { workspaceId: 'one' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Enable bot replies' }));
+  await screen.findByText('Bot replies enabled for this account');
+  expect(metaClient.setBot).toHaveBeenCalledWith(row.id, true);
+  expect(screen.getByRole('button', { name: 'Disable bot replies' })).toBeTruthy();
+});
+it('explains an in-flight bot send without changing the displayed mode', async () => {
+  vi.mocked(metaClient.list).mockResolvedValue([{ ...row, meta_bot_enabled: true }]);
+  vi.mocked(metaClient.setBot).mockRejectedValue(new ApiRequestError(409, 'conflict', 'private-provider-body'));
+  render(createElement(MetaChannels, { workspaceId: 'one' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Disable bot replies' }));
+  expect((await screen.findByRole('alert')).textContent).toContain('A bot reply is being sent.');
+  expect(document.body.textContent).not.toContain('private-provider-body');
+  expect(screen.getByText('Bot replies enabled for this account')).toBeTruthy();
 });

@@ -15,6 +15,10 @@ from .usage import QUOTA_NOTICE, blocked_notice, reserve
 from .whatsapp_copy import format_reply, handoff_notice
 
 
+def wants_handoff(text):
+    return text.strip().strip('*_').casefold() in settings.handoff_keywords
+
+
 def window(at):
     return bool(at and now() - timedelta(hours=24) < at <= now())
 
@@ -118,7 +122,7 @@ def process_one():
     # No Session survives the quota check, embedding, model or grounding calls.
     copy, result, reason = copy_for(tenant, question), None, None
     try:
-        if question.strip().casefold() in settings.handoff_keywords or not within_hours(tenant):
+        if wants_handoff(question) or not within_hours(tenant):
             reason = 'handoff'
         elif not rag.chat_limiter.allow('meta:' + tenant_id + ':' + conv.id):
             reason = 'rate'

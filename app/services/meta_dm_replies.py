@@ -73,16 +73,25 @@ def dispatch_one() -> bool:
             provider_id = send(channel, recipient, content)
     except (MetaSignupError, ValueError, RuntimeError):
         pass
+    handed_off = False
     with Session.begin() as db:
+        current = db.scalar(select(Conversation).where(Conversation.id == conversation_id,
+            Conversation.tenant_id == tenant_id).with_for_update())
         message = db.get(Message, message_id)
         if message is not None:
             message.channel_message_id = provider_id
             message.meta_acknowledged_at = now() if provider_id else None
             message.delivery_status = 'sent' if provider_id else ('unknown' if attempted else 'failed')
+            if (not provider_id and message.role == 'assistant' and current
+                    and current.status == 'bot' and not current.handoff):
+                current.status, current.handoff, current.analytics_handoff = 'waiting', True, True
+                handed_off = True
             message.error = None if provider_id else (
                 'Meta delivery could not be confirmed; do not automatically retry' if attempted else
                 'Meta DM reply is no longer eligible or the messaging window expired')
     publish_sync(tenant_id, 'message.updated', {'conversation_id': conversation_id})
+    if handed_off:
+        publish_sync(tenant_id, 'conversation.updated', {'conversation_id': conversation_id})
     return True
 
 
@@ -95,7 +104,12 @@ def expire_stale() -> None:
             Message.dispatch_started_at < now() - timedelta(minutes=2),
         ).values(delivery_status='unknown', error='Meta delivery could not be confirmed')
           .returning(Message.conversation_id)).scalars().all()
+        changed = set(db.execute(update(Conversation).where(Conversation.id.in_(set(rows)),
+            Conversation.status == 'bot', Conversation.handoff.is_(False))
+            .values(status='waiting', handoff=True, analytics_handoff=True).returning(Conversation.id)).scalars())
         events = db.execute(select(Conversation.tenant_id, Conversation.id)
                             .where(Conversation.id.in_(set(rows)))).all() if rows else []
     for tenant_id, conversation_id in events:
         publish_sync(tenant_id, 'message.updated', {'conversation_id': conversation_id})
+        if conversation_id in changed:
+            publish_sync(tenant_id, 'conversation.updated', {'conversation_id': conversation_id})

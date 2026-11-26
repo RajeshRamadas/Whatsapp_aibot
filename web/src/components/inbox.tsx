@@ -11,7 +11,7 @@ import { api } from '@/lib/api';
 
 type Conversation = {
   id: string; user: string; channel: string; status: string;
-  labels: string[]; can_reply_freely: boolean; assignee_user_id: string | null;
+  labels: string[]; can_reply_freely: boolean; can_hand_back?: boolean; assignee_user_id: string | null;
 };
 type Citation = { number: number; filename: string; heading?: string; page?: number };
 type Message = { role: string; kind: string; content: string; delivery_status: string | null; sources?: Citation[]; attachments?: Attachment[] };
@@ -214,12 +214,12 @@ export function Inbox({ canAct }: { canAct: boolean }) {
           <h2 className="break-all text-lg font-semibold">{active.user}</h2>
           {canAct && <div className="my-3 flex flex-wrap gap-2">
             <button className={field} disabled={busy} onClick={() => action('take-over')}>{copy.takeOver}</button>
-            {!isMeta && <button className={field} disabled={busy} onClick={() => action('hand-back')}>{copy.handBack}</button>}
+            {(!isMeta || (active.can_hand_back && active.status !== 'bot')) && <button className={field} disabled={busy} onClick={() => action('hand-back')}>{copy.handBack}</button>}
             <button className={field} disabled={busy} onClick={() => action(active.status === 'closed' ? 'reopen' : 'close')}>
               {active.status === 'closed' ? copy.reopen : copy.close}
             </button>
           </div>}
-          <ol aria-label={copy.messages} aria-live="polite" className="mb-4 grid max-h-[50vh] gap-2 overflow-auto">
+          <ol tabIndex={0} aria-label={copy.messages} aria-live="polite" className="mb-4 grid max-h-[50vh] gap-2 overflow-auto">
             {messages.map((message, index) => <li key={index} className="rounded border border-border p-2">
               <span className="text-sm font-semibold">{message.kind === 'note' ? copy.internalNote : labelFor(message.role)}</span>
               {!message.attachments?.some(item => item.transcript === message.content) &&

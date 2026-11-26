@@ -1317,4 +1317,9 @@ for inbound messages already persisted by the inbox worker.
 Meta accounts can opt into grounded bot text replies with
 `PUT /api/v1/meta-dm/channels/{id}/bot` (`enabled: true/false`). Migration 0056
 starts every existing account with this off. The workspace bot must also be live.
-Generation and delivery recheck ownership, connection, quota and the reply window.
+AI usage is reserved before generation; delivery rechecks ownership, connection,
+business hours and the reply window.
+
+Owners/admins can enable or disable bot replies in **Messaging accounts** in
+English/Hindi. Inbox offers **Hand back to bot** only when that Meta account is
+enabled, connected and within its messaging window.

@@ -4,7 +4,7 @@ from sqlalchemy import or_, select, update
 from ..db import Channel, Contact, Conversation, Message, MetaDmEvent, Session, Tenant, now, uid
 from ..models.meta_bot import MetaBotTurn
 from .events import publish_sync
-from .meta_bot import window
+from .meta_bot import cancel, handoff, notice, wants_handoff, window
 
 
 def process_one() -> bool:
@@ -60,8 +60,15 @@ def process_one() -> bool:
                 db.execute(update(MetaBotTurn).where(MetaBotTurn.tenant_id == tenant_id,
                     MetaBotTurn.conversation_id == conv.id, MetaBotTurn.status == 'queued')
                     .values(status='cancelled'))
-                db.add(MetaBotTurn(id=event.id, tenant_id=tenant_id, channel_id=owner.id,
-                    conversation_id=conv.id, incoming_message_id=incoming.id))
+                if wants_handoff(event.text):
+                    cancel(db, conv)
+                    handoff(conv)
+                    db.add(Message(conversation_id=conv.id, role='assistant', direction='outbound',
+                        content=notice(workspace, channel, event.text), delivery_status='queued',
+                        reply_key='meta-notice:' + event.id))
+                else:
+                    db.add(MetaBotTurn(id=event.id, tenant_id=tenant_id, channel_id=owner.id,
+                        conversation_id=conv.id, incoming_message_id=incoming.id))
             else:
                 conv.status, conv.handoff, conv.analytics_handoff = 'waiting', True, True
         if event.sent_at and (conv.last_inbound_at is None or event.sent_at > conv.last_inbound_at):

@@ -7,7 +7,7 @@ import { Button } from './ui/button';
 import { field } from './appointment-settings';
 import { ApiRequestError } from '@/lib/api';
 
-type AccountError = 'actionError' | 'conflictError' | 'busyError' | 'unavailableError' | 'permissionError' | 'validationError' | 'cleanupError' | 'sessionError';
+type AccountError = 'actionError' | 'conflictError' | 'busyError' | 'unavailableError' | 'permissionError' | 'validationError' | 'cleanupError' | 'sessionError' | 'botBusyError';
 
 export function MetaChannels({ workspaceId }: { workspaceId: string }) {
   const copy = useCopy('metaChannels');
@@ -22,11 +22,11 @@ export function MetaChannels({ workspaceId }: { workspaceId: string }) {
   }, [workspaceId, version]);
   const available = ['instagram', 'messenger'].filter(value => !rows?.some(row => row.kind === value));
   const selectedKind = available.includes(kind) ? kind : available[0] ?? 'instagram';
-  async function act(fn: () => Promise<unknown>, operation: 'connect' | 'disconnect' = 'connect') {
+  async function act(fn: () => Promise<unknown>, operation: 'connect' | 'disconnect' | 'bot' = 'connect') {
     setBusy(true); setError(null);
     try { await fn(); refresh(value => value + 1); } catch (failure) {
       const errors: Partial<Record<number, AccountError>> = { 401: 'sessionError', 403: 'sessionError',
-        409: operation === 'disconnect' ? 'busyError' : 'conflictError', 422: 'validationError',
+        409: operation === 'bot' ? 'botBusyError' : operation === 'disconnect' ? 'busyError' : 'conflictError', 422: 'validationError',
         424: 'cleanupError', 502: 'permissionError', 503: 'unavailableError' };
       setError(failure instanceof ApiRequestError ? errors[failure.status] ?? 'actionError' : 'actionError');
     }
@@ -43,6 +43,9 @@ export function MetaChannels({ workspaceId }: { workspaceId: string }) {
       <h2 className="text-lg font-semibold">{row.kind === 'instagram' ? copy.instagram : copy.messenger}</h2>
       <p className="break-all">{row.display_name || row.external_id}</p><p className="break-all">{copy.asset}: {row.external_id}</p>
       <p role="status">{row.status === 'configured' ? copy.connected : copy.disconnected}</p>
+      <p role="status">{row.meta_bot_enabled ? copy.botEnabled : copy.botDisabled}</p>
+      <p className="text-sm text-muted">{copy.botHelp}</p>
+      <Button className="w-fit" variant="secondary" disabled={busy || row.status !== 'configured'} onClick={() => void act(() => metaClient.setBot(row.id, !row.meta_bot_enabled), 'bot')}>{row.meta_bot_enabled ? copy.botDisable : copy.botEnable}</Button>
       <p className="text-sm text-muted">{copy.disconnectHelp}</p>
       <Button className="w-fit" variant="secondary" disabled={busy} onClick={() => { if (window.confirm(copy.disconnectPrompt)) void act(() => metaClient.disconnect(row.id), 'disconnect'); }}>{copy.disconnect}</Button>
     </section>)}

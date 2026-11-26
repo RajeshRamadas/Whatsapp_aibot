@@ -3,7 +3,8 @@
 Signed text DMs from verified workspace assets enter the shared inbox and wait for
 staff. Human agents can send short text replies within the conservative 24-hour
 customer messaging window. OAuth account selection and delivery/read receipts
-are available. Bot replies, attachments and automatic token refresh remain later slices.
+and opt-in bot text replies are available. Attachments and automatic token refresh
+remain later slices.
 
 ## Connect an asset
 
@@ -180,3 +181,20 @@ with an open messaging window. No additional provider credentials are required.
 
 Automated acceptance uses fake models and Meta delivery. Real model/Meta test-asset
 checks remain deployment setup; media and automatic token refresh remain later work.
+
+### Bot controls
+
+Open **Messaging accounts** as an owner/admin, connect the account, then select
+**Enable bot replies**. Keep the workspace bot live in Bot settings. The account
+card shows its confirmed mode; disabling routes active bot conversations to staff
+and cancels queued bot work. Account setup remains available in English/Hindi.
+
+In Inbox, **Hand back to bot** appears for an enabled account with an open window.
+New staff-owned conversations stay with staff until this action is used. Taking
+over again silences the bot. See [the bot and staff workflow](screenshots/t10-8-meta-bot.png).
+
+Unconfirmed or timed-out bot delivery moves the conversation to staff. It does
+not send a second message or automatically replay the uncertain send.
+
+Explicit handoff keywords are honored at intake, before model work. A rapid
+follow-up cannot supersede the request for a person.

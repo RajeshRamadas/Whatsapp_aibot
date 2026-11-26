@@ -730,7 +730,7 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 | T10.5 | Grounding check | BOT-5 | T5.1 |
 | T10.6 | Shopify and WooCommerce | EC-1 to EC-3 | T10.3 |
 | T10.7 | Drive and Notion sync | KN-6, SYNC-1 to SYNC-3 | T2.2 |
-| T10.8 | Instagram and Messenger (inbound, verified connections, guarded agent replies, channel UI, OAuth account picker and delivery/read receipts delivered; refresh and bot/media support pending) | CH-4, META-1 | T6.1 |
+| T10.8 | Instagram and Messenger (inbound, verified connections, guarded agent replies, channel UI, OAuth account picker, delivery/read receipts and opt-in knowledge bot delivered; refresh and media support pending) | CH-4, META-1 | T6.1 |
 | T10.9 | White-label and agency billing; impersonation | ADM-2, ADM-3 | T7.2 |
 | T10.10 | Lead follow-ups | LEAD-4 | T9.2 |
 
@@ -964,3 +964,9 @@ hours/windows and serialize guarded sends. Human takeover/close, disablement and
 newer inputs fence stale drafts; failures and uncertainty hand off with localized
 notices. The owner/admin endpoint covers auth, isolation and strict validation.
 Migration up/down/up/check and 44 focused/shared Meta tests pass. Controls follow.
+
+T10.8j3: English/Hindi Messaging accounts controls explicitly enable/disable bot
+text per account, explain the workspace live switch/quota and retain manual setup.
+Inbox offers hand-back for eligible enabled Meta accounts. Component tests cover
+confirmed mode changes and in-flight-send recovery; browser acceptance covers
+opt-in, grounded replies, staff ownership, hand-back, disablement and viewers.

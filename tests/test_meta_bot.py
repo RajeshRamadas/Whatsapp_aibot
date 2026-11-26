@@ -176,7 +176,10 @@ def test_handoff_paths_do_not_publish_unverified_facts(client, bot, monkeypatch,
         monkeypatch.setattr(rag, 'answer', lambda *args, **kwargs: result)
     if reason == 'failure':
         monkeypatch.setattr(rag, 'answer', lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError('private-body')))
-    assert meta_bot.process_one()
+    if reason == 'agent':
+        assert not meta_bot.process_one()
+    else:
+        assert meta_bot.process_one()
     message = outgoing(conv)[0]
     assert message.reply_key.startswith('meta-notice:') and len(message.content.encode()) <= 1000
     assert not message.sources and 'Unverified draft' not in message.content and 'private-body' not in message.content
@@ -238,3 +241,39 @@ def test_foreign_workspace_and_queued_reply_cancellation(client, bot, monkeypatc
     assert outgoing(conv)[0].delivery_status == 'failed' and not replies.dispatch_one()
     enable(client, bot)
     assert not meta_bot.process_one() and not replies.dispatch_one()
+
+
+@pytest.mark.parametrize('timeout', [False, True])
+def test_unconfirmed_bot_delivery_hands_off_without_another_send(client, bot, monkeypatch, timeout):
+    enable(client, bot)
+    conv = incoming(bot)
+    answer(monkeypatch)
+    assert meta_bot.process_one()
+    if timeout:
+        with Session.begin() as db:
+            message = db.get(Message, outgoing(conv)[0].id)
+            message.delivery_status = 'sending'
+            message.dispatch_started_at = now() - timedelta(minutes=3)
+        replies.expire_stale()
+    else:
+        def failed(*args):
+            raise replies.MetaSignupError('private-error')
+        monkeypatch.setattr(replies, 'send', failed)
+        assert replies.dispatch_one()
+    with Session() as db:
+        assert db.get(Conversation, conv).status == 'waiting'
+    assert len(outgoing(conv)) == 1 and outgoing(conv)[0].delivery_status == 'unknown'
+    assert not replies.dispatch_one() and not meta_bot.process_one()
+
+
+def test_explicit_human_request_wins_over_a_rapid_followup(client, bot, monkeypatch):
+    enable(client, bot)
+    incoming(bot, 'refund policy')
+    conv = incoming(bot, '*agent*')
+    incoming(bot, 'I need a refund')
+    monkeypatch.setattr(rag, 'answer', lambda *args, **kwargs: pytest.fail('Human handoff must prevent model calls'))
+    assert not meta_bot.process_one()
+    assert all(turn.status == 'cancelled' for turn in turns())
+    assert len(outgoing(conv)) == 1 and outgoing(conv)[0].reply_key.startswith('meta-notice:')
+    with Session() as db:
+        assert db.get(Conversation, conv).status == 'waiting'
