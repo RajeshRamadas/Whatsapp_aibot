@@ -672,6 +672,7 @@ from .models import google_calendar as _google_calendar  # noqa: E402, F401
 from .models import http_actions as _http_actions  # noqa: E402,F401
 from .models import knowledge_sync as _knowledge_sync  # noqa: E402,F401
 from .models import lead_sync as _lead_sync  # noqa: E402,F401
+from .models import meta_oauth as _meta_oauth  # noqa: E402,F401
 from .models import mfa as _mfa  # noqa: E402,F401
 from .models import order_proofs as _order_proofs  # noqa: E402,F401
 from .models import payments as _payments  # noqa: E402,F401

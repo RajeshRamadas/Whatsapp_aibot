@@ -31,6 +31,7 @@ from . import (
     media,
     meta_dm,
     meta_dm_connections,
+    meta_oauth,
     meta_signup,
     metrics,
     mfa,
@@ -65,7 +66,7 @@ for module in (knowledge_sync, commerce, spreadsheets, http_actions, outgoing_we
                onboarding, bot,
                jobs,
                chat, conversations, evals, events, inbox, invoices, leads, meta_dm,
-               meta_dm_connections, meta_signup, push, qa, templates,
+               meta_dm_connections, meta_oauth, meta_signup, push, qa, templates,
                usage,
                websites,
     whatsapp, widget, widget_chat, platform, analytics, metrics, email_feedback, contacts, campaigns, media, websites):

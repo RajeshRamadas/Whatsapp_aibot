@@ -1295,3 +1295,8 @@ finish. Localized recovery messages explain setup, permission and cleanup failur
 Meta enrollment uses a shared service for verification, subscription compensation
 and transaction guards. The manual connection API retains its existing behavior;
 OAuth authorization and account selection build on the same enrollment checks.
+
+Meta user-token authorization now queues code exchange and account discovery in
+the worker. Configure `META_DM_OAUTH_REDIRECT_URI` to the public
+`/api/backend/meta-dm/oauth/callback`; see [authorization setup](docs/META_DM.md).
+Migration 0054 stores short-lived, session-bound encrypted attempts.

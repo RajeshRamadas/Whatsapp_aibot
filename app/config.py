@@ -50,6 +50,8 @@ class Settings(BaseSettings):
     email_sends_per_second: int = Field(1, ge=1, le=1000)
     public_app_url: str = 'http://localhost:3000'
     google_calendar_client_id: str | None = None
+    meta_dm_oauth_redirect_uri: str | None = None
+    meta_dm_oauth_config_id: str | None = None
     google_calendar_client_secret: str | None = None
     google_calendar_redirect_uri: str | None = None
     google_calendar_requests_per_minute: int = Field(60, ge=1, le=600)

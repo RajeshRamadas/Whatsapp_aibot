@@ -453,9 +453,18 @@ async def dispatch_meta_dm(ctx):
             break
 
 
+@observed_job
+async def dispatch_meta_oauth(ctx):
+    from ..services.meta_oauth import process_one
+    for _ in range(5):
+        if not await asyncio.to_thread(process_one):
+            break
+
+
 class WorkerSettings:
     on_startup = startup
-    cron_jobs = [cron(dispatch_meta_dm_replies, second={0, 10, 20, 30, 40, 50}),
+    cron_jobs = [cron(dispatch_meta_oauth, second=set(range(0, 60, 5)), timeout=900),
+                 cron(dispatch_meta_dm_replies, second={0, 10, 20, 30, 40, 50}),
                  cron(dispatch_meta_dm, second=set(range(0, 60, 5))),
                  cron(dispatch_knowledge_sync, second={10, 40}, timeout=900),
                  cron(dispatch_commerce, second={0, 30}, timeout=900),
