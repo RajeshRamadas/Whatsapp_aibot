@@ -8,6 +8,16 @@ test('platform administrator reviews failures and suspends and resumes a workspa
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Platform administration', exact: true })).toBeVisible();
   const tenant = page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'Platform Suspension Fixture' }) });
+  const workspaces = page.getByRole('region', { name: 'Workspaces', exact: true });
+  const range = workspaces.locator('p[aria-live="polite"]');
+  await expect(range).toBeVisible();
+  while (await tenant.count() === 0) {
+    const previous = await range.innerText();
+    await expect(workspaces.getByRole('button', { name: 'Next page', exact: true })).toBeEnabled();
+    await workspaces.getByRole('button', { name: 'Next page', exact: true }).click();
+    await expect(range).toBeVisible();
+    await expect(range).not.toHaveText(previous);
+  }
   await expect(tenant.getByText('Active', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Document ingestion', exact: true }).first()).toBeVisible();
   await expect(page.getByRole('region', { name: 'Dead-letter jobs', exact: true })

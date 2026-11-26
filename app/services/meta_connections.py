@@ -142,7 +142,8 @@ def connect_asset(body, tenant_id, lease, graph=None, guard=None, finalize=None)
     try:
         name = verify_connection(graph, body.kind, body.external_id, token)
         added = not already_subscribed(graph, body.external_id, token)
-        if graph.request(f'{body.external_id}/subscribed_apps', params={'subscribed_fields': 'messages'},
+        fields = 'messages,messaging_seen' if body.kind == 'instagram' else 'messages,message_deliveries,message_reads'
+        if graph.request(f'{body.external_id}/subscribed_apps', params={'subscribed_fields': fields},
                          token=token, payload={}).get('success') is not True:
             raise MetaSignupError('Meta did not confirm messaging webhook subscription')
         return persist_connection(body, tenant_id, name, encrypted, guard, finalize)

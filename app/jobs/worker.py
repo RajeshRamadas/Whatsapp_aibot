@@ -448,8 +448,15 @@ async def clean_spreadsheet_storage(ctx):
 @observed_job
 async def dispatch_meta_dm(ctx):
     from ..services.meta_dm import process_one
+    from ..services.meta_receipts import cleanup
+    from ..services.meta_receipts import process_one as receipt
+    await asyncio.to_thread(cleanup)
     for _ in range(20):
         if not await asyncio.to_thread(process_one):
+            break
+
+    for _ in range(20):
+        if not await asyncio.to_thread(receipt):
             break
 
 

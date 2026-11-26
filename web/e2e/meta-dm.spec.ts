@@ -31,6 +31,8 @@ test('Meta accounts: verify, receive signed DMs, reply within window and disconn
   await composer.fill('Thanks, we can help.'); await page.getByRole('button', { name: 'Send reply', exact: true }).click();
   await expect(page.getByRole('list', { name: 'Messages', exact: true }).getByText('Thanks, we can help.', { exact: true })).toBeVisible();
   await expect(page.getByRole('list', { name: 'Messages', exact: true }).getByText('Sent', { exact: true })).toBeVisible();
+  expect((await page.request.post('/api/backend/_test/meta-dm/receipt', { data: { kind: 'instagram', external_id: '654321', status: 'read' } })).ok()).toBeTruthy();
+  await expect(page.getByRole('list', { name: 'Messages', exact: true }).getByText('Read', { exact: true })).toBeVisible();
   expect((await incoming(true)).ok()).toBeTruthy(); await page.reload();
   await page.getByRole('button', { name: /meta-expired-customer/ }).click();
   await expect(page.getByText('Replies require a connected account and a customer message within the last 24 hours.', { exact: true })).toBeVisible();

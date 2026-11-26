@@ -69,6 +69,7 @@ def dispatch_one() -> bool:
         message = db.get(Message, message_id)
         if message is not None:
             message.channel_message_id = provider_id
+            message.meta_acknowledged_at = now() if provider_id else None
             message.delivery_status = 'sent' if provider_id else ('unknown' if attempted else 'failed')
             message.error = None if provider_id else (
                 'Meta delivery could not be confirmed; do not automatically retry' if attempted else

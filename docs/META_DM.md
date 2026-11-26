@@ -2,8 +2,8 @@
 
 Signed text DMs from verified workspace assets enter the shared inbox and wait for
 staff. Human agents can send short text replies within the conservative 24-hour
-customer messaging window. Bot replies, attachments, receipts, OAuth onboarding
-and automatic token refresh remain later slices.
+customer messaging window. OAuth account selection and delivery/read receipts
+are available. Bot replies, attachments and automatic token refresh remain later slices.
 
 ## Connect an asset
 
@@ -122,3 +122,34 @@ and clears the return marker after cancellation or successful connection.
 English/Hindi browser acceptance exercises denial, cancellation, account selection,
 viewer restrictions, secret-free responses, axe and 320 px layout with fake Meta
 providers. See [the account picker](screenshots/t10-8-meta-oauth.png).
+
+## Delivery and read receipts (T10.8i)
+
+Apply migration `0055_meta_receipts` before restarting API/workers. It also widens
+provider message IDs to 255 characters for Instagram; downgrade refuses stored IDs
+longer than the previous 128-character limit instead of truncating them. New connections
+subscribe Messenger to `messages,message_deliveries,message_reads` and Instagram
+to `messages,messaging_seen`. Enable the corresponding app webhook fields at Meta.
+For existing assets, update their subscribed fields at Meta as well; reconnecting
+creates a new asset binding and does not transfer old receipts/history.
+
+Instagram seen events identify the message (`read.mid`). Messenger delivery events
+identify messages (`delivery.mids`) or provide a watermark; reads use
+`read.watermark`. Only signed, bounded metadata for connected assets is queued.
+Receipt identity includes the original channel record and customer. The worker
+updates confirmed outbound text only, in order `sent → delivered → read`, and
+publishes the existing inbox update event. Receipts never create customer messages,
+reopen the 24-hour reply window or retry a send whose outcome is unknown.
+
+Messenger watermarks use an acceptance upper bound recorded after the send
+response, or earlier MID-bearing delivery evidence. Queue creation time is never
+used. A read watermark is retained per conversation so delayed delivery evidence
+can confirm a read without claiming newer messages were read. Legacy messages
+with no acceptance bound require MID-bearing evidence. Missing evidence can leave
+a real read displayed as Sent/Delivered; the service does not guess.
+
+Receipts that precede send persistence retry correlation for up to ten minutes;
+receipt metadata is retained for seven days. Disconnect deletes that asset's receipt
+queue. No additional credentials or settings are required. Automated checks use
+fake signed callbacks; live field subscriptions and provider receipts still need
+verification against a Meta test asset. See [inbox receipt states](screenshots/t10-8-meta-receipts.png).

@@ -177,6 +177,7 @@ class Conversation(Base):
     status: Mapped[str] = mapped_column(String(20), default='bot')
     assignee_user_id: Mapped[str | None] = mapped_column(ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     labels: Mapped[list] = mapped_column(JSONB, default=list)
+    meta_read_watermark: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_inbound_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_message_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
@@ -198,12 +199,13 @@ class Message(Base):
     direction: Mapped[str] = mapped_column(String(12), default='inbound')
     author_user_id: Mapped[str | None] = mapped_column(ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     kind: Mapped[str] = mapped_column(String(20), default='text')
-    channel_message_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    channel_message_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     sources: Mapped[list] = mapped_column(JSONB, default=list)
     reply_key: Mapped[str | None] = mapped_column(String(128))
     template_payload: Mapped[dict | None] = mapped_column(JSONB)
     attachments: Mapped[list] = mapped_column(JSONB, default=list, server_default=text("'[]'::jsonb"))
     upload_data: Mapped[bytes | None] = mapped_column(LargeBinary, deferred=True)
+    meta_acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     dispatch_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     delivery_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -673,6 +675,7 @@ from .models import http_actions as _http_actions  # noqa: E402,F401
 from .models import knowledge_sync as _knowledge_sync  # noqa: E402,F401
 from .models import lead_sync as _lead_sync  # noqa: E402,F401
 from .models import meta_oauth as _meta_oauth  # noqa: E402,F401
+from .models import meta_receipts as _meta_receipts  # noqa: E402,F401
 from .models import mfa as _mfa  # noqa: E402,F401
 from .models import order_proofs as _order_proofs  # noqa: E402,F401
 from .models import payments as _payments  # noqa: E402,F401
