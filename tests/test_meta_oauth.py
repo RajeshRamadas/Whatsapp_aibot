@@ -225,6 +225,8 @@ def test_configuration_and_authorization_attempt_budget(client, configured, monk
     first = client.post(BASE + '/start', headers=configured, json={'kind': 'instagram'}).json()
     params = parse_qs(urlparse(first['url']).query)
     assert params['config_id'] == ['business-config'] and 'scope' not in params
+    assert params['response_type'] == ['code'] and params['override_default_response_type'] == ['true']
+    assert params['auth_type'] == ['rerequest']
     begin(client, configured)
     begin(client, configured)
     assert client.post(BASE + '/start', headers=configured, json={'kind': 'messenger'}).status_code == 409

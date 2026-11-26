@@ -29,9 +29,10 @@ def valid_redirect(value):
 
 def authorization_url(kind, state):
     params = {'client_id': settings.whatsapp_app_id, 'redirect_uri': settings.meta_dm_oauth_redirect_uri,
-              'response_type': 'code', 'state': state}
+              'response_type': 'code', 'auth_type': 'rerequest', 'state': state}
     if settings.meta_dm_oauth_config_id:
         params['config_id'] = settings.meta_dm_oauth_config_id
+        params['override_default_response_type'] = 'true'
     else:
         params['scope'] = SCOPES[kind]
     return f'https://www.facebook.com/{settings.whatsapp_graph_version}/dialog/oauth?' + urlencode(params)
