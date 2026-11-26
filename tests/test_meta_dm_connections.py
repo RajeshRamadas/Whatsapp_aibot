@@ -66,7 +66,7 @@ def test_connect_verified_and_disconnect(client, admin, monkeypatch):
         ('debug_token', {'input_token': 'secret-page-token'}, None, None),
         ('12345', {'fields': 'id,name,category'}, None, None),
         ('12345/subscribed_apps', {'fields': 'id', 'limit': 100}, None, None),
-        ('12345/subscribed_apps', {'subscribed_fields': 'messages'}, {}, None),
+        ('12345/subscribed_apps', {'subscribed_fields': 'messages,message_deliveries,message_reads'}, {}, None),
     ]
     assert client.post(BASE, headers=admin, json=PAYLOAD).status_code == 409
     assert client.delete(BASE + '/' + channel_id, headers=admin).status_code == 204

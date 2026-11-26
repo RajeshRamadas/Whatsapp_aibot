@@ -1,4 +1,4 @@
-"""Verified Meta Instagram/Messenger DM ingestion; no outbound messages in this phase."""
+"""Verified Meta Instagram/Messenger DM ingestion; durable inbound messages and delivery/read receipts."""
 import hashlib
 import hmac
 import json
@@ -13,6 +13,7 @@ from sqlalchemy.exc import IntegrityError
 
 from ..config import settings
 from ..db import Channel, MetaDmEvent, Session, now, uid
+from ..services import meta_receipts
 
 router = APIRouter()
 
@@ -30,10 +31,16 @@ def extract(payload: dict):
     if payload.get('object') not in ('instagram', 'page'):
         return
     channel = 'instagram' if payload['object'] == 'instagram' else 'messenger'
-    for entry in payload.get('entry', []):
+    entries = payload.get('entry')
+    if not isinstance(entries, list):
+        return
+    for entry in entries:
         if not isinstance(entry, dict):
             continue
-        for event in entry.get('messaging', []):
+        events = entry.get('messaging')
+        if not isinstance(events, list):
+            continue
+        for event in events:
             if not isinstance(event, dict):
                 continue
             message = event.get('message')
@@ -98,4 +105,5 @@ async def webhook(request: Request):
     if not isinstance(payload, dict):
         raise HTTPException(400, 'Invalid payload')
     await run_in_threadpool(store, payload)
+    await run_in_threadpool(meta_receipts.store, payload)
     return {'status': 'ok'}

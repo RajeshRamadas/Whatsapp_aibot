@@ -1304,3 +1304,8 @@ Migration 0054 stores short-lived, session-bound encrypted attempts.
 
 Messaging accounts now offers **Authorize with Meta** and a server-validated
 account picker in English/Hindi. Manual token entry remains available.
+
+Meta DMs now show provider-confirmed **Delivered**/**Read** states in Inbox.
+Signed receipts are queued, scoped to the original account/customer and applied
+without regressing statuses or reopening reply windows. Apply migration 0055 and
+subscribe the provider fields described in [Meta setup](docs/META_DM.md).

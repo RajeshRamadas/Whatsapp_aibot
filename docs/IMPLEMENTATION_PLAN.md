@@ -730,7 +730,7 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 | T10.5 | Grounding check | BOT-5 | T5.1 |
 | T10.6 | Shopify and WooCommerce | EC-1 to EC-3 | T10.3 |
 | T10.7 | Drive and Notion sync | KN-6, SYNC-1 to SYNC-3 | T2.2 |
-| T10.8 | Instagram and Messenger (inbound, verified connections, guarded agent replies, channel UI and OAuth account picker delivered; refresh, bot/media/status support pending) | CH-4, META-1 | T6.1 |
+| T10.8 | Instagram and Messenger (inbound, verified connections, guarded agent replies, channel UI, OAuth account picker and delivery/read receipts delivered; refresh and bot/media support pending) | CH-4, META-1 | T6.1 |
 | T10.9 | White-label and agency billing; impersonation | ADM-2, ADM-3 | T7.2 |
 | T10.10 | Lead follow-ups | LEAD-4 | T9.2 |
 
@@ -945,3 +945,9 @@ tests and 37 Playwright checks pass with fake providers. Production build,
 typecheck, lint, widget checks and migration 0054 up/down/up/check pass. Optional
 Login for Business explicitly requests authorization codes; declined permissions
 can be requested again. Live grants remain pending Meta app/callback setup.
+
+T10.8i: migration 0055 adds durable, asset/customer-bound Meta delivery/read
+receipts. Workers preserve monotonic statuses, correlate early callbacks without
+resending, retain conservative Messenger read watermarks and publish inbox updates.
+English/Hindi status labels are reused. Bot/media and automatic refresh remain
+future slices; live receipt checks require Meta field subscriptions/test assets.

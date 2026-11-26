@@ -69,3 +69,30 @@ async def reply_worker(request, call_next):
             if not await asyncio.to_thread(meta_oauth.process_one):
                 break
     return response
+
+
+@app.post('/api/v1/_test/meta-dm/receipt', include_in_schema=False)
+async def receipt_fixture(body: dict):
+    from sqlalchemy import select
+
+    from app.db import Channel, Conversation, Message, Session
+    from app.services import meta_receipts
+    with Session() as db:
+        mids = db.scalars(select(Message.channel_message_id).join(Conversation).join(
+            Channel, Channel.id == Conversation.meta_channel_id).where(Channel.external_id == body['external_id'],
+            Channel.kind == body['kind'], Message.direction == 'outbound', Message.channel_message_id.is_not(None))
+            .order_by(Message.id)).all()
+    detail = {'mid': mids[-1]} if body['kind'] == 'instagram' else {
+        'watermark': int(now().timestamp() * 1000), **({'mids': mids} if body['status'] == 'delivered' else {})}
+    data = {'object': 'instagram' if body['kind'] == 'instagram' else 'page', 'entry': [{'messaging': [{
+        'sender': {'id': 'meta-test-customer'}, 'recipient': {'id': body['external_id']},
+        'read' if body['status'] == 'read' else 'delivery': detail}]}]}
+    raw = json.dumps(data).encode()
+    signature = hmac.new(settings.whatsapp_app_secret.encode(), raw, hashlib.sha256).hexdigest()
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
+        response = await client.post('/webhooks/meta-dm', content=raw,
+            headers={'x-hub-signature-256': 'sha256=' + signature})
+    for _ in range(20):
+        if not await asyncio.to_thread(meta_receipts.process_one):
+            break
+    return JSONResponse(response.json(), status_code=response.status_code)
