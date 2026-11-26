@@ -939,3 +939,9 @@ session-bound flow, poll background work and expose cancellation/recovery. Brows
 acceptance uses fake Meta grants and covers denial, cancellation, selection, viewer
 restrictions, privacy, axe and narrow layout. T10.8 remains open for automatic token
 refresh, bot/media/status support and live permission/delivery checks.
+
+T10.8g/h acceptance (stacked PRs #124–#126): 626 backend tests, 70 frontend
+tests and 37 Playwright checks pass with fake providers. Production build,
+typecheck, lint, widget checks and migration 0054 up/down/up/check pass. Optional
+Login for Business explicitly requests authorization codes; declined permissions
+can be requested again. Live grants remain pending Meta app/callback setup.
