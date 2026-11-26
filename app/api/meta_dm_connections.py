@@ -36,12 +36,13 @@ def verify_connection(kind: str, external_id: str, token: str) -> str | None:
     result = graph.request(external_id, params={'fields': 'id,name'}, token=token)
     if str(result.get('id')) != external_id:
         raise MetaSignupError('Meta did not verify ownership of the selected asset')
+    name = str(result.get('name') or '')[:200] or None
     # A successful subscription proves the token can manage webhooks for the asset.
     result = graph.request(f'{external_id}/subscribed_apps', params={'subscribed_fields': 'messages'},
                            token=token, payload={})
     if result.get('success') is not True:
         raise MetaSignupError('Meta did not confirm messaging webhook subscription')
-    return str(result.get('name') or '')[:200] or None
+    return name
 
 
 @router.post('/channels', status_code=201)

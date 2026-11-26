@@ -1,5 +1,6 @@
 export const pages = [
   { key: 'dashboard', path: '/dashboard', roles: ['owner', 'admin', 'agent', 'viewer'] },
+  { key: 'channels', path: '/dashboard/channels', roles: ['owner', 'admin'] },
   { key: 'inbox', path: '/dashboard/inbox', roles: ['owner', 'admin', 'agent', 'viewer'] },
   { key: 'knowledge', path: '/dashboard/knowledge', roles: ['owner', 'admin', 'agent', 'viewer'] },
   { key: 'botSettings', path: '/dashboard/bot', roles: ['owner', 'admin'] },

@@ -37,6 +37,25 @@ Meta administrator must revoke provider permissions separately if desired.
   `failed`. Stale `sending` messages become `unknown` and publish inbox updates.
 - WhatsApp retains its own dispatcher; Meta replies never enter that sender.
 
+## Dashboard controls (T10.8e)
+
+Workspace owners/admins can open **Messaging accounts** to verify and connect a
+pre-provisioned Meta account token, inspect the connected account and disconnect
+it. The English/Hindi screen clears token fields after every attempt, shows
+loading/empty/error states and clears private state when switching workspaces.
+This uses the existing verified connection API; it does not implement OAuth.
+
+Inbox filters include Instagram and Messenger. Eligible conversations permit text
+replies; expired or disconnected conversations explain why sending is unavailable.
+Oversized drafts are blocked before submission. Meta conversations do not offer
+the unsupported hand-back-to-bot action. A live provider name is retained from the
+verification result instead of being lost when subscription succeeds.
+
+Browser acceptance covers permission failures, signed inbound messages, confirmed
+staff replies, byte limits, expired windows, disconnection, viewer restrictions,
+English/Hindi, axe and 320 px layout. See the
+[account screen](screenshots/t10-8-meta-accounts.png).
+
 ## Migration and acceptance
 
 Apply migrations `0052_meta_dm_events` and `0053_meta_dm_binding` before restarting

@@ -66,7 +66,7 @@ class BrowserBilling(FakeBilling):
         return snapshot
 
 
-auth._auth_limiter = RateLimiter(60, window_seconds=900, namespace='browser-test-auth')
+auth._auth_limiter = RateLimiter(120, window_seconds=900, namespace='browser-test-auth')
 graph = BrowserBilling()
 settings.razorpay_key_id = 'browser-test-key'
 settings.razorpay_key_secret = 'browser-test-secret'
@@ -331,6 +331,7 @@ from tests import browser_accuracy as browser_accuracy  # noqa: E402
 from tests import browser_grounding as browser_grounding  # noqa: E402
 from tests import browser_http_actions as browser_http_actions  # noqa: E402
 from tests import browser_lead_sync as browser_lead_sync  # noqa: E402
+from tests import browser_meta_dm as browser_meta_dm  # noqa: E402
 from tests import browser_security as browser_security  # noqa: E402
 from tests import browser_spreadsheets as browser_spreadsheets  # noqa: E402
 from tests import browser_webhooks as browser_webhooks  # noqa: E402

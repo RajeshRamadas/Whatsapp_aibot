@@ -1279,3 +1279,10 @@ migration `0053_meta_dm_binding`; old unbound Meta history stays read-only until
 fresh signed inbound message creates a bound conversation. See [Meta DM setup and
 limits](docs/META_DM.md). OAuth, bot replies, media and live permission verification
 remain subsequent work. No additional environment variables are required.
+
+Workspace owners/admins can manage Instagram and Messenger under **Messaging
+accounts**. The English/Hindi controls verify supplied account tokens, display
+connection status and disconnect accounts. Inbox filters, text-length feedback and
+24-hour-window notices support staff replies. Tokens clear after each connection
+attempt and workspace changes clear the private view. OAuth and live Meta permission
+approval remain separate setup; these controls use pre-provisioned account tokens.

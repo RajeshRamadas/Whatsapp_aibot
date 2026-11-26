@@ -16,7 +16,7 @@ test('platform administrator reviews failures and suspends and resumes a workspa
   await expect(page.getByText('private-document.pdf')).toHaveCount(0);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 
-  const rejected = await page.request.post('http://127.0.0.1:8000/webhooks/whatsapp', { data: {} });
+  const rejected = await page.request.post((process.env.API_INTERNAL_URL ?? 'http://127.0.0.1:8000') + '/webhooks/whatsapp', { data: {} });
   expect(rejected.status()).toBe(401);
   const webhooks = page.getByRole('region', { name: 'Webhook failures', exact: true });
   await webhooks.getByRole('button', { name: 'Refresh', exact: true }).click();

@@ -40,7 +40,7 @@ test('owner reviews usage, saves a policy, checks out and downloads the invoice'
     payment: { entity: { id: 'pay_browser', amount: 707882, currency: 'INR', status: 'captured' } },
   } });
   const signature = createHmac('sha256', 'browser-test-webhook').update(body).digest('hex');
-  const payment = await page.request.post('http://127.0.0.1:8000/webhooks/razorpay', {
+  const payment = await page.request.post((process.env.API_INTERNAL_URL ?? 'http://127.0.0.1:8000') + '/webhooks/razorpay', {
     data: body, headers: { 'Content-Type': 'application/json', 'X-Razorpay-Signature': signature,
       'X-Razorpay-Event-Id': 'browser-test-charge' },
   });

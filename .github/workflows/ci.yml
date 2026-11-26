@@ -72,6 +72,7 @@ jobs:
           source /tmp/inbox-push.env
           set +a
           python -m scripts.seed_inbox_e2e
+          python -m scripts.seed_meta_dm_e2e
           python -m scripts.seed_platform_e2e
           python -m scripts.seed_knowledge_sync_e2e
           python -m scripts.seed_commerce_e2e
