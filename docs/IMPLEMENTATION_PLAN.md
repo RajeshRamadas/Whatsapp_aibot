@@ -921,3 +921,8 @@ subscriptions/committed connections are preserved; uncertain cleanup is explicit
 Disconnect waits for in-flight replies through a shared tenant-lock claim barrier.
 English/Hindi errors explain conflict, permissions, setup and cleanup recovery.
 The task summary now reflects delivered UI and the remaining OAuth/bot/media work.
+
+T10.8g1: verified enrollment is shared by manual and upcoming OAuth connections.
+The service retains asset/app verification, cleanup fencing and session-free HTTP,
+with transaction guards for authorization and atomic OAuth completion. Existing
+manual endpoint behavior and regression coverage are preserved.
