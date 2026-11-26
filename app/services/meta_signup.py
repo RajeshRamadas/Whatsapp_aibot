@@ -21,7 +21,7 @@ class MetaSignup:
     opener = build_opener(NoRedirects())
 
     @integration('meta_signup')
-    def request(self, path, *, params=None, token=None, payload=None):
+    def request(self, path, *, params=None, token=None, payload=None, method=None):
         url = f'https://graph.facebook.com/{settings.whatsapp_graph_version}/{path}'
         if params:
             url += '?' + urlencode(params)
@@ -33,7 +33,7 @@ class MetaSignup:
             data = json.dumps(payload).encode()
             headers['Content-Type'] = 'application/json'
         try:
-            with self.opener.open(Request(url, data=data, headers=headers), timeout=12) as response:
+            with self.opener.open(Request(url, data=data, headers=headers, method=method), timeout=12) as response:
                 result = json.load(response)
         except (URLError, OSError, ValueError):
             # OAuth URLs contain secrets. Never surface the URL or Graph response body.

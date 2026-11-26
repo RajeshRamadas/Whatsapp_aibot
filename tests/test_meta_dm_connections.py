@@ -16,6 +16,7 @@ def admin(client, monkeypatch):
     monkeypatch.setattr(settings, 'auth_cookie_secure', False)
     monkeypatch.setattr(settings, 'master_key', 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=')
     monkeypatch.setattr(settings, 'whatsapp_app_secret', 'test-app-secret')
+    monkeypatch.setattr(settings, 'whatsapp_app_id', '123')
     monkeypatch.setattr(settings, 'whatsapp_verify_token', 'test-verify')
     headers = login(client, 'meta-dm-admin@example.com', Recorder())
     response = client.post('/api/v1/workspaces', headers=headers, json={'name': 'Meta DM test'})
@@ -26,12 +27,25 @@ def admin(client, monkeypatch):
 class FakeGraph:
     def __init__(self):
         self.calls = []
+        self.subscribed = False
+        self.actual_kind = None
+        self.debug = {'is_valid': True, 'app_id': '123'}
 
-    def request(self, path, *, params=None, token=None, payload=None):
-        self.calls.append((path, params, token, payload))
+    def request(self, path, *, params=None, token=None, payload=None, method=None):
+        self.calls.append((path, params, token, payload, method))
+        if path == 'debug_token':
+            return {'data': self.debug}
         if path.endswith('/subscribed_apps'):
+            if method == 'DELETE':
+                self.subscribed = False
+            elif payload is None:
+                return {'data': [{'id': '123'}] if self.subscribed else []}
+            else:
+                self.subscribed = True
             return {'success': True}
-        return {'id': path, 'name': 'Example Page'}
+        kind = self.actual_kind or ('instagram' if 'ig_id' in (params or {}).get('fields', '') else 'messenger')
+        marker = {'ig_id': path} if kind == 'instagram' else {'category': 'Business'}
+        return {'id': path, 'name': 'Example Page', **marker}
 
 
 def test_connect_verified_and_disconnect(client, admin, monkeypatch):
@@ -48,9 +62,11 @@ def test_connect_verified_and_disconnect(client, admin, monkeypatch):
         row = db.get(Channel, channel_id)
         assert b'secret-page-token' not in row.credentials_enc
         assert decrypt(row.tenant_id, row.credentials_enc).decode() == 'secret-page-token'
-    assert graph.calls == [
-        ('12345', {'fields': 'id,name'}, 'secret-page-token', None),
-        ('12345/subscribed_apps', {'subscribed_fields': 'messages'}, 'secret-page-token', {}),
+    assert [(path, params, body, method) for path, params, token, body, method in graph.calls] == [
+        ('debug_token', {'input_token': 'secret-page-token'}, None, None),
+        ('12345', {'fields': 'id,name,category'}, None, None),
+        ('12345/subscribed_apps', {'fields': 'id', 'limit': 100}, None, None),
+        ('12345/subscribed_apps', {'subscribed_fields': 'messages'}, {}, None),
     ]
     assert client.post(BASE, headers=admin, json=PAYLOAD).status_code == 409
     assert client.delete(BASE + '/' + channel_id, headers=admin).status_code == 204

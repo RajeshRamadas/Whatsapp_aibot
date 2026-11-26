@@ -40,7 +40,7 @@ def dispatch_one() -> bool:
                    ~exists(select(other.id).where(other.conversation_id == Conversation.id,
                                                  other.role == 'agent', other.delivery_status == 'sending')))
             .order_by(Message.id).limit(1)
-            .with_for_update(skip_locked=True, of=(Message, Conversation))).first()
+            .with_for_update(skip_locked=True, of=(Message, Conversation, Tenant))).first()
         if row is None:
             return False
         message, conv, tenant = row

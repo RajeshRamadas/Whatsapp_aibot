@@ -1286,3 +1286,8 @@ connection status and disconnect accounts. Inbox filters, text-length feedback a
 24-hour-window notices support staff replies. Tokens clear after each connection
 attempt and workspace changes clear the private view. OAuth and live Meta permission
 approval remain separate setup; these controls use pre-provisioned account tokens.
+
+Meta connections verify the configured app ID and provider account type before
+subscribing. Failed saves compensate newly created subscriptions, while existing
+connections are preserved. Disconnect reports a conflict until in-flight replies
+finish. Localized recovery messages explain setup, permission and cleanup failures.
