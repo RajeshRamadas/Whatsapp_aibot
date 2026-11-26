@@ -66,7 +66,7 @@ class BrowserBilling(FakeBilling):
         return snapshot
 
 
-auth._auth_limiter = RateLimiter(60, window_seconds=900, namespace='browser-test-auth')
+auth._auth_limiter = RateLimiter(120, window_seconds=900, namespace='browser-test-auth')
 graph = BrowserBilling()
 settings.razorpay_key_id = 'browser-test-key'
 settings.razorpay_key_secret = 'browser-test-secret'
