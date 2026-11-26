@@ -5,6 +5,7 @@ from sqlalchemy import exists, select, update
 from sqlalchemy.orm import aliased
 
 from ..db import Channel, Conversation, Message, Session, Tenant, now
+from .bot_policy import within_hours
 from .crypto import decrypt
 from .events import publish_sync
 from .meta_signup import MetaSignup, MetaSignupError
@@ -22,7 +23,12 @@ def send(channel: Channel, recipient: str, content: str) -> str:
 
 def eligible(message, conv, tenant, channel):
     limit = 1000 if conv.channel == 'instagram' else 2000
-    return bool(not tenant.suspended and conv.status == 'agent' and conv.handoff and conv.external_user
+    human = message.role == 'agent' and conv.status == 'agent' and conv.handoff
+    notice = bool(message.reply_key and message.reply_key.startswith('meta-notice:')
+                  and conv.status == 'waiting' and conv.handoff)
+    bot = (message.role == 'assistant' and tenant.bot_live and channel and channel.meta_bot_enabled
+           and (notice or (conv.status == 'bot' and not conv.handoff and within_hours(tenant))))
+    return bool(not tenant.suspended and (human or bot) and conv.external_user
                 and channel and channel.id == conv.meta_channel_id and channel.tenant_id == tenant.id
                 and channel.kind == conv.channel and channel.credentials_enc and conv.last_inbound_at
                 and now() - timedelta(hours=24) < conv.last_inbound_at <= now()
@@ -35,10 +41,12 @@ def dispatch_one() -> bool:
         row = db.execute(select(Message, Conversation, Tenant)
             .join(Conversation, Conversation.id == Message.conversation_id)
             .join(Tenant, Tenant.id == Conversation.tenant_id)
-            .where(Message.role == 'agent', Message.kind == 'text', Message.delivery_status == 'queued',
+            .where(Message.role.in_(('agent', 'assistant')), Message.kind == 'text',
+                   Message.delivery_status == 'queued',
                    Conversation.channel.in_(('instagram', 'messenger')),
                    ~exists(select(other.id).where(other.conversation_id == Conversation.id,
-                                                 other.role == 'agent', other.delivery_status == 'sending')))
+                                                 other.role.in_(('agent', 'assistant')),
+                                                 other.delivery_status == 'sending')))
             .order_by(Message.id).limit(1)
             .with_for_update(skip_locked=True, of=(Message, Conversation, Tenant))).first()
         if row is None:
@@ -83,7 +91,7 @@ def expire_stale() -> None:
         rows = db.execute(update(Message).where(
             Message.id.in_(select(Message.id).join(Conversation)
                            .where(Conversation.channel.in_(('instagram', 'messenger')))),
-            Message.role == 'agent', Message.delivery_status == 'sending',
+            Message.role.in_(('agent', 'assistant')), Message.delivery_status == 'sending',
             Message.dispatch_started_at < now() - timedelta(minutes=2),
         ).values(delivery_status='unknown', error='Meta delivery could not be confirmed')
           .returning(Message.conversation_id)).scalars().all()

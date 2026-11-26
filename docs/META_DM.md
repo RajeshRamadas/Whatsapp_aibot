@@ -153,3 +153,30 @@ receipt metadata is retained for seven days. Disconnect deletes that asset's rec
 queue. No additional credentials or settings are required. Automated checks use
 fake signed callbacks; live field subscriptions and provider receipts still need
 verification against a Meta test asset. See [inbox receipt states](screenshots/t10-8-meta-receipts.png).
+
+## Opt-in knowledge bot (T10.8j)
+
+Apply migration `0056_meta_bot_turns` and restart API/workers. All existing
+Instagram/Messenger accounts start with `meta_bot_enabled=false`. A signed-in
+owner/admin can PUT `/api/v1/meta-dm/channels/{id}/bot` with a strict boolean
+`enabled`. The workspace's main bot switch must also be live. Enabling an account
+affects new messages; existing staff-owned conversations need explicit hand-back.
+
+Generation uses existing workspace AI settings, knowledge, read-only spreadsheets,
+language/script policy and grounding. Bookings, payments, order lookup, custom
+actions and lead capture are excluded in this slice. Every model call runs without
+a SQL session. Quotas, hours, suspension, the original asset binding and the 24-hour
+provider window are checked. Only confirmed prior replies enter model history.
+
+Uncertain/blocked drafts, rate/quota limits, provider failures and oversized replies
+move to staff with a localized notice. Verified text is never silently shortened.
+Durable generation claims expire after ten minutes without automatic replay.
+New messages supersede older queued turns/drafts. Takeover, close and per-account
+disable cancel pending generations; handing back cannot revive a cancelled claim.
+Disable waits for a bot send already in progress. A provider request that has
+already started cannot be cancelled. Agent and bot text share the ordered sender
+and receipt processing. Staff can hand back only to an enabled, connected account
+with an open messaging window. No additional provider credentials are required.
+
+Automated acceptance uses fake models and Meta delivery. Real model/Meta test-asset
+checks remain deployment setup; media and automatic token refresh remain later work.

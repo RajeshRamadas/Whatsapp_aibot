@@ -422,6 +422,7 @@ class Channel(Base):
     waba_id: Mapped[str | None] = mapped_column(String(32), unique=True)
     credentials_enc: Mapped[bytes | None] = mapped_column(LargeBinary)
     last_webhook_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    meta_bot_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text('false'))
     campaign_quality: Mapped[str] = mapped_column(String(16), default='UNKNOWN', server_default='UNKNOWN')
     campaign_limit: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
     campaign_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -674,6 +675,7 @@ from .models import google_calendar as _google_calendar  # noqa: E402, F401
 from .models import http_actions as _http_actions  # noqa: E402,F401
 from .models import knowledge_sync as _knowledge_sync  # noqa: E402,F401
 from .models import lead_sync as _lead_sync  # noqa: E402,F401
+from .models import meta_bot as _meta_bot  # noqa: E402,F401
 from .models import meta_oauth as _meta_oauth  # noqa: E402,F401
 from .models import meta_receipts as _meta_receipts  # noqa: E402,F401
 from .models import mfa as _mfa  # noqa: E402,F401

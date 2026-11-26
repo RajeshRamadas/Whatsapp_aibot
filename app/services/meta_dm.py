@@ -1,8 +1,10 @@
 """Publish queued Instagram/Messenger text DMs to the tenant inbox."""
-from sqlalchemy import or_, select
+from sqlalchemy import or_, select, update
 
-from ..db import Channel, Contact, Conversation, Message, MetaDmEvent, Session, now, uid
+from ..db import Channel, Contact, Conversation, Message, MetaDmEvent, Session, Tenant, now, uid
+from ..models.meta_bot import MetaBotTurn
 from .events import publish_sync
+from .meta_bot import window
 
 
 def process_one() -> bool:
@@ -33,18 +35,35 @@ def process_one() -> bool:
                                                     Conversation.channel == channel,
                                                     Conversation.meta_channel_id == owner.id,
                                                     Conversation.external_user == sender))
+        workspace = db.get(Tenant, tenant_id)
+        enabled = bool(owner.meta_bot_enabled and workspace and workspace.bot_live and not workspace.suspended
+                       and window(event.sent_at))
         if conv is None:
             conv = Conversation(id=uid(), tenant_id=tenant_id, channel=channel,
                                 meta_channel_id=owner.id,
-                                status='waiting', handoff=True, analytics_handoff=True,
+                                status='bot' if enabled else 'waiting', handoff=not enabled,
+                                analytics_handoff=not enabled,
                                 external_user=sender, contact_id=contact.id if contact else None)
             db.add(conv)
             db.flush()
         if conv.contact_id is None and contact:
             conv.contact_id = contact.id
         # The event is locked; status update and message commit are atomic.
-        db.add(Message(conversation_id=conv.id, role='user', direction='inbound',
-                       channel_message_id=event.provider_message_id, content=event.text))
+        incoming = Message(conversation_id=conv.id, role='user', direction='inbound',
+                           channel_message_id=event.provider_message_id, content=event.text)
+        db.add(incoming)
+        db.flush()
+        if conv.status == 'bot' and not conv.handoff:
+            db.execute(update(Message).where(Message.conversation_id == conv.id, Message.role == 'assistant',
+                Message.delivery_status == 'queued').values(delivery_status='failed', error='A newer message arrived'))
+            if enabled:
+                db.execute(update(MetaBotTurn).where(MetaBotTurn.tenant_id == tenant_id,
+                    MetaBotTurn.conversation_id == conv.id, MetaBotTurn.status == 'queued')
+                    .values(status='cancelled'))
+                db.add(MetaBotTurn(id=event.id, tenant_id=tenant_id, channel_id=owner.id,
+                    conversation_id=conv.id, incoming_message_id=incoming.id))
+            else:
+                conv.status, conv.handoff, conv.analytics_handoff = 'waiting', True, True
         if event.sent_at and (conv.last_inbound_at is None or event.sent_at > conv.last_inbound_at):
             conv.last_inbound_at = event.sent_at
         conv.last_message_at = now()

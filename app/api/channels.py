@@ -25,6 +25,7 @@ def view(channel):
             'campaign_quality': channel.campaign_quality, 'campaign_verified_limit': channel.campaign_limit,
             'campaign_checked_at': channel.campaign_checked_at,
             'campaign_portfolio': channel.campaign_portfolio,
+            'meta_bot_enabled': channel.meta_bot_enabled,
             'status': 'configured' if configured else 'unconfigured', 'has_channel_token': has_token}
 
 

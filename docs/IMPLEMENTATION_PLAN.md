@@ -957,3 +957,10 @@ record tools and lead capture while retaining retrieval, read-only spreadsheets,
 language policy and grounding. A history cutoff avoids repeating a pre-recorded
 Meta inbound turn. Default widget/WhatsApp behavior is preserved. Opt-in controls
 and durable Meta bot processing follow in stacked parts.
+
+T10.8j2: migration 0056 adds opt-in channel settings and durable Meta bot turns.
+Workers answer only from verified workspace knowledge, meter AI usage, enforce
+hours/windows and serialize guarded sends. Human takeover/close, disablement and
+newer inputs fence stale drafts; failures and uncertainty hand off with localized
+notices. The owner/admin endpoint covers auth, isolation and strict validation.
+Migration up/down/up/check and 44 focused/shared Meta tests pass. Controls follow.

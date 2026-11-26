@@ -11,6 +11,7 @@ from ..db import CannedReply, Channel, Contact, Conversation, Membership, Messag
 from ..observability import bind
 from ..services.channels import whatsapp_channel
 from ..services.events import publish_sync
+from ..services.meta_bot import cancel as cancel_meta_bot
 from .principal import Principal, require_role
 
 router = APIRouter()
@@ -31,11 +32,17 @@ def can_reply(conv: Conversation) -> bool:
                 and now() - timedelta(hours=24) < conv.last_inbound_at <= now())
 
 
-def view(conv: Conversation) -> dict:
+def view(conv: Conversation, db=None, enabled=None) -> dict:
+    meta = conv.channel in ('instagram', 'messenger')
+    if meta and enabled is None and db is not None:
+        enabled = set(db.scalars(select(Channel.id).where(Channel.tenant_id == conv.tenant_id,
+            Channel.meta_bot_enabled, Channel.credentials_enc.is_not(None))))
+    can_hand_back = not meta or bool(conv.meta_channel_id in (enabled or ()) and can_reply(conv))
     return {'id': conv.id, 'channel': conv.channel, 'user': conv.external_user, 'handoff': conv.handoff,
             'contact_id': conv.contact_id, 'status': conv.status, 'assignee_user_id': conv.assignee_user_id,
             'labels': conv.labels, 'last_inbound_at': conv.last_inbound_at, 'last_message_at': conv.last_message_at,
-            'created_at': conv.created_at, 'can_reply_freely': conv.channel == 'web' or can_reply(conv)}
+            'created_at': conv.created_at, 'can_hand_back': can_hand_back,
+            'can_reply_freely': conv.channel == 'web' or can_reply(conv)}
 
 
 class Assign(BaseModel):
@@ -92,7 +99,10 @@ def inbox_list(status: str | None = None, channel: str | None = None, assignee: 
                                     (Conversation.id < previous.id)))
         rows = db.scalars(query.order_by(Conversation.created_at.desc(), Conversation.id.desc())
                           .limit(limit + 1)).all()
-    return {'items': [view(row) for row in rows[:limit]],
+        enabled = set(db.scalars(select(Channel.id).where(Channel.tenant_id == tenant_id,
+            Channel.meta_bot_enabled, Channel.credentials_enc.is_not(None))))
+        items = [view(row, db, enabled) for row in rows[:limit]]
+    return {'items': items,
             'next_cursor': rows[limit - 1].id if len(rows) > limit else None, 'counts': counts}
 
 
@@ -102,8 +112,9 @@ def take_over(conversation_id: str, principal: Principal = Depends(require_role(
         raise HTTPException(403, 'User session required to take ownership')
     with Session.begin() as db:
         conv = conversation(db, principal.tenant.id, conversation_id)
+        cancel_meta_bot(db, conv)
         conv.handoff, conv.status, conv.assignee_user_id = True, 'agent', principal.user.id
-        result = view(conv)
+        result = view(conv, db)
     publish_sync(principal.tenant.id, 'conversation.updated', {'conversation_id': conversation_id})
     return result
 
@@ -119,7 +130,7 @@ def assign(conversation_id: str, body: Assign, principal: Principal = Depends(re
         conv.assignee_user_id = body.user_id
         conv.handoff = True
         conv.status = 'agent' if body.user_id else 'waiting'
-        result = view(conv)
+        result = view(conv, db)
     publish_sync(principal.tenant.id, 'conversation.updated', {'conversation_id': conversation_id})
     return result
 
@@ -181,6 +192,7 @@ def reply(conversation_id: str, body: Reply, principal: Principal = Depends(requ
                           kind='text', author_user_id=principal.user.id if principal.user else None,
                           content=body.message, delivery_status=delivery, reply_key=idempotency_key)
         db.add(message)
+        cancel_meta_bot(db, conv)
         conv.handoff, conv.status = True, 'agent'
         conv.last_message_at = now()
         db.flush()
@@ -194,8 +206,10 @@ def reply(conversation_id: str, body: Reply, principal: Principal = Depends(requ
 def hand_back(conversation_id: str, principal: Principal = Depends(require_role('agent'))):
     with Session.begin() as db:
         conv = conversation(db, principal.tenant.id, conversation_id)
+        if conv.channel in ('instagram', 'messenger') and not view(conv, db)['can_hand_back']:
+            raise HTTPException(409, 'Enable bot replies on the connected account within its messaging window first')
         conv.handoff, conv.status, conv.assignee_user_id = False, 'bot', None
-        result = view(conv)
+        result = view(conv, db)
     publish_sync(principal.tenant.id, 'conversation.updated', {'conversation_id': conversation_id})
     return result
 
@@ -204,8 +218,9 @@ def hand_back(conversation_id: str, principal: Principal = Depends(require_role(
 def close(conversation_id: str, principal: Principal = Depends(require_role('agent'))):
     with Session.begin() as db:
         conv = conversation(db, principal.tenant.id, conversation_id)
+        cancel_meta_bot(db, conv)
         conv.status, conv.handoff = 'closed', True
-        result = view(conv)
+        result = view(conv, db)
     publish_sync(principal.tenant.id, 'conversation.updated', {'conversation_id': conversation_id})
     return result
 
@@ -215,7 +230,7 @@ def reopen(conversation_id: str, principal: Principal = Depends(require_role('ag
     with Session.begin() as db:
         conv = conversation(db, principal.tenant.id, conversation_id)
         conv.status, conv.handoff = 'waiting', True
-        result = view(conv)
+        result = view(conv, db)
     publish_sync(principal.tenant.id, 'conversation.updated', {'conversation_id': conversation_id})
     return result
 
@@ -227,7 +242,7 @@ def update_labels(conversation_id: str, body: Labels, principal: Principal = Dep
     with Session.begin() as db:
         conv = conversation(db, principal.tenant.id, conversation_id)
         conv.labels = list(dict.fromkeys(body.labels))
-        result = view(conv)
+        result = view(conv, db)
     publish_sync(principal.tenant.id, 'conversation.updated', {'conversation_id': conversation_id})
     return result
 
@@ -282,4 +297,4 @@ def delete_canned(reply_id: str, principal: Principal = Depends(require_role('ad
 @router.get('/api/v1/inbox/conversations/{conversation_id}')
 def inbox_conversation(conversation_id: str, principal: Principal = Depends(require_role('viewer'))):
     with Session() as db:
-        return view(conversation(db, principal.tenant.id, conversation_id))
+        return view(conversation(db, principal.tenant.id, conversation_id), db)
