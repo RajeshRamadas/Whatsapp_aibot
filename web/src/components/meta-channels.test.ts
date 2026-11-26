@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, expect, it, vi } from 'vitest';
 import { MetaChannels } from './meta-channels';
 import { metaClient } from '@/api/meta-dm';
+import { ApiRequestError } from '@/lib/api';
 vi.mock('@/api/meta-dm', () => ({ metaClient: { list: vi.fn(), connect: vi.fn(), disconnect: vi.fn() } }));
 afterEach(() => { cleanup(); vi.resetAllMocks(); vi.restoreAllMocks(); });
 const row = { id: 'channel', kind: 'instagram', external_id: '12345', display_name: 'Shop account', status: 'configured' };
@@ -22,6 +23,31 @@ it('verifies on submission, clears the token and disconnects explicitly', async 
   fireEvent.click(screen.getByRole('button', { name: 'Disconnect account' }));
   await screen.findByText('No Instagram or Messenger accounts connected.');
   expect(metaClient.disconnect).toHaveBeenCalledWith('channel');
+});
+it.each([
+  [409, 'This account or channel type is already connected.'],
+  [422, 'Check the selected channel, account ID and token'],
+  [424, 'Meta subscription cleanup could not be confirmed.'],
+  [502, 'Meta could not verify this account'],
+  [503, 'Messaging setup is unavailable.'],
+])('explains HTTP %s without displaying private server details', async (status, message) => {
+  vi.mocked(metaClient.list).mockResolvedValue([]);
+  vi.mocked(metaClient.connect).mockRejectedValue(new ApiRequestError(Number(status), 'safe', 'private-token'));
+  render(createElement(MetaChannels, { workspaceId: 'one' }));
+  await screen.findByText('No Instagram or Messenger accounts connected.');
+  fireEvent.change(screen.getByLabelText('Meta account or Page ID'), { target: { value: '12345' } });
+  fireEvent.change(screen.getByLabelText('Access token'), { target: { value: 'private-token' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Verify and connect' }));
+  expect((await screen.findByRole('alert')).textContent).toContain(String(message));
+  expect(document.body.textContent).not.toContain('private-token');
+});
+it('explains why an in-flight reply prevents disconnecting', async () => {
+  vi.mocked(metaClient.list).mockResolvedValue([row]);
+  vi.mocked(metaClient.disconnect).mockRejectedValue(new ApiRequestError(409, 'conflict', 'private detail'));
+  vi.spyOn(window, 'confirm').mockReturnValue(true);
+  render(createElement(MetaChannels, { workspaceId: 'one' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Disconnect account' }));
+  expect((await screen.findByRole('alert')).textContent).toContain('A reply is being sent.');
 });
 it('recovers load failures and clears credentials after failed verification', async () => {
   vi.mocked(metaClient.list).mockRejectedValueOnce(new Error('private response')).mockResolvedValue([]);

@@ -8,7 +8,8 @@ and automatic token refresh remain later slices.
 ## Connect an asset
 
 Configure the Meta app's messaging permissions and subscribe its webhook to
-`/webhooks/meta-dm`. Verification uses `WHATSAPP_VERIFY_TOKEN`; signatures use
+`/webhooks/meta-dm`. Set `WHATSAPP_APP_ID` to the app that issued account tokens.
+Verification uses `WHATSAPP_VERIFY_TOKEN`; signatures use
 `WHATSAPP_APP_SECRET`. A signed-in workspace owner/admin can call
 `POST /api/v1/meta-dm/channels` with `kind` (`messenger` or `instagram`), numeric
 `external_id` and a pre-provisioned `access_token`. The server tests asset access
@@ -18,11 +19,22 @@ shared by workspaces. Generic channel updates cannot replace Meta tokens without
 verification. Deleting `/api/v1/meta-dm/channels/{id}` disconnects locally; the
 Meta administrator must revoke provider permissions separately if desired.
 
+Connection verifies token validity and app ownership plus a type-specific provider
+field (`ig_id` for Instagram, `category` for Pages). Encryption is checked before
+changing Meta subscriptions. A per-asset enrollment lease prevents concurrent
+connections from undoing one another's subscription. Failed saves remove only a
+new subscription; existing subscriptions and committed connections are preserved.
+If cleanup cannot be confirmed, HTTP 424 asks the administrator to reconcile the
+account's subscription before retrying. Provider details and tokens stay private.
+
 ## Reply guarantees
 
 - Conversations and inbound events bind to the original channel record. Replacing
   an asset cannot inherit the previous asset's recipients, history or queued sends.
   Disconnecting fails queued replies and ignores queued events for that channel.
+  While a reply is in flight, disconnect returns HTTP 409 and leaves the account
+  connected. Claiming a reply and disconnecting share the tenant row lock, so a
+  disconnect cannot succeed just before a new provider call starts.
 - The signed provider timestamp determines the reply window. Delayed or older
   events cannot reopen or move it backwards. Missing, malformed or future timestamps
   may be retained as messages but never open a sending window.
@@ -44,6 +56,8 @@ pre-provisioned Meta account token, inspect the connected account and disconnect
 it. The English/Hindi screen clears token fields after every attempt, shows
 loading/empty/error states and clears private state when switching workspaces.
 This uses the existing verified connection API; it does not implement OAuth.
+Localized errors distinguish conflicts, in-flight replies, invalid account details,
+provider permission failures, unavailable setup and unconfirmed cleanup.
 
 Inbox filters include Instagram and Messenger. Eligible conversations permit text
 replies; expired or disconnected conversations explain why sending is unavailable.

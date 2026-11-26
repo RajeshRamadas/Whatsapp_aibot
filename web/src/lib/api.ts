@@ -1,5 +1,8 @@
 import { browserLocale, catalogFor } from '@/i18n/catalogs';
 export type ApiError = { error?: { code: string; message: string } };
+export class ApiRequestError extends Error {
+  constructor(public status: number, public code: string, message: string) { super(message); this.name = 'ApiRequestError'; }
+}
 export function csrfToken(cookie: string): string {
   const value = cookie.split('; ').find(part => part.startsWith('chatbot_csrf='));
   return value ? decodeURIComponent(value.slice('chatbot_csrf='.length)) : '';
@@ -16,7 +19,8 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   });
   if (!response.ok) {
     const data = await response.json().catch(() => ({})) as ApiError;
-    throw new Error(data.error?.message ?? catalogFor(browserLocale()).errors.requestFailed);
+    throw new ApiRequestError(response.status, data.error?.code ?? 'request_failed',
+      data.error?.message ?? catalogFor(browserLocale()).errors.requestFailed);
   }
   if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;

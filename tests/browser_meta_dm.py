@@ -18,12 +18,18 @@ from app.services.meta_signup import MetaSignupError
 
 class Graph:
     def request(self, path, **kwargs):
+        if path == 'debug_token':
+            return {'data': {'is_valid': True, 'app_id': settings.whatsapp_app_id}}
         if path.startswith('999'):
             raise MetaSignupError('Synthetic permission failure')
-        return {'success': True} if path.endswith('/subscribed_apps') else {'id': path, 'name': 'Meta demo account'}
+        if path.endswith('/subscribed_apps'):
+            return {'success': True} if kwargs.get('payload') is not None or kwargs.get('method') else {'data': []}
+        marker = 'ig_id' if 'ig_id' in (kwargs.get('params') or {}).get('fields', '') else 'category'
+        return {'id': path, 'name': 'Meta demo account', marker: path if marker == 'ig_id' else 'Business'}
 
 
 meta_dm_connections.MetaSignup = Graph
+settings.whatsapp_app_id = settings.whatsapp_app_id or '123'
 meta_dm_replies.send = lambda *args: 'meta-sent-' + uid()
 
 

@@ -5,7 +5,7 @@
   "refresh": "Refresh channels",
   "loading": "Loading channels…",
   "loadError": "Could not load channels. Refresh to try again.",
-  "actionError": "The change could not be completed. Check account permissions and re-enter the token before retrying.",
+  "actionError": "The change could not be completed. Refresh accounts and try again.",
   "empty": "No Instagram or Messenger accounts connected.",
   "instagram": "Instagram",
   "messenger": "Messenger",
@@ -21,5 +21,12 @@
   "tokenHelp": "Use an account token with messaging and webhook permissions. We verify access before connecting and store the token encrypted. The token field is cleared after every attempt.",
   "connect": "Verify and connect",
   "verifying": "Verifying…",
-  "denied": "Only workspace owners and admins can manage messaging accounts."
+  "denied": "Only workspace owners and admins can manage messaging accounts.",
+  "conflictError": "This account or channel type is already connected. Check existing connections before trying again.",
+  "busyError": "A reply is being sent. Wait for it to finish, then disconnect the account again.",
+  "unavailableError": "Messaging setup is unavailable. Ask your platform administrator to check its configuration.",
+  "permissionError": "Meta could not verify this account or its messaging permissions. Check the selected channel, account ID and token.",
+  "validationError": "Check the selected channel, account ID and token, then try again.",
+  "cleanupError": "Meta subscription cleanup could not be confirmed. Ask your Meta administrator to remove this app’s account subscription before retrying.",
+  "sessionError": "Sign in as a workspace owner or admin to manage this account."
 }

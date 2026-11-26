@@ -10,7 +10,7 @@ test('Meta accounts: verify, receive signed DMs, reply within window and disconn
   await form.getByLabel('Meta account or Page ID', { exact: true }).fill('999');
   await form.getByLabel('Access token', { exact: true }).fill('synthetic-token');
   await form.getByRole('button', { name: 'Verify and connect', exact: true }).click();
-  await expect(page.getByRole('alert').filter({ hasText: 'The change could not be completed.' })).toBeVisible();
+  await expect(page.getByRole('alert').filter({ hasText: 'Meta could not verify this account' })).toBeVisible();
   await expect(form.getByLabel('Access token', { exact: true })).toHaveValue('');
   await form.getByLabel('Meta account or Page ID', { exact: true }).fill('654321');
   await form.getByLabel('Access token', { exact: true }).fill('synthetic-token');

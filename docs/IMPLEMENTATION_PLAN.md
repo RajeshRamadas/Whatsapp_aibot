@@ -730,7 +730,7 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 | T10.5 | Grounding check | BOT-5 | T5.1 |
 | T10.6 | Shopify and WooCommerce | EC-1 to EC-3 | T10.3 |
 | T10.7 | Drive and Notion sync | KN-6, SYNC-1 to SYNC-3 | T2.2 |
-| T10.8 | Instagram and Messenger (inbound, verified connections and agent reply API merged; guarded dispatch and channel UI in progress) | CH-4, META-1 | T6.1 |
+| T10.8 | Instagram and Messenger (inbound, verified connections, guarded agent replies and channel UI delivered; OAuth, bot/media/status support pending) | CH-4, META-1 | T6.1 |
 | T10.9 | White-label and agency billing; impersonation | ADM-2, ADM-3 | T7.2 |
 | T10.10 | Lead follow-ups | LEAD-4 | T9.2 |
 
@@ -914,3 +914,10 @@ permission failures, signed inbound events, confirmed/expired staff replies,
 role restrictions, axe and 320 px layout. OAuth/refresh, bot/media/status support
 and live Meta permission/delivery checks remain pending; T10.8 is not fully complete.
 See [guide](META_DM.md) and [screenshot](screenshots/t10-8-meta-accounts.png).
+
+T10.8f completion: review follow-ups add provider asset-type/app verification,
+enrollment coordination and subscription rollback after failed persistence. Existing
+subscriptions/committed connections are preserved; uncertain cleanup is explicit.
+Disconnect waits for in-flight replies through a shared tenant-lock claim barrier.
+English/Hindi errors explain conflict, permissions, setup and cleanup recovery.
+The task summary now reflects delivered UI and the remaining OAuth/bot/media work.
