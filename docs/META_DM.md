@@ -3,8 +3,8 @@
 Signed text DMs from verified workspace assets enter the shared inbox and wait for
 staff. Human agents can send short text replies within the conservative 24-hour
 customer messaging window. OAuth account selection and delivery/read receipts
-and opt-in bot text replies are available. Attachments and automatic token refresh
-remain later slices.
+and opt-in bot text replies are available. Incoming attachments are private and
+go to staff; outbound media and automatic token refresh remain later slices.
 
 ## Connect an asset
 
@@ -109,8 +109,7 @@ never retried. Terminal attempts erase their secrets; logout cascades deletion.
 Register the callback and permissions, enable the worker, and check a real grant,
 denial, account selection and signed inbound/staff reply with a Meta test account
 before launch. Automated checks use fakes; live grants remain pending app setup.
-Automatic token refresh, bot replies, media and delivery-status support remain
-future T10.8 work.
+Automatic token refresh and outbound media remain future T10.8 work.
 
 ### Account picker
 
@@ -180,7 +179,7 @@ and receipt processing. Staff can hand back only to an enabled, connected accoun
 with an open messaging window. No additional provider credentials are required.
 
 Automated acceptance uses fake models and Meta delivery. Real model/Meta test-asset
-checks remain deployment setup; media and automatic token refresh remain later work.
+checks remain deployment setup; outbound media and automatic token refresh remain later work.
 
 ### Bot controls
 
@@ -198,3 +197,34 @@ not send a second message or automatically replay the uncertain send.
 
 Explicit handoff keywords are honored at intake, before model work. A rapid
 follow-up cannot supersede the request for a person.
+
+## Incoming attachments (T10.8k)
+
+Apply migration `0057_meta_inbound_media` and restart API/workers. Signed image,
+audio and file events now enter the original account's conversation. Inbox shows
+private images, audio playback and document downloads using its existing English/Hindi
+media controls. Files use the existing authenticated media endpoint, workspace roles,
+private object storage and `MEDIA_RETENTION_DAYS`. No new credentials are needed.
+
+Provider download URLs are encrypted with `MASTER_KEY`, bound to the workspace and
+attachment, and erased after completion. Only public HTTPS Meta CDN hosts beneath
+`fbcdn.net`, `fbsbx.com` and `cdninstagram.com` are accepted. DNS is pinned with TLS
+hostname verification. Redirects and compressed responses are rejected; channel
+tokens/cookies are never sent to the CDN. MIME/content signatures and bounded streams
+enforce JPEG/PNG up to 5 MiB and existing supported audio/documents up to 16 MiB,
+subject to the lower `MEDIA_MAX_BYTES` setting. At most ten files are downloaded per
+event; extra/unsupported files have an unavailable placeholder.
+
+Every attachment message routes bot-owned conversations to staff and cancels pending
+bot work, even when accompanied by a caption. Staff-owned conversations stay with
+staff. This slice does not transcribe audio, interpret images or answer attachments.
+The existing transcription setting is unchanged. Staff can still send text within
+the messaging window; outbound Meta attachments are not yet supported.
+
+Downloads run outside SQL sessions and check account binding, suspension and retention
+before fetching and before publication. Disconnection or expired/interrupted downloads
+leave unavailable placeholders; interrupted claims expire after ten minutes without
+automatic replay. Worker completions publish live Inbox updates. Existing retention
+cleanup deletes the private objects. Fake-provider backend/browser checks cover both
+channels; real Meta attachment delivery remains a deployment check. See the
+[Inbox attachment view](screenshots/t10-8-meta-media.png).

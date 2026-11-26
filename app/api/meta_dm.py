@@ -13,7 +13,7 @@ from sqlalchemy.exc import IntegrityError
 
 from ..config import settings
 from ..db import Channel, MetaDmEvent, Session, now, uid
-from ..services import meta_receipts
+from ..services import meta_media, meta_receipts
 
 router = APIRouter()
 
@@ -27,7 +27,7 @@ def valid_signature(raw: bytes, signature: str | None) -> bool:
 
 
 def extract(payload: dict):
-    """Yield only supported text DMs, never echoes, delivery receipts or unknown events."""
+    """Yield text/attachment DMs, never echoes or delivery receipts."""
     if payload.get('object') not in ('instagram', 'page'):
         return
     channel = 'instagram' if payload['object'] == 'instagram' else 'messenger'
@@ -48,23 +48,29 @@ def extract(payload: dict):
             if not isinstance(message, dict) or not isinstance(sender, dict) or not isinstance(recipient, dict):
                 continue
             mid, body = message.get('mid'), message.get('text')
+            parts = message.get('attachments')
+            parts = parts if isinstance(parts, list) else []
             sid, rid = sender.get('id'), recipient.get('id')
-            if (message.get('is_echo') or not isinstance(mid, str) or not isinstance(body, str)
+            if (message.get('is_echo') or not isinstance(mid, str)
                     or not isinstance(sid, str) or not isinstance(rid, str)):
                 continue
-            if not (1 <= len(mid) <= 240 and 1 <= len(body) <= 4000
+            if body is None and parts:
+                body = ''
+            if not isinstance(body, str) or not (body or parts):
+                continue
+            if not (1 <= len(mid) <= 240 and len(body) <= 4000
                     and 1 <= len(sid) <= 64 and 1 <= len(rid) <= 64):
                 continue
             stamp = event.get('timestamp')
             sent_at = None
             if isinstance(stamp, int) and not isinstance(stamp, bool) and 0 < stamp <= int(now().timestamp() * 1000):
                 sent_at = datetime.fromtimestamp(stamp / 1000, timezone.utc)
-            yield channel, mid, sid, rid, body, sent_at
+            yield channel, mid, sid, rid, body, sent_at, parts
 
 
 def store(payload: dict) -> int:
     accepted = 0
-    for channel, mid, sender, recipient, body, sent_at in extract(payload):
+    for channel, mid, sender, recipient, body, sent_at, parts in extract(payload):
         with Session() as db:
             owner = db.scalar(select(Channel).where(Channel.kind == channel, Channel.external_id == recipient))
             if owner is None:
@@ -73,6 +79,7 @@ def store(payload: dict) -> int:
                               channel_id=owner.id, sent_at=sent_at,
                               provider_message_id=channel + ':' + mid, recipient_id=recipient,
                               sender_id=sender, text=body, status='queued', received_at=now())
+            row.attachments = meta_media.snapshot(owner.tenant_id, row.id, parts)
             db.add(row)
             try:
                 db.commit()

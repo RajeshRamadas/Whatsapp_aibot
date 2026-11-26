@@ -5,6 +5,7 @@ from ..db import Channel, Contact, Conversation, Message, MetaDmEvent, Session, 
 from ..models.meta_bot import MetaBotTurn
 from .events import publish_sync
 from .meta_bot import cancel, handoff, notice, wants_handoff, window
+from .meta_media import placeholders
 
 
 def process_one() -> bool:
@@ -19,6 +20,7 @@ def process_one() -> bool:
                                                 Channel.kind == channel, Channel.external_id == event.recipient_id))
         if owner is None:
             event.status = 'ignored'
+            event.attachments = []
             return True
         contact = db.scalar(select(Contact).where(Contact.tenant_id == tenant_id, Contact.channel == channel,
                                                   Contact.external_user == sender))
@@ -50,7 +52,9 @@ def process_one() -> bool:
             conv.contact_id = contact.id
         # The event is locked; status update and message commit are atomic.
         incoming = Message(conversation_id=conv.id, role='user', direction='inbound',
-                           channel_message_id=event.provider_message_id, content=event.text)
+                           channel_message_id=event.provider_message_id, content=event.text,
+                           attachments=placeholders(event.attachments, tenant_id),
+                           kind='media' if event.attachments else 'text')
         db.add(incoming)
         db.flush()
         if conv.status == 'bot' and not conv.handoff:
@@ -60,7 +64,7 @@ def process_one() -> bool:
                 db.execute(update(MetaBotTurn).where(MetaBotTurn.tenant_id == tenant_id,
                     MetaBotTurn.conversation_id == conv.id, MetaBotTurn.status == 'queued')
                     .values(status='cancelled'))
-                if wants_handoff(event.text):
+                if event.attachments or wants_handoff(event.text):
                     cancel(db, conv)
                     handoff(conv)
                     db.add(Message(conversation_id=conv.id, role='assistant', direction='outbound',
@@ -74,7 +78,7 @@ def process_one() -> bool:
         if event.sent_at and (conv.last_inbound_at is None or event.sent_at > conv.last_inbound_at):
             conv.last_inbound_at = event.sent_at
         conv.last_message_at = now()
-        event.status = 'processed'
+        event.status = 'media_queued' if event.attachments else 'processed'
         conversation_id = conv.id
     publish_sync(tenant_id, 'message.created', {'conversation_id': conversation_id})
     publish_sync(tenant_id, 'conversation.updated', {'conversation_id': conversation_id})
