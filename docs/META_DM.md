@@ -84,3 +84,29 @@ replacement/disconnection, timestamps, eligibility, text limits, session-free HT
 reply ordering, unknown delivery and stale inbox events. Real Meta test assets,
 production permission approval and live delivery verification are still required
 before customer launch. Never paste access tokens into chat or commit them.
+
+## Meta authorization (T10.8g)
+
+Apply migration `0054_meta_authorizations` and restart API/workers. Set
+`META_DM_OAUTH_REDIRECT_URI` to
+`https://marketingadda.com/api/backend/meta-dm/oauth/callback` and register that
+exact URI in the same app identified by `WHATSAPP_APP_ID`/`WHATSAPP_APP_SECRET`.
+Use a Meta app configured for Facebook Login with the Page/Instagram permissions
+listed in `app/integrations/meta_oauth`. Optional `META_DM_OAUTH_CONFIG_ID` must
+issue **user tokens**; system-user token configurations are unsupported. HTTPS is
+required except for localhost development. Existing manual-token setup remains.
+
+Owners/admins start a ten-minute attempt bound to their workspace, user and browser
+session. The callback consumes a random one-use state and queues encrypted work.
+Workers exchange the code, obtain a long-lived user token and discover up to 100
+Page/Instagram accounts. Only account names and IDs reach the picker. Selection
+uses that encrypted snapshot, then repeats app/type verification and enrollment.
+Provider HTTP calls hold no SQL session. Role/session revocation, expiry,
+cancellation and interrupted work stop enrollment; uncertain code exchange is
+never retried. Terminal attempts erase their secrets; logout cascades deletion.
+
+Register the callback and permissions, enable the worker, and check a real grant,
+denial, account selection and signed inbound/staff reply with a Meta test account
+before launch. Automated checks use fakes; live grants remain pending app setup.
+Automatic token refresh, bot replies, media and delivery-status support remain
+future T10.8 work.

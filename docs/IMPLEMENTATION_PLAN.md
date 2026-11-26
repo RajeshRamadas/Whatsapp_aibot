@@ -926,3 +926,10 @@ T10.8g1: verified enrollment is shared by manual and upcoming OAuth connections.
 The service retains asset/app verification, cleanup fencing and session-free HTTP,
 with transaction guards for authorization and atomic OAuth completion. Existing
 manual endpoint behavior and regression coverage are preserved.
+
+T10.8g2: migration 0054 adds ten-minute session/workspace-bound Meta user-token
+authorization. Workers exchange codes and discover accounts; scoped selection
+reuses verified enrollment with atomic completion and cancellation compensation.
+Secrets are encrypted and wiped on termination. Migration up/down/up/check and
+fake-provider authorization, isolation, revocation and interruption tests pass.
+Account-picker controls follow; live grant checks require Meta app setup.
