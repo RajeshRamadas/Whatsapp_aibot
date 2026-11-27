@@ -32,9 +32,10 @@ it('limits Meta attachments to supported files and omits captions', async () => 
   expect(screen.queryByLabelText('Attachment caption (optional)')).toBeNull();
   const input = screen.getByLabelText('Image, PDF, audio or video');
   expect(input.getAttribute('accept')).toContain('audio/wav');
+  expect(input.getAttribute('accept')).toContain('image/gif');
   fireEvent.change(input, { target: { files: [new File(['text'], 'file.txt', { type: 'text/plain' })] } });
   fireEvent.submit(screen.getByRole('form', { name: 'Send an attachment' }));
-  expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Choose a JPEG/PNG image, PDF, AAC/M4A/WAV audio or MP4 video file.');
+  expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Choose a JPEG, PNG or GIF image, PDF, AAC/M4A/WAV audio or MP4 video file.');
   expect(queueMedia).not.toHaveBeenCalled();
 });
 
@@ -104,4 +105,16 @@ it('plays ready videos privately and leaves failed videos unavailable', () => {
   expect(screen.getByLabelText('Video attachment').hasAttribute('autoplay')).toBe(false);
   expect(screen.getAllByRole('link')).toHaveLength(1);
   expect(screen.getByText('Attachment is unavailable or expired.')).toBeTruthy();
+});
+
+it('plays and stops an animated GIF on demand', () => {
+  render(createElement(MessageMedia, { conversationId: 'one', attachments: [
+    { id: 'gif', kind: 'image', status: 'ready', mime_type: 'image/gif', filename: 'reply.gif', size: 100 },
+  ] }));
+  expect(screen.queryByRole('img')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Play GIF' }));
+  expect(screen.getByRole('img').getAttribute('src')).toBe('/private/attachment');
+  fireEvent.click(screen.getByRole('button', { name: 'Stop GIF' }));
+  expect(screen.queryByRole('img')).toBeNull();
+  expect(screen.getByRole('link').getAttribute('href')).toBe('/private/attachment');
 });

@@ -69,10 +69,12 @@ async def download(url, kind):
                     data.extend(chunk)
                     if len(data) > limit:
                         raise ValueError('Attachment exceeds the size limit')
-                mime = media.validate(bytes(data), response.headers.get('content-type', ''), kind)
-                if kind == 'video' and await asyncio.to_thread(audio_validation.validate, bytes(data), mime) != 'video':
+                data = bytes(data)
+                mime = await asyncio.to_thread(media.validate, data, response.headers.get('content-type', ''), kind,
+                                               allow_gif=True)
+                if kind == 'video' and await asyncio.to_thread(audio_validation.validate, data, mime) != 'video':
                     raise ValueError('Attachment must contain a supported video track')
-                return bytes(data), mime
+                return data, mime
 
 
 def bound(db, event):

@@ -17,6 +17,7 @@ from app.services.meta_dm import process_one
 from tests import test_media
 from tests import test_meta_audio_replies as audio_fixtures
 from tests import test_meta_video_replies as video_fixtures
+from tests.meta_gif_fixture import gif_bytes
 from tests.test_meta_dm import signed
 
 PDF = b'%PDF-1.7\nprivate Meta document'
@@ -278,12 +279,21 @@ def test_pinned_cdn_download_bounds(monkeypatch, scenario, kind):
 
 
 @pytest.mark.parametrize(('kind', 'mime', 'body'), [('image', 'image/png', b'\x89PNG\r\n\x1a\nfixture'),
+                                                   ('image', 'image/gif', gif_bytes()),
                                                    ('audio', 'audio/ogg', b'OggSfixture')])
 def test_image_and_audio_cdn_download(monkeypatch, kind, mime, body):
     monkeypatch.setattr(meta_media.web_fetch, 'resolve', lambda _: '8.8.8.8')
     monkeypatch.setattr(meta_media.httpx, 'AsyncHTTPTransport', lambda **kwargs: httpx.MockTransport(
         lambda request: httpx.Response(200, headers={'content-type': mime}, stream=httpx.ByteStream(body))))
     assert asyncio.run(meta_media.download(SOURCE, kind)) == (body, mime)
+
+
+@pytest.mark.parametrize('data', [b'GIF89a;', gif_bytes()[:-1], gif_bytes((1921, 1))])
+def test_gif_validation_rejects_malformed_or_oversized_frames(data):
+    with pytest.raises(ValueError):
+        media.validate(data, 'image/gif', 'image', allow_gif=True)
+    with pytest.raises(ValueError):
+        media.validate(gif_bytes(), 'image/gif', 'image')
 
 
 @pytest.mark.parametrize('case', ['valid', 'audio_only', 'fake', 'codec', 'mime', 'unavailable', 'timeout'])

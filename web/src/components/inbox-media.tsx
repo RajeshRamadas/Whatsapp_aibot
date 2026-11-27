@@ -4,16 +4,27 @@ import { useEffect, useRef, useState } from 'react';
 import { mediaUrl, queueMedia, type Attachment } from '@/api/media';
 
 const field = 'min-h-11 min-w-0 rounded border border-border bg-surface p-2';
-const metaTypes = ['image/jpeg', 'image/png', 'application/pdf', 'audio/aac', 'audio/mp4', 'audio/wav',
+const metaTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf', 'audio/aac', 'audio/mp4', 'audio/wav',
   'audio/x-m4a', 'audio/m4a', 'audio/x-wav', 'video/mp4'];
+
+function AttachmentImage({ url, gif }: { url: string; gif: boolean }) {
+  const copy = useCopy('media');
+  const [playing, setPlaying] = useState(false);
+  return <>
+    {gif && <button type="button" className={field} onClick={() => setPlaying(value => !value)}>
+      {playing ? copy.stopGif : copy.playGif}
+    </button>}
+    {/* eslint-disable-next-line @next/next/no-img-element */}
+    {(!gif || playing) && <img className="max-h-64 max-w-full rounded" src={url} alt={copy.image} />}
+  </>;
+}
 
 export function MessageMedia({ conversationId, attachments }: { conversationId: string; attachments: Attachment[] }) {
   const copy = useCopy('media');
   return <ul className="grid gap-3">{attachments.map(item => <li key={item.id} className="min-w-0 space-y-2">
     {item.status === 'ready' && item.mime_type ? <>
       {/* Authenticated URLs refresh their five-minute storage redirect on each request. */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      {item.kind === 'image' && <img className="max-h-64 max-w-full rounded" src={mediaUrl(conversationId, item)} alt={copy.image} />}
+      {item.kind === 'image' && <AttachmentImage url={mediaUrl(conversationId, item)} gif={item.mime_type === 'image/gif'} />}
       {item.kind === 'audio' && <audio className="w-full max-w-sm" controls preload="none" aria-label={copy.audio} src={mediaUrl(conversationId, item)} />}
       {item.kind === 'video' && <video className="max-h-64 w-full max-w-sm rounded" controls playsInline preload="none" aria-label={copy.video} src={mediaUrl(conversationId, item)} />}
       <a className="block break-words underline" href={mediaUrl(conversationId, item)} target="_blank" rel="noopener noreferrer">{copy.download}: {item.filename}</a>

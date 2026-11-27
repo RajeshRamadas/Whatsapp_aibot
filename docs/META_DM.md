@@ -382,3 +382,18 @@ The Facebook Login integration obtains long-lived Page tokens, which normally
 have no scheduled expiry. Revocation or expired authorization requires a new
 grant through Meta. The worker does not retain the user's temporary OAuth token.
 See [Meta's Page token documentation](https://developers.facebook.com/documentation/facebook-login/guides/access-tokens/get-long-lived#long-lived-page-token).
+
+## Private GIF attachments (T10.8q)
+
+Instagram and Messenger support incoming GIF image attachments and manual staff
+GIF replies. Existing private storage, attachment retention, staff handoff and
+the messaging window apply. In Inbox, use **Play GIF** and **Stop GIF** to
+control animation. Downloads require access to the conversation.
+
+GIFs are limited to the lower of 5 MiB or `MEDIA_MAX_BYTES`, a 1920×1920 canvas,
+120 frames, and 24 million decoded pixels across frames. Malformed or oversized
+incoming GIFs show an unavailable attachment. Uploads return a validation error.
+The worker downloads media from the pinned CDN URL in the signed event and sends replies
+with Meta's existing private multipart media request. No migration or new
+setting. Deploy compatible workers before API and web. Live GIF delivery still
+requires Meta test assets and permission verification.
