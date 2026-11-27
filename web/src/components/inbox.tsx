@@ -274,8 +274,8 @@ export function Inbox({ canAct }: { canAct: boolean }) {
           </form>}
           {tooLong && <p role="alert">{copy.metaTooLong}</p>}
           {isMeta && !active.can_reply_freely && <p role="status">{copy.metaWindow}</p>}
-          {canAct && active.channel === 'whatsapp' && active.can_reply_freely && active.status !== 'closed' &&
-            <InboxMedia key={selected} conversationId={selected} recipient={active.user} onQueued={() => refresh(value => value + 1)} />}
+          {canAct && (active.channel === 'whatsapp' || isMeta) && active.can_reply_freely && active.status !== 'closed' &&
+            <InboxMedia key={selected} meta={isMeta} conversationId={selected} recipient={active.user} onQueued={() => refresh(value => value + 1)} />}
           {canAct && active.channel === 'whatsapp' && !active.can_reply_freely && active.status !== 'closed' &&
             <InboxTemplatePicker key={selected} conversationId={selected}
               onQueued={() => refresh(value => value + 1)} />}

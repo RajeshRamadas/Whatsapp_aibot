@@ -9,9 +9,10 @@ from pydantic import BaseModel
 from sqlalchemy import select
 
 from ..config import settings
-from ..db import Message, Session, now, uid
-from ..services import media
+from ..db import Channel, Message, Session, now, uid
+from ..services import media, meta_outbound_media
 from ..services.events import publish_sync
+from ..services.meta_bot import cancel as cancel_meta_bot
 from ..services.storage import LocalStorage, storage
 from .inbox import can_reply, conversation
 from .principal import Principal, require_role
@@ -93,13 +94,21 @@ async def reply(conversation_id: UUID, file: UploadFile = File(...), caption: st
                     or previous.attachments[0].get('mime_type') != mime):
                 raise HTTPException(409, 'Idempotency key already used for another reply')
             return {'status': previous.delivery_status, 'message_id': previous.id}
-        if conv.channel != 'whatsapp' or conv.status == 'closed' or not can_reply(conv):
-            raise HTTPException(409, 'An open WhatsApp conversation within the 24-hour window is required')
-        from ..services.channels import whatsapp_channel
-        channel = whatsapp_channel(db, principal.tenant.id)
-        if not settings.whatsapp_enabled or not (settings.whatsapp_access_token or
-                                                  (channel and channel.credentials_enc)):
-            raise HTTPException(503, 'WhatsApp is not configured')
+        if conv.status == 'closed' or not can_reply(conv):
+            raise HTTPException(409, 'An open messaging conversation within the 24-hour window is required')
+        if conv.channel in ('instagram', 'messenger'):
+            if mime not in meta_outbound_media.MIMES or caption:
+                raise HTTPException(422, 'Meta supports JPEG/PNG images and PDF files; send text as a separate reply')
+            channel = db.scalar(select(Channel).where(Channel.id == conv.meta_channel_id,
+                Channel.tenant_id == principal.tenant.id, Channel.kind == conv.channel))
+            if not channel or not channel.credentials_enc:
+                raise HTTPException(503, 'This Meta messaging channel is not connected')
+        else:
+            from ..services.channels import whatsapp_channel
+            channel = whatsapp_channel(db, principal.tenant.id)
+            if not settings.whatsapp_enabled or not (settings.whatsapp_access_token or
+                                                      (channel and channel.credentials_enc)):
+                raise HTTPException(503, 'WhatsApp is not configured')
         identity = uid()
         message = Message(conversation_id=conv.id, role='agent', direction='outbound', kind=kind,
             author_user_id=author, content=caption, delivery_status='queued', reply_key=idempotency_key,
@@ -107,6 +116,8 @@ async def reply(conversation_id: UUID, file: UploadFile = File(...), caption: st
                 'mime_type': mime, 'size': len(data), 'sha256': digest, 'status': 'queued',
                 'key': media.key_for(principal.tenant.id, identity)}])
         db.add(message)
+        if conv.channel in ('instagram', 'messenger'):
+            cancel_meta_bot(db, conv)
         conv.handoff, conv.status, conv.last_message_at = True, 'agent', now()
         db.flush()
         result = {'status': 'queued', 'message_id': message.id}

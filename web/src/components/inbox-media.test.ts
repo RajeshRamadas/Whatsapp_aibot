@@ -25,3 +25,29 @@ it('renders expired and long voice-note states without a downloadable link', () 
   expect(screen.getByText('Voice notes over five minutes are sent to an agent without transcription.')).toBeTruthy();
   expect(screen.queryByRole('link')).toBeNull();
 });
+
+it('limits Meta attachments to supported files and omits captions', async () => {
+  vi.mocked(queueMedia).mockClear();
+  render(createElement(InboxMedia, { conversationId: 'one', recipient: 'customer', meta: true, onQueued: vi.fn() }));
+  expect(screen.queryByLabelText('Attachment caption (optional)')).toBeNull();
+  const input = screen.getByLabelText('Image or PDF');
+  expect(input.getAttribute('accept')).toBe('image/jpeg,image/png,application/pdf');
+  fireEvent.change(input, { target: { files: [new File(['text'], 'file.txt', { type: 'text/plain' })] } });
+  fireEvent.submit(screen.getByRole('form', { name: 'Send an attachment' }));
+  expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Choose a JPEG/PNG image or a PDF file.');
+  expect(queueMedia).not.toHaveBeenCalled();
+});
+
+it('confirms Meta recipient and sends a supported file with no caption', async () => {
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+  vi.mocked(queueMedia).mockResolvedValue({ status: 'queued', message_id: 1 });
+  const onQueued = vi.fn();
+  render(createElement(InboxMedia, { conversationId: 'one', recipient: 'customer', meta: true, onQueued }));
+  const file = new File(['%PDF-1.7'], 'file.pdf', { type: 'application/pdf' });
+  fireEvent.change(screen.getByLabelText('Image or PDF'), { target: { files: [file] } });
+  fireEvent.submit(screen.getByRole('form', { name: 'Send an attachment' }));
+  expect((await screen.findByRole('status')).textContent).toContain('Attachment queued.');
+  expect(confirm).toHaveBeenCalledWith(expect.stringContaining('file.pdf\ncustomer'));
+  expect(queueMedia).toHaveBeenCalledWith('one', file, '', expect.any(String));
+  expect(onQueued).toHaveBeenCalledOnce();
+});

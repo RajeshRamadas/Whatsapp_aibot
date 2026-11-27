@@ -115,6 +115,7 @@ jobs:
             docs/screenshots/t10-8-meta-receipts.png
             docs/screenshots/t10-8-meta-bot.png
             docs/screenshots/t10-8-meta-media.png
+            docs/screenshots/t10-8-meta-agent-media.png
             web/test-results/
           retention-days: 7
 

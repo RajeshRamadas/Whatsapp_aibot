@@ -1,5 +1,7 @@
 {
   "title": "Send an attachment", "file": "Image or document", "caption": "Attachment caption (optional)",
+  "metaFile": "Image or PDF", "metaType": "Choose a JPEG/PNG image or a PDF file.",
+  "metaHelp": "JPEG/PNG images: up to 5 MiB. PDF files: up to 16 MiB. Workspace limits may be lower. Send any text as a separate reply. Confirming the send hands the conversation to staff.",
   "help": "Images: JPEG/PNG, up to 5 MiB. Documents: PDF, text or Office files, up to 16 MiB. Workspace limits may be lower.",
   "send": "Send attachment", "confirm": "Send this attachment to the customer?", "queued": "Attachment queued. Delivery status appears in the conversation.",
   "uncertain": "Delivery could not be confirmed. Check the conversation before sending another copy.",

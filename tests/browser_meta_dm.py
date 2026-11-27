@@ -14,7 +14,7 @@ from app.api import meta_dm_connections
 from app.config import settings
 from app.db import now, uid
 from app.main import app
-from app.services import meta_bot, meta_dm, meta_dm_replies, meta_media, meta_oauth
+from app.services import meta_bot, meta_dm, meta_dm_replies, meta_media, meta_oauth, meta_outbound_media
 from app.services.meta_signup import MetaSignupError
 
 
@@ -41,6 +41,7 @@ meta_oauth.MetaSignup = Graph
 settings.meta_dm_oauth_redirect_uri = 'http://localhost:3000/api/backend/meta-dm/oauth/callback'
 settings.whatsapp_app_id = settings.whatsapp_app_id or '123'
 meta_dm_replies.send = lambda *args: 'meta-sent-' + uid()
+meta_outbound_media.send = lambda *args: 'meta-file-' + uid()
 
 
 async def download_fixture(url, kind):
@@ -91,6 +92,8 @@ async def incoming(body: dict):
 async def reply_worker(request, call_next):
     response = await call_next(request)
     if request.method == 'POST' and request.url.path.endswith('/reply') and response.status_code == 200:
+        await asyncio.to_thread(meta_dm_replies.dispatch_one)
+    if request.method == 'POST' and request.url.path.endswith('/media') and response.status_code == 202:
         await asyncio.to_thread(meta_dm_replies.dispatch_one)
     if '/api/v1/meta-dm/oauth/' in request.url.path and response.status_code < 400:
         for _ in range(3):
