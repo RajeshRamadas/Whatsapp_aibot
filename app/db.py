@@ -242,6 +242,11 @@ class EvalCase(Base):
 class MetaDmEvent(Base):
     """Durable, deduplicated Instagram/Messenger inbound messages."""
     __tablename__ = 'meta_dm_events'
+    __table_args__ = (
+        Index('ix_meta_dm_events_work', 'status', 'received_at', 'id'),
+        Index('ix_meta_dm_events_media_expiry', 'received_at',
+              postgresql_where=text("attachments @? '$[*].source_enc'")),
+    )
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
     tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'), index=True)
     channel: Mapped[str] = mapped_column(String(20))
@@ -250,6 +255,8 @@ class MetaDmEvent(Base):
     provider_message_id: Mapped[str] = mapped_column(String(255), unique=True)
     recipient_id: Mapped[str] = mapped_column(String(64))
     sender_id: Mapped[str] = mapped_column(String(64))
+    attachments: Mapped[list] = mapped_column(JSONB, default=list, server_default=text("'[]'::jsonb"))
+    media_claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     text: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(20), default='queued')
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)

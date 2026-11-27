@@ -1277,7 +1277,7 @@ disconnect cancels queued work. Ordered workers recheck eligibility and close da
 sessions before HTTP. Unconfirmed sends are never retried automatically. Apply
 migration `0053_meta_dm_binding`; old unbound Meta history stays read-only until a
 fresh signed inbound message creates a bound conversation. See [Meta DM setup and
-limits](docs/META_DM.md). Automatic token refresh, bot replies, media and live
+limits](docs/META_DM.md). Automatic token refresh, outbound media and live
 permission verification remain subsequent work.
 
 Workspace owners/admins can manage Instagram and Messenger under **Messaging
@@ -1323,3 +1323,10 @@ business hours and the reply window.
 Owners/admins can enable or disable bot replies in **Messaging accounts** in
 English/Hindi. Inbox offers **Hand back to bot** only when that Meta account is
 enabled, connected and within its messaging window.
+
+Incoming Meta images, audio and documents now appear in Inbox through the same
+authenticated private downloads as WhatsApp media. Apply migration 0057 and restart
+API/workers. Signed CDN URLs are encrypted until download completes; the worker
+enforces public Meta HTTPS destinations, size/type limits and account binding.
+Attachments hand off to staff without model interpretation. Existing media retention
+settings apply; expired/unsupported files remain visible as unavailable attachments.

@@ -1,7 +1,7 @@
 {
   "title": "Instagram and Messenger",
   "intro": "Connect an account and reply to its customers from Inbox.",
-  "help": "Staff can send text replies for 24 hours after a customer message. Bot text replies are optional per account. Attachments are not available yet.",
+  "help": "Staff can send text replies for 24 hours after a customer message. Bot text replies are optional per account. Incoming attachments appear in Inbox and go to staff for review.",
   "refresh": "Refresh channels",
   "loading": "Loading channels…",
   "loadError": "Could not load channels. Refresh to try again.",

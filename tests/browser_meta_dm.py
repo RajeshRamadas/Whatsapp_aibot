@@ -4,15 +4,17 @@ import hashlib
 import hmac
 import json
 from datetime import timedelta
+from io import BytesIO
 
 import httpx
 from fastapi.responses import JSONResponse
+from PIL import Image, ImageDraw
 
 from app.api import meta_dm_connections
 from app.config import settings
 from app.db import now, uid
 from app.main import app
-from app.services import meta_bot, meta_dm, meta_dm_replies, meta_oauth
+from app.services import meta_bot, meta_dm, meta_dm_replies, meta_media, meta_oauth
 from app.services.meta_signup import MetaSignupError
 
 
@@ -41,6 +43,24 @@ settings.whatsapp_app_id = settings.whatsapp_app_id or '123'
 meta_dm_replies.send = lambda *args: 'meta-sent-' + uid()
 
 
+async def download_fixture(url, kind):
+    if 'unavailable' in url:
+        raise ValueError('Synthetic expired attachment')
+    if kind == 'image':
+        image = Image.new('RGB', (240, 120), '#243c5a')
+        ImageDraw.Draw(image).text((22, 50), 'Sample customer image', fill='white')
+        output = BytesIO()
+        image.save(output, format='PNG')
+        return output.getvalue(), 'image/png'
+    if kind == 'audio':
+        from tests.browser_app import browser_media
+        return browser_media()
+    return b'%PDF-1.7\nPrivate Meta browser fixture', 'application/pdf'
+
+
+meta_media.download = download_fixture
+
+
 @app.post('/api/v1/_test/meta-dm/inbound', include_in_schema=False)
 async def incoming(body: dict):
     old = bool(body.get('old'))
@@ -48,13 +68,16 @@ async def incoming(body: dict):
         'sender': {'id': 'meta-expired-customer' if old else 'meta-test-customer'},
         'recipient': {'id': body['external_id']},
         'timestamp': int((now() - timedelta(hours=25 if old else 0)).timestamp() * 1000),
-        'message': {'mid': uid(), 'text': body.get('text', 'Could you help with my order?')}}]}]}
+        'message': {'mid': uid(), 'text': body.get('text', 'Could you help with my order?'),
+                    **({'attachments': body['attachments']} if 'attachments' in body else {})}}]}]}
     raw = json.dumps(data).encode()
     signature = hmac.new(settings.whatsapp_app_secret.encode(), raw, hashlib.sha256).hexdigest()
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
         response = await client.post('/webhooks/meta-dm', content=raw,
                                      headers={'x-hub-signature-256': 'sha256=' + signature})
     while await asyncio.to_thread(meta_dm.process_one):
+        pass
+    while await asyncio.to_thread(meta_media.process_one):
         pass
     for _ in range(10):
         if not await asyncio.to_thread(meta_bot.process_one):

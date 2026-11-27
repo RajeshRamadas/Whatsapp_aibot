@@ -58,7 +58,8 @@ def disconnect(channel_id: str, principal: Principal = Depends(admin)):
             Message.role.in_(('agent', 'assistant')), Message.delivery_status == 'queued').values(
                 delivery_status='failed', error='Meta channel disconnected before delivery'))
         db.execute(update(MetaDmEvent).where(MetaDmEvent.tenant_id == principal.tenant.id,
-            MetaDmEvent.channel_id == channel.id, MetaDmEvent.status == 'queued').values(status='ignored'))
+            MetaDmEvent.channel_id == channel.id, MetaDmEvent.status == 'queued')
+            .values(status='ignored', attachments=[]))
         db.delete(channel)
     for identity in conversations:
         publish_sync(principal.tenant.id, 'message.updated', {'conversation_id': identity})

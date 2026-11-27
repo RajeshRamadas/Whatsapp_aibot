@@ -27,10 +27,10 @@ test('Meta bot: explicit opt-in, grounded replies, human ownership, hand-back an
   await expect(messages.getByText(/Refunds accepted within 30 days/)).toHaveCount(1);
   await expect(messages.getByText('Sent', { exact: true })).toHaveCount(1);
   await page.getByRole('button', { name: 'Take over', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Hand back to bot', exact: true })).toBeVisible();
   expect((await incoming('Could you explain refunds?')).ok()).toBeTruthy();
   await expect(messages.getByText('Could you explain refunds?', { exact: true })).toBeVisible();
   await expect(messages.getByText(/Refunds accepted within 30 days/)).toHaveCount(1);
-  await expect(page.getByRole('button', { name: 'Hand back to bot', exact: true })).toBeVisible();
   await page.setViewportSize({ width: 1280, height: 600 });
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await messages.focus(); await expect(messages).toBeFocused();
@@ -41,6 +41,7 @@ test('Meta bot: explicit opt-in, grounded replies, human ownership, hand-back an
   await page.setViewportSize({ width: 1280, height: 1000 }); await page.mouse.move(0, 0);
   await page.screenshot({ path: '../docs/screenshots/t10-8-meta-bot.png', fullPage: true });
   await page.getByRole('button', { name: 'Hand back to bot', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Hand back to bot', exact: true })).toHaveCount(0);
   expect((await incoming('Please confirm the refund policy.')).ok()).toBeTruthy();
   await expect(messages.getByText(/Refunds accepted within 30 days/)).toHaveCount(2);
   expect((await incoming('agent')).ok()).toBeTruthy();

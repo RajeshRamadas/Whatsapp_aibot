@@ -730,9 +730,23 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 | T10.5 | Grounding check | BOT-5 | T5.1 |
 | T10.6 | Shopify and WooCommerce | EC-1 to EC-3 | T10.3 |
 | T10.7 | Drive and Notion sync | KN-6, SYNC-1 to SYNC-3 | T2.2 |
-| T10.8 | Instagram and Messenger (inbound, verified connections, guarded agent replies, channel UI, OAuth account picker, delivery/read receipts and opt-in knowledge bot delivered; refresh and media support pending) | CH-4, META-1 | T6.1 |
+| T10.8 | Instagram and Messenger (verified connections, text replies, OAuth picker, receipts, opt-in knowledge bot and private inbound attachments delivered; refresh and outbound media pending) | CH-4, META-1 | T6.1 |
 | T10.9 | White-label and agency billing; impersonation | ADM-2, ADM-3 | T7.2 |
 | T10.10 | Lead follow-ups | LEAD-4 | T9.2 |
+
+#### T10.8k Private incoming Meta attachments
+- **Delivers:** CH-4, META-1 (inbound media slice)
+- **Depends on:** T10.8j (merged #128–#130), T9.4a (private storage/downloads)
+- **Size:** M
+- **Steps:** durably snapshot bounded signed attachment events with encrypted URLs;
+  publish private Inbox placeholders; download supported images/audio/documents outside
+  SQL sessions with pinned public Meta CDN HTTPS and size/type limits; preserve staff
+  handoff, account isolation and retention; cover the existing English/Hindi Inbox flow.
+- **Done when:** fake-provider tests cover signatures, replay, private download access,
+  hostile URLs, limits, disconnect/suspension, stale claims and expiry; migration passes
+  up/down/check; browser acceptance covers both channels, accessibility and 320 px.
+- **Notes:** No automatic transcription/image interpretation. Outbound Meta media and
+  token refresh remain separate T10.8 slices; live Meta validation requires test assets.
 
 ### Dependency overview
 
@@ -970,3 +984,14 @@ text per account, explain the workspace live switch/quota and retain manual setu
 Inbox offers hand-back for eligible enabled Meta accounts. Component tests cover
 confirmed mode changes and in-flight-send recovery; browser acceptance covers
 opt-in, grounded replies, staff ownership, hand-back, disablement and viewers.
+
+T10.8k: migration 0057 adds encrypted, bounded incoming attachment snapshots and
+durable download claims. Public Meta CDN downloads use pinned DNS/TLS, MIME/signature
+and stream limits without SQL sessions. The shared Inbox shows private images, audio
+and documents; unsupported/expired files remain visible. Attachments hand off to staff,
+and transcription stays unchanged. Account/suspension/retention fences and interrupted
+claims are covered by fake-provider tests. T10.8 remains open for outbound media,
+automatic token refresh and live Meta verification.
+Migration 0057 passed up/down/up/check. English/Hindi browser acceptance covers
+both channels, actual audio playback, private document downloads, staff handoff,
+unavailable files, axe and 320 px layout. Frontend checks pass with 72 unit tests.
