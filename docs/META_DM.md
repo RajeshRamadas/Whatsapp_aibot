@@ -263,7 +263,7 @@ Other outbound formats and automatic token refresh remain future slices. See
 
 ## Agent audio replies (T10.8m)
 
-The **Image, PDF or audio** picker now accepts AAC, MP4/M4A and WAV recordings for
+The **Image, PDF, audio or video** picker accepts AAC, MP4/M4A and WAV recordings for
 Instagram/Messenger. Selected audio has a local playback preview; it is uploaded
 only after staff confirm the filename and recipient. Preview URLs are released
 when the selection changes, sends successfully or the form closes. Captions remain
@@ -293,7 +293,8 @@ container image). Missing validation tools return a setup error without queueing
 Validation uses bounded local processes, private temporary files, forced demuxers
 and disabled external MOV references/network protocols. Files must have an audio
 track, no video track, and a decodable opening frame. This also allows audio-only
-MP4 files reported by browsers as `video/mp4`; video clips are rejected.
+MP4 files reported by browsers as `video/mp4`; clips with video follow the video
+reply rules below.
 
 Claims recheck in-flight/earlier replies using a fresh statement after acquiring
 conversation/tenant locks. Early Messenger reads remain pending while a reply is
@@ -306,7 +307,8 @@ The **Image, PDF, audio or video** picker accepts H.264 MP4 clips with optional 
 audio, up to 1920×1920 and 16 MiB (or the lower `MEDIA_MAX_BYTES` limit). The local
 preview plays before upload; staff confirm the filename and recipient to queue.
 Selected MP4 files containing only audio keep the existing audio send behaviour.
-Other video containers/codecs, captions and empty or undecodable tracks are rejected.
+Send text separately; other video containers/codecs and empty or undecodable tracks
+are rejected.
 
 Video uses the same multipart endpoint, private storage, verified Page token,
 24-hour window, staff takeover, FIFO claim/staging fences, single-attempt send,
