@@ -62,10 +62,11 @@ def download(conversation_id: UUID, attachment_id: UUID,
         path = store._path(item['key'])
         if not path.is_file():
             raise HTTPException(404, 'Attachment is unavailable or expired')
+        disposition = 'inline' if item['kind'] in ('image', 'audio', 'video') else 'attachment'
         return FileResponse(path, media_type=item['mime_type'], filename=item['filename'], headers=headers,
-                            content_disposition_type='inline' if item['kind'] in ('image', 'audio') else 'attachment')
+                            content_disposition_type=disposition)
     return RedirectResponse(store.presign_get(item['key'], content_type=item['mime_type'], filename=item['filename'],
-                            inline=item['kind'] in ('image', 'audio')), status_code=302, headers=headers)
+                            inline=item['kind'] in ('image', 'audio', 'video')), status_code=302, headers=headers)
 
 
 @router.post('/api/v1/inbox/conversations/{conversation_id}/media', response_model=QueuedMedia, status_code=202)
@@ -73,16 +74,18 @@ async def reply(conversation_id: UUID, file: UploadFile = File(...), caption: st
                 idempotency_key: str = Header(..., min_length=1, max_length=128),
                 principal: Principal = Depends(require_role('agent'))):
     mime = (file.content_type or '').split(';')[0].lower()
-    mime = {'audio/x-m4a': 'audio/mp4', 'audio/m4a': 'audio/mp4', 'video/mp4': 'audio/mp4',
+    mime = {'audio/x-m4a': 'audio/mp4', 'audio/m4a': 'audio/mp4',
             'audio/x-wav': 'audio/wav'}.get(mime, mime)
-    kind = 'image' if mime.startswith('image/') else 'audio' if mime.startswith('audio/') else 'document'
+    kind = next((kind for kind in ('image', 'audio', 'video') if mime.startswith(kind + '/')), 'document')
     data = await file.read(settings.media_max_bytes + 1)
     if len(data) > settings.media_max_bytes:
         raise HTTPException(413, 'Attachment exceeds the size limit')
     try:
         media.validate(data, mime, kind)
-        if kind == 'audio':
-            await run_in_threadpool(audio_validation.validate, data, mime)
+        if kind in ('audio', 'video'):
+            kind = await run_in_threadpool(audio_validation.validate, data, mime)
+            if mime == 'video/mp4' and kind == 'audio':
+                mime = 'audio/mp4'
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from None
     except audio_validation.Unavailable as exc:
@@ -111,8 +114,8 @@ async def reply(conversation_id: UUID, file: UploadFile = File(...), caption: st
             if not channel or not channel.credentials_enc:
                 raise HTTPException(503, 'This Meta messaging channel is not connected')
         else:
-            if kind == 'audio':
-                raise HTTPException(422, 'Audio uploads are supported for Instagram and Messenger only')
+            if kind in ('audio', 'video'):
+                raise HTTPException(422, 'Audio/video uploads are supported for Instagram and Messenger only')
             from ..services.channels import whatsapp_channel
             channel = whatsapp_channel(db, principal.tenant.id)
             if not settings.whatsapp_enabled or not (settings.whatsapp_access_token or

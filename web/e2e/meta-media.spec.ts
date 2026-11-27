@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { readFileSync } from 'node:fs';
 
 test('Meta attachments stay private, appear in Inbox and hand off to staff', async ({ page, playwright }) => {
   test.setTimeout(90000); page.setDefaultTimeout(15000);
@@ -46,10 +47,10 @@ test('Meta attachments stay private, appear in Inbox and hand off to staff', asy
     expect(await messages.innerHTML()).not.toContain('signature=private-fixture');
     await expect(page.getByRole('button', { name: 'Take over', exact: true })).toBeVisible();
     await expect(page.getByLabel('Attachment caption (optional)', { exact: true })).toHaveCount(0);
-    const upload = page.getByLabel('Image, PDF or audio', { exact: true });
+    const upload = page.getByLabel('Image, PDF, audio or video', { exact: true });
     await upload.setInputFiles({ name: 'unsupported.txt', mimeType: 'text/plain', buffer: Buffer.from('plain text') });
     await page.getByRole('button', { name: 'Send attachment', exact: true }).click();
-    await expect(page.getByText('Choose a JPEG/PNG image, PDF, or AAC/M4A/WAV audio file.', { exact: true })).toBeVisible();
+    await expect(page.getByText('Choose a JPEG/PNG image, PDF, AAC/M4A/WAV audio or MP4 video file.', { exact: true })).toBeVisible();
     const imageBytes = await (await page.request.get((await links.filter({ hasText: 'attachment.png' }).getAttribute('href'))!)).body();
     for (const [name, mimeType, buffer] of [['requested.pdf', 'application/pdf', Buffer.from('%PDF-1.7\nRequested file')],
       ['agent.png', 'image/png', imageBytes]] as const) {
@@ -76,12 +77,29 @@ test('Meta attachments stay private, appear in Inbox and hand off to staff', asy
     expect((await (await page.request.get((await sentAudio.getAttribute('href'))!)).body()).subarray(0, 4).toString()).toBe('RIFF');
     await expect(messages.getByLabel('Voice note', { exact: true })).toHaveCount(2);
     await expect(messages.getByRole('heading', { name: 'Voice transcript', exact: true })).toHaveCount(0);
-    await expect(messages.getByText('Sent', { exact: true })).toHaveCount(4);
+    await upload.setInputFiles({ name: 'reply.mp4', mimeType: 'video/mp4', buffer: readFileSync('e2e/fixtures/meta-video.mp4') });
+    const videoPreview = page.getByLabel('Preview video before sending', { exact: true });
+    expect(await videoPreview.getAttribute('src')).toMatch(/^blob:/);
+    const playVideo = (video: HTMLVideoElement) => video.play().then(() => {
+      video.pause(); return [video.duration, video.videoWidth, video.videoHeight];
+    });
+    expect(await videoPreview.evaluate(playVideo)).toEqual([1, 320, 180]);
+    page.once('dialog', dialog => { expect(dialog.message()).toContain('reply.mp4'); expect(dialog.message()).toContain('meta-test-customer'); return dialog.accept(); });
+    await page.getByRole('button', { name: 'Send attachment', exact: true }).click();
+    await expect(videoPreview).toHaveCount(0);
+    const videoLink = messages.getByRole('link', { name: 'Download attachment: reply.mp4', exact: true });
+    await expect(videoLink).toBeVisible();
+    const video = videoLink.locator('..').getByLabel('Video attachment', { exact: true });
+    expect(await video.evaluate(playVideo)).toEqual([1, 320, 180]);
+    const videoDownload = await page.request.get((await videoLink.getAttribute('href'))!);
+    expect(videoDownload.headers()['content-type']).toBe('video/mp4');
+    expect((await videoDownload.body()).subarray(4, 8).toString()).toBe('ftyp');
+    await expect(messages.getByText('Sent', { exact: true })).toHaveCount(5);
     expect((await page.request.post('/api/backend/_test/meta-dm/receipt', { data: { kind, external_id: identity, status: 'read' } })).ok()).toBeTruthy();
-    await expect(messages.getByText('Read', { exact: true })).toHaveCount(kind === 'instagram' ? 1 : 4);
+    await expect(messages.getByText('Read', { exact: true })).toHaveCount(kind === 'instagram' ? 1 : 5);
     await page.getByRole('button', { name: 'हिन्दी', exact: true }).click();
     await expect(page.getByText('अटैचमेंट उपलब्ध नहीं है या इसकी अवधि खत्म हो गई है।', { exact: true })).toBeVisible();
-    await expect(page.getByLabel('चित्र, PDF या ऑडियो', { exact: true })).toBeVisible();
+    await expect(page.getByLabel('चित्र, PDF, ऑडियो या वीडियो', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'English', exact: true }).click();
     await expect(messages).toBeVisible();
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
@@ -90,7 +108,7 @@ test('Meta attachments stay private, appear in Inbox and hand off to staff', asy
     await page.setViewportSize({ width: 1280, height: 1000 });
     if (kind === 'instagram') {
       await messages.evaluate(node => { node.scrollTop = node.scrollHeight; });
-      await page.screenshot({ path: '../docs/screenshots/t10-8-meta-agent-audio.png', fullPage: true });
+      await page.screenshot({ path: '../docs/screenshots/t10-8-meta-agent-video.png', fullPage: true });
     }
     const anonymous = await playwright.request.newContext({ baseURL: 'http://localhost:3000' });
     expect((await anonymous.get(url)).status()).toBe(401); await anonymous.dispose();

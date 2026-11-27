@@ -730,7 +730,7 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 | T10.5 | Grounding check | BOT-5 | T5.1 |
 | T10.6 | Shopify and WooCommerce | EC-1 to EC-3 | T10.3 |
 | T10.7 | Drive and Notion sync | KN-6, SYNC-1 to SYNC-3 | T2.2 |
-| T10.8 | Instagram and Messenger (verified connections, text replies, OAuth picker, receipts, knowledge bot, inbound attachments and agent image/PDF/audio replies delivered; refresh and other outbound formats pending) | CH-4, META-1 | T6.1 |
+| T10.8 | Instagram and Messenger (verified connections, text replies, OAuth picker, receipts, knowledge bot, inbound attachments and agent image/PDF/audio/video replies delivered; refresh and other formats pending) | CH-4, META-1 | T6.1 |
 | T10.9 | White-label and agency billing; impersonation | ADM-2, ADM-3 | T7.2 |
 | T10.10 | Lead follow-ups | LEAD-4 | T9.2 |
 
@@ -773,6 +773,20 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
   acceptance covers preview/playback, both channels, Hindi, axe and 320 px layout.
 - **Notes:** No migration or new setting. Microphone recording, speech-to-text,
   WhatsApp audio sending, other outbound formats and token refresh stay outside this slice.
+
+#### T10.8n Manual agent MP4 video replies for Meta
+- **Delivers:** CH-4, META-1 (manual outbound video slice)
+- **Depends on:** T10.8m (merged #133)
+- **Size:** S
+- **Steps:** support H.264 MP4 clips with optional AAC audio in the private sender;
+  validate tracks and opening frames with bounded local decoders; add English/Hindi
+  local preview and authenticated playback; preserve audio-only MP4 normalization.
+- **Done when:** fake-provider tests cover both channels, auth/isolation/validation,
+  private range downloads, receipts, retention, staging guards and unknown sends;
+  browser acceptance covers preview/playback, Hindi, axe and 320 px layout.
+- **Notes:** No migration, endpoint or new setting. Workers deploy first; incoming
+  video, WhatsApp video sending, automatic captions/transcription and token refresh
+  remain outside this slice. Live delivery needs configured Meta test assets.
 
 ### Dependency overview
 
@@ -1040,3 +1054,11 @@ transcription. T10.8 remains open for token refresh, other formats and live chec
 Review hardening adds bounded local audio-track/frame validation, audio-only
 `video/mp4` normalization, fresh claim checks under conversation/tenant locks and
 pending early Messenger reads. Roll out compatible workers before API/web controls.
+
+T10.8n: staff can preview and send H.264 MP4 clips (optional AAC audio) from the
+Meta Inbox. Video remains private and uses the shared ordered sender, receipt and
+retention paths; authenticated playback supports byte ranges. Validation bounds
+size, dimensions, decoder time/memory/CPU, tracks and opening frames. Audio-only
+MP4 remains an audio reply. No migration or new setting; compatible workers roll
+out before API/web. Transcription stays disabled. Incoming video, token refresh,
+other formats and real Meta permission/delivery checks remain future work.
