@@ -730,7 +730,7 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 | T10.5 | Grounding check | BOT-5 | T5.1 |
 | T10.6 | Shopify and WooCommerce | EC-1 to EC-3 | T10.3 |
 | T10.7 | Drive and Notion sync | KN-6, SYNC-1 to SYNC-3 | T2.2 |
-| T10.8 | Instagram and Messenger (verified connections, text replies, OAuth picker, receipts, opt-in knowledge bot and private inbound attachments delivered; refresh and outbound media pending) | CH-4, META-1 | T6.1 |
+| T10.8 | Instagram and Messenger (verified connections, text replies, OAuth picker, receipts, knowledge bot, inbound attachments and agent image/PDF replies delivered; refresh and other outbound formats pending) | CH-4, META-1 | T6.1 |
 | T10.9 | White-label and agency billing; impersonation | ADM-2, ADM-3 | T7.2 |
 | T10.10 | Lead follow-ups | LEAD-4 | T9.2 |
 
@@ -747,6 +747,19 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
   up/down/check; browser acceptance covers both channels, accessibility and 320 px.
 - **Notes:** No automatic transcription/image interpretation. Outbound Meta media and
   token refresh remain separate T10.8 slices; live Meta validation requires test assets.
+
+#### T10.8l Agent images and PDF replies for Meta
+- **Delivers:** CH-4, META-1 (outbound image/PDF slice)
+- **Depends on:** T10.8k (merged #131), T10.8i receipts
+- **Size:** M
+- **Steps:** extend the scoped multipart media API and English/Hindi Inbox form;
+  upload JPEG/PNG/PDF bytes directly with verified Page tokens; share ordered text
+  dispatch, recheck eligibility after staging, clear temporary bytes and apply receipts.
+- **Done when:** endpoint permission/isolation/validation and fake-provider tests cover
+  idempotency, FIFO, private access, ownership/window/disconnect guards, uncertain
+  sends, stale claims and receipts; browser flow covers both channels, Hindi, axe and 320 px.
+- **Notes:** No migration. Text is a separate reply. Other media formats and automatic
+  refresh remain later slices; live delivery requires Meta test assets/permissions.
 
 ### Dependency overview
 
@@ -995,3 +1008,11 @@ automatic token refresh and live Meta verification.
 Migration 0057 passed up/down/up/check. English/Hindi browser acceptance covers
 both channels, actual audio playback, private document downloads, staff handoff,
 unavailable files, axe and 320 px layout. Frontend checks pass with 72 unit tests.
+
+T10.8l: staff can queue JPEG/PNG images and PDF replies from the English/Hindi
+Meta Inbox with explicit filename/recipient confirmation. Private staging and one
+multipart provider request share FIFO with text and recheck current eligibility
+after storage I/O. Unknown sends never replay; temporary bytes clear on terminal
+or stale outcomes. Delivery/read receipts cover files as well as text. No migration
+or new setting. T10.8 remains open for automatic refresh, other outbound formats
+and live Meta validation; transcription remains unchanged.

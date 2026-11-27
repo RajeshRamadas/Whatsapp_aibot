@@ -45,16 +45,37 @@ test('Meta attachments stay private, appear in Inbox and hand off to staff', asy
     expect(download.headers()['cache-control']).toContain('no-store');
     expect(await messages.innerHTML()).not.toContain('signature=private-fixture');
     await expect(page.getByRole('button', { name: 'Take over', exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Send attachment', exact: true })).toHaveCount(0);
+    await expect(page.getByLabel('Attachment caption (optional)', { exact: true })).toHaveCount(0);
+    const upload = page.getByLabel('Image or PDF', { exact: true });
+    await upload.setInputFiles({ name: 'unsupported.txt', mimeType: 'text/plain', buffer: Buffer.from('plain text') });
+    await page.getByRole('button', { name: 'Send attachment', exact: true }).click();
+    await expect(page.getByText('Choose a JPEG/PNG image or a PDF file.', { exact: true })).toBeVisible();
+    const imageBytes = await (await page.request.get((await links.filter({ hasText: 'attachment.png' }).getAttribute('href'))!)).body();
+    for (const [name, mimeType, buffer] of [['requested.pdf', 'application/pdf', Buffer.from('%PDF-1.7\nRequested file')],
+      ['agent.png', 'image/png', imageBytes]] as const) {
+      await upload.setInputFiles({ name, mimeType, buffer });
+      page.once('dialog', dialog => { expect(dialog.message()).toContain(name); expect(dialog.message()).toContain('meta-test-customer'); return dialog.accept(); });
+      await page.getByRole('button', { name: 'Send attachment', exact: true }).click();
+      const saved = messages.getByRole('link', { name: 'Download attachment: ' + name, exact: true });
+      await expect(saved).toBeVisible();
+      expect((await page.request.get((await saved.getAttribute('href'))!)).ok()).toBeTruthy();
+    }
+    await expect(messages.getByText('Sent', { exact: true })).toHaveCount(3);
+    expect((await page.request.post('/api/backend/_test/meta-dm/receipt', { data: { kind, external_id: identity, status: 'read' } })).ok()).toBeTruthy();
+    await expect(messages.getByText('Read', { exact: true })).toHaveCount(kind === 'instagram' ? 1 : 3);
     await page.getByRole('button', { name: 'हिन्दी', exact: true }).click();
     await expect(page.getByText('अटैचमेंट उपलब्ध नहीं है या इसकी अवधि खत्म हो गई है।', { exact: true })).toBeVisible();
+    await expect(page.getByLabel('चित्र या PDF', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'English', exact: true }).click();
     await expect(messages).toBeVisible();
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
     await page.setViewportSize({ width: 320, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.setViewportSize({ width: 1280, height: 1000 });
-    if (kind === 'instagram') await page.screenshot({ path: '../docs/screenshots/t10-8-meta-media.png', fullPage: true });
+    if (kind === 'instagram') {
+      await messages.evaluate(node => { node.scrollTop = node.scrollHeight; });
+      await page.screenshot({ path: '../docs/screenshots/t10-8-meta-agent-media.png', fullPage: true });
+    }
     const anonymous = await playwright.request.newContext({ baseURL: 'http://localhost:3000' });
     expect((await anonymous.get(url)).status()).toBe(401); await anonymous.dispose();
   }

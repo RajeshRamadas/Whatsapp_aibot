@@ -5,6 +5,7 @@ from sqlalchemy import exists, select, update
 from sqlalchemy.orm import aliased
 
 from ..db import Channel, Conversation, Message, Session, Tenant, now
+from . import meta_outbound_media
 from .bot_policy import within_hours
 from .crypto import decrypt
 from .events import publish_sync
@@ -41,7 +42,7 @@ def dispatch_one() -> bool:
         row = db.execute(select(Message, Conversation, Tenant)
             .join(Conversation, Conversation.id == Message.conversation_id)
             .join(Tenant, Tenant.id == Conversation.tenant_id)
-            .where(Message.role.in_(('agent', 'assistant')), Message.kind == 'text',
+            .where(Message.role.in_(('agent', 'assistant')), Message.kind.in_(('text', 'image', 'document')),
                    Message.delivery_status == 'queued',
                    Conversation.channel.in_(('instagram', 'messenger')),
                    ~exists(select(other.id).where(other.conversation_id == Conversation.id,
@@ -55,7 +56,7 @@ def dispatch_one() -> bool:
         message_id, conversation_id, tenant_id = message.id, conv.id, tenant.id
         message.delivery_status, message.dispatch_started_at = 'sending', now()
     # A later dispatcher sees 'sending' and cannot overtake this conversation.
-    attempted, provider_id = False, None
+    attempted, provider_id, attachment = False, None, None
     try:
         with Session() as db:
             message = db.get(Message, message_id)
@@ -67,11 +68,31 @@ def dispatch_one() -> bool:
             ready = bool(message and conv and tenant and message.delivery_status == 'sending'
                          and eligible(message, conv, tenant, channel))
             recipient, content = (conv.external_user, message.content) if ready else (None, None)
+            attachment = dict(message.attachments[0]) if message and message.attachments else None
+            data = message.upload_data if ready and attachment else None
+        if ready and bool(attachment) != (message.kind != 'text'):
+            raise ValueError('Invalid Meta reply kind')
+        if ready and attachment:
+            if message.role != 'agent' or content or not data:
+                raise ValueError('Invalid Meta attachment reply')
+            meta_outbound_media.stage(tenant_id, attachment, data)
+            # Private storage can take time. Recheck ownership, binding and window after I/O.
+            with Session() as db:
+                current = db.get(Message, message_id)
+                conv = db.scalar(select(Conversation).where(Conversation.id == conversation_id,
+                    Conversation.tenant_id == tenant_id))
+                tenant = db.get(Tenant, tenant_id)
+                channel = db.scalar(select(Channel).where(Channel.id == conv.meta_channel_id,
+                    Channel.tenant_id == tenant_id)) if conv else None
+                ready = bool(current and conv and tenant and current.delivery_status == 'sending'
+                             and eligible(current, conv, tenant, channel))
         # Detached scalar channel data; no database connection survives the HTTP call.
         if ready:
             attempted = True
-            provider_id = send(channel, recipient, content)
-    except (MetaSignupError, ValueError, RuntimeError):
+            provider_id = (meta_outbound_media.send(channel, recipient, attachment, data) if attachment
+                           else send(channel, recipient, content))
+    except Exception:
+        # Storage/provider details can contain credentials. Keep only the outcome below.
         pass
     handed_off = False
     with Session.begin() as db:
@@ -81,13 +102,19 @@ def dispatch_one() -> bool:
         if message is not None:
             message.channel_message_id = provider_id
             message.meta_acknowledged_at = now() if provider_id else None
-            message.delivery_status = 'sent' if provider_id else ('unknown' if attempted else 'failed')
+            message.delivery_status = ('sent' if provider_id else
+                ('unknown' if attempted or message.delivery_status == 'unknown' else 'failed'))
+            if attachment:
+                message.attachments = [{**attachment, 'status':
+                    'ready' if attachment.get('status') == 'ready' else 'failed'}]
+                message.upload_data = None
             if (not provider_id and message.role == 'assistant' and current
                     and current.status == 'bot' and not current.handoff):
                 current.status, current.handoff, current.analytics_handoff = 'waiting', True, True
                 handed_off = True
             message.error = None if provider_id else (
-                'Meta delivery could not be confirmed; do not automatically retry' if attempted else
+                'Meta delivery could not be confirmed; do not automatically retry'
+                if message.delivery_status == 'unknown' else
                 'Meta DM reply is no longer eligible or the messaging window expired')
     publish_sync(tenant_id, 'message.updated', {'conversation_id': conversation_id})
     if handed_off:
@@ -102,8 +129,12 @@ def expire_stale() -> None:
                            .where(Conversation.channel.in_(('instagram', 'messenger')))),
             Message.role.in_(('agent', 'assistant')), Message.delivery_status == 'sending',
             Message.dispatch_started_at < now() - timedelta(minutes=2),
-        ).values(delivery_status='unknown', error='Meta delivery could not be confirmed')
-          .returning(Message.conversation_id)).scalars().all()
+        ).values(delivery_status='unknown', error='Meta delivery could not be confirmed', upload_data=None)
+          .returning(Message.id, Message.conversation_id)).all()
+        for message in db.scalars(select(Message).where(Message.id.in_([row.id for row in rows]))):
+            message.attachments = [{**item, 'status': 'failed' if item['status'] == 'queued' else item['status']}
+                                   for item in message.attachments]
+        rows = [row.conversation_id for row in rows]
         changed = set(db.execute(update(Conversation).where(Conversation.id.in_(set(rows)),
             Conversation.status == 'bot', Conversation.handoff.is_(False))
             .values(status='waiting', handoff=True, analytics_handoff=True).returning(Conversation.id)).scalars())

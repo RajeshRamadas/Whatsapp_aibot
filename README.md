@@ -1277,7 +1277,7 @@ disconnect cancels queued work. Ordered workers recheck eligibility and close da
 sessions before HTTP. Unconfirmed sends are never retried automatically. Apply
 migration `0053_meta_dm_binding`; old unbound Meta history stays read-only until a
 fresh signed inbound message creates a bound conversation. See [Meta DM setup and
-limits](docs/META_DM.md). Automatic token refresh, outbound media and live
+limits](docs/META_DM.md). Automatic token refresh, other outbound media types and live
 permission verification remain subsequent work.
 
 Workspace owners/admins can manage Instagram and Messenger under **Messaging
@@ -1330,3 +1330,9 @@ API/workers. Signed CDN URLs are encrypted until download completes; the worker
 enforces public Meta HTTPS destinations, size/type limits and account binding.
 Attachments hand off to staff without model interpretation. Existing media retention
 settings apply; expired/unsupported files remain visible as unavailable attachments.
+
+Staff can also send JPEG/PNG images and PDF files from the Meta Inbox within the
+24-hour window. The existing multipart media endpoint queues one confirmed upload,
+takes over for staff and uses the ordered sender. Files remain private and upload
+directly to Meta using the connected Page token; text is sent as a separate reply.
+Unknown sends are never replayed automatically. No migration or new setting is needed.

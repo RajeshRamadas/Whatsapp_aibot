@@ -4,7 +4,8 @@ Signed text DMs from verified workspace assets enter the shared inbox and wait f
 staff. Human agents can send short text replies within the conservative 24-hour
 customer messaging window. OAuth account selection and delivery/read receipts
 and opt-in bot text replies are available. Incoming attachments are private and
-go to staff; outbound media and automatic token refresh remain later slices.
+go to staff; agents can send images/PDFs. Other outbound media and automatic token
+refresh remain later slices.
 
 ## Connect an asset
 
@@ -109,7 +110,7 @@ never retried. Terminal attempts erase their secrets; logout cascades deletion.
 Register the callback and permissions, enable the worker, and check a real grant,
 denial, account selection and signed inbound/staff reply with a Meta test account
 before launch. Automated checks use fakes; live grants remain pending app setup.
-Automatic token refresh and outbound media remain future T10.8 work.
+Automatic token refresh and other outbound media types remain future T10.8 work.
 
 ### Account picker
 
@@ -179,7 +180,7 @@ and receipt processing. Staff can hand back only to an enabled, connected accoun
 with an open messaging window. No additional provider credentials are required.
 
 Automated acceptance uses fake models and Meta delivery. Real model/Meta test-asset
-checks remain deployment setup; outbound media and automatic token refresh remain later work.
+checks remain deployment setup; other outbound media types and automatic token refresh remain later work.
 
 ### Bot controls
 
@@ -219,7 +220,7 @@ Every attachment message routes bot-owned conversations to staff and cancels pen
 bot work, even when accompanied by a caption. Staff-owned conversations stay with
 staff. This slice does not transcribe audio, interpret images or answer attachments.
 The existing transcription setting is unchanged. Staff can still send text within
-the messaging window; outbound Meta attachments are not yet supported.
+the messaging window, including the image/PDF replies described below.
 
 Downloads run outside SQL sessions and check account binding, suspension and retention
 before fetching and before publication. Disconnection or expired/interrupted downloads
@@ -228,3 +229,34 @@ automatic replay. Worker completions publish live Inbox updates. Existing retent
 cleanup deletes the private objects. Fake-provider backend/browser checks cover both
 channels; real Meta attachment delivery remains a deployment check. See the
 [Inbox attachment view](screenshots/t10-8-meta-media.png).
+
+## Agent image and PDF replies (T10.8l)
+
+In Inbox, staff can choose **Image or PDF**, review the filename and recipient,
+then confirm **Send attachment**. JPEG/PNG images are limited to 5 MiB and PDFs
+to 16 MiB, subject to the lower workspace `MEDIA_MAX_BYTES` setting. Send text
+as a separate reply; Meta captions and other file formats are rejected explicitly.
+The English/Hindi form is available only within the 24-hour messaging window.
+
+The existing `POST /api/v1/inbox/conversations/{id}/media` endpoint requires an
+agent or higher role and an idempotency key. Queueing takes ownership for staff
+and cancels pending bot work. Reusing the same key returns the recorded outcome;
+changing the payload under the same key returns 409. Queued files share FIFO
+ordering with text. The worker rechecks binding, staff ownership, suspension and
+the reply window after private storage I/O, without retaining SQL sessions.
+
+Uploads use a verified **Page access token** and one multipart request to Meta's
+`/me/messages` endpoint with `filedata`; public or presigned file URLs are not
+needed, including with local storage. Original filenames remain in the private
+Inbox; the provider upload uses an ASCII filename. See Meta's
+[server upload contract](https://developers.facebook.com/documentation/business-messaging/instagram-messaging/features/attachment-upload).
+Confirmed provider IDs enable the existing delivery/read receipts. Unconfirmed
+requests become Unknown, with no automatic retry. Closing, handing back or
+disconnecting before dispatch prevents a send; an HTTP call already in progress
+cannot be cancelled. Stale claims become Unknown and temporary database bytes
+are cleared. Private copies use the same authenticated downloads and retention.
+
+No migration or new setting is needed. Automated checks use fake providers;
+live image/PDF sending still needs configured Meta test assets and permissions.
+Other outbound formats and automatic token refresh remain future slices. See
+[the agent attachment flow](screenshots/t10-8-meta-agent-media.png).

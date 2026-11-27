@@ -22,13 +22,14 @@ export function MessageMedia({ conversationId, attachments }: { conversationId: 
   </li>)}</ul>;
 }
 
-export function InboxMedia({ conversationId, recipient, onQueued }: { conversationId: string; recipient: string; onQueued: () => void }) {
+export function InboxMedia({ conversationId, recipient, onQueued, meta = false }: { conversationId: string; recipient: string; onQueued: () => void; meta?: boolean }) {
   const copy = useCopy('media');
   const [file, setFile] = useState<File>(); const [caption, setCaption] = useState('');
   const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [notice, setNotice] = useState('');
   const input = useRef<HTMLInputElement>(null); const attempt = useRef<{ file: File; caption: string; key: string } | undefined>(undefined);
   return <form aria-label={copy.title} className="mt-4 grid min-w-0 gap-2 rounded border border-border p-3" onSubmit={async event => {
     event.preventDefault(); if (!file || busy) return;
+    if (meta && !['image/jpeg', 'image/png', 'application/pdf'].includes(file.type)) { setError(copy.metaType); return; }
     if (file.size > (file.type.startsWith('image/') ? 5242880 : 16777216)) { setError(copy.size); return; }
     if (!window.confirm(copy.confirm + '\n' + file.name + '\n' + recipient)) return;
     if (attempt.current?.file !== file || attempt.current.caption !== caption) attempt.current = { file, caption, key: crypto.randomUUID() };
@@ -39,10 +40,10 @@ export function InboxMedia({ conversationId, recipient, onQueued }: { conversati
       onQueued();
     } catch (failure) { setError(failure instanceof Error ? failure.message : copy.error); }
     finally { setBusy(false); }
-  }}><h3 className="font-semibold">{copy.title}</h3><p className="text-sm">{copy.help}</p>
-    <label className="grid min-w-0 gap-1">{copy.file}<input ref={input} className={field + ' w-full'} required type="file" disabled={busy}
-      accept="image/jpeg,image/png,application/pdf,text/plain,.doc,.docx,.xls,.xlsx,.ppt,.pptx" onChange={event => setFile(event.target.files?.[0])} /></label>
-    <label className="grid gap-1">{copy.caption}<input className={field} disabled={busy} maxLength={1024} value={caption} onChange={event => setCaption(event.target.value)} /></label>
+  }}><h3 className="font-semibold">{copy.title}</h3><p className="text-sm">{meta ? copy.metaHelp : copy.help}</p>
+    <label className="grid min-w-0 gap-1">{meta ? copy.metaFile : copy.file}<input ref={input} className={field + ' w-full'} required type="file" disabled={busy}
+      accept={meta ? 'image/jpeg,image/png,application/pdf' : 'image/jpeg,image/png,application/pdf,text/plain,.doc,.docx,.xls,.xlsx,.ppt,.pptx'} onChange={event => setFile(event.target.files?.[0])} /></label>
+    {!meta && <label className="grid gap-1">{copy.caption}<input className={field} disabled={busy} maxLength={1024} value={caption} onChange={event => setCaption(event.target.value)} /></label>}
     <button className={field} disabled={busy || !file}>{copy.send}</button>{error && <p role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}
   </form>;
 }
