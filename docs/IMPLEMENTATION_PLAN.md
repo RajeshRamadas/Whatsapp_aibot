@@ -1037,3 +1037,6 @@ updates and retention reuse the existing sender. MIME aliases normalize to store
 types; unsupported formats fail explicitly. Preview URLs release after selection
 changes, successful sends or unmounting. No migration/new setting and no automatic
 transcription. T10.8 remains open for token refresh, other formats and live checks.
+Review hardening adds bounded local audio-track/frame validation, audio-only
+`video/mp4` normalization, fresh claim checks under conversation/tenant locks and
+pending early Messenger reads. Roll out compatible workers before API/web controls.

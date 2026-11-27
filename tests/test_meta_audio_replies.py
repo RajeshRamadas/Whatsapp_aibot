@@ -2,8 +2,13 @@
 import hashlib
 import io
 import json
+import subprocess
 import wave
+from contextlib import contextmanager
 from datetime import timedelta
+from functools import lru_cache
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import httpx
 import pytest
@@ -11,6 +16,7 @@ from sqlalchemy import select
 
 from app.config import settings
 from app.db import ApiKey, Channel, Conversation, Message, Session, now
+from app.models.meta_receipts import MetaReceipt
 from app.services import media, meta_dm_replies, meta_outbound_media, meta_receipts
 from app.services.meta_signup import MetaSignupError
 from tests import test_meta_outbound_media
@@ -26,6 +32,17 @@ def wav():
         writer.setparams((1, 2, 16000, 0, 'NONE', 'not compressed'))
         writer.writeframes(b'\0\0' * 16000)
     return output.getvalue()
+
+
+@lru_cache
+def encoded(format_name):
+    with TemporaryDirectory() as directory:
+        path = Path(directory) / ('sample.' + format_name)
+        args = (['-f', 'lavfi', '-i', 'color=s=16x16:r=10', '-an', '-c:v', 'mpeg4'] if format_name == 'mp4'
+                else ['-f', 'lavfi', '-i', 'anullsrc=r=16000:cl=mono', '-c:a', 'aac'])
+        subprocess.run(['ffmpeg', '-nostdin', '-v', 'error', '-threads', '1', *args, '-t', '0.2', '-y', str(path)],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10, check=True)
+        return path.read_bytes()
 
 
 @pytest.mark.parametrize('kind', ['instagram', 'messenger'])
@@ -128,7 +145,7 @@ def test_unknown_audio_is_not_replayed_or_transcribed(client, tenant, account, m
     _, conv = account
     path = f'/api/v1/inbox/conversations/{conv}/media'
     headers = {**tenant['headers'], 'Idempotency-Key': 'unknown-audio'}
-    args = {'files': {'file': ('reply.m4a', b'\x00\x00\x00\x18ftypM4A fixture', 'audio/x-m4a')}}
+    args = {'files': {'file': ('reply.m4a', encoded('m4a'), 'audio/x-m4a')}}
     first = client.post(path, headers=headers, **args)
     assert first.status_code == 202
     calls = []
@@ -143,3 +160,90 @@ def test_unknown_audio_is_not_replayed_or_transcribed(client, tenant, account, m
         message = db.scalar(select(Message).where(Message.conversation_id == conv))
         assert message.upload_data is None and message.attachments[0]['mime_type'] == 'audio/mp4'
         assert 'transcript' not in json.dumps(message.attachments)
+
+
+@pytest.mark.parametrize(('mime', 'body', 'valid'), [
+    ('audio/aac', b'\xff\xf1fixture', False), ('audio/mp4', b'\0\0\0\x18ftypfixture', False),
+    ('audio/mp4', 'mp4', False), ('video/mp4', 'mp4', False),
+    ('video/mp4', 'm4a', True), ('audio/aac', 'aac', True)])
+def test_only_decodable_audio_without_video_is_queued(client, tenant, account, mime, body, valid):
+    data = encoded(body) if isinstance(body, str) else body
+    path = f'/api/v1/inbox/conversations/{account[1]}/media'
+    response = client.post(path, headers={**tenant['headers'], 'Idempotency-Key': 'decode'},
+                           files={'file': ('recording.mp4', data, mime)})
+    assert response.status_code == (202 if valid else 422), response.text
+    with Session() as db:
+        identity = db.scalar(select(Message.id).where(Message.conversation_id == account[1]))
+        assert (identity is not None) == valid
+
+
+def test_claim_rechecks_committed_inflight_reply_after_locking(client, tenant, account, monkeypatch):
+    _, conv = account
+    with Session.begin() as db:
+        earlier = Message(conversation_id=conv, role='agent', direction='outbound', kind='text',
+                          content='Earlier reply', delivery_status='failed')
+        db.add(earlier)
+        db.flush()
+        earlier_id = earlier.id
+    response = client.post(f'/api/v1/inbox/conversations/{conv}/media',
+        headers={**tenant['headers'], 'Idempotency-Key': 'race'},
+        files={'file': ('reply.wav', wav(), 'audio/wav')})
+    assert response.status_code == 202
+    calls = []
+    monkeypatch.setattr(meta_outbound_media, 'send', lambda *args: calls.append(args) or 'unexpected-mid')
+    class Sessions:
+        def __call__(self):
+            return Session()
+        @contextmanager
+        def begin(self):
+            with Session.begin() as db:
+                execute = db.execute
+                def after_selection(statement, *args, **kwargs):
+                    result = execute(statement, *args, **kwargs)
+                    if [item['name'] for item in getattr(statement, 'column_descriptions', [])] == [
+                            'Message', 'Conversation', 'Tenant']:
+                        # Model a competing claim becoming visible after the SELECT snapshot.
+                        with Session.begin() as other:
+                            other.get(Message, earlier_id).delivery_status = 'sending'
+                    return result
+                db.execute = after_selection
+                yield db
+    monkeypatch.setattr(meta_dm_replies, 'Session', Sessions())
+    assert not meta_dm_replies.dispatch_one()
+    assert calls == []
+    with Session() as db:
+        assert db.get(Message, response.json()['message_id']).delivery_status == 'queued'
+
+
+def test_early_audio_read_waits_for_ack_and_preserves_mid_evidence(client, tenant, account):
+    _, conv = account
+    result = client.post(f'/api/v1/inbox/conversations/{conv}/media',
+        headers={**tenant['headers'], 'Idempotency-Key': 'early-read'},
+        files={'file': ('reply.wav', wav(), 'audio/wav')})
+    identity = result.json()['message_id']
+    read_at, delivered_at = now() - timedelta(seconds=2), now() - timedelta(seconds=3)
+    with Session.begin() as db:
+        message = db.get(Message, identity)
+        message.delivery_status, message.dispatch_started_at = 'sending', now() - timedelta(seconds=5)
+    assert meta_receipts.store(receipt(status='read', watermark=int(read_at.timestamp() * 1000))) == 1
+    assert meta_receipts.process_one()
+    with Session.begin() as db:
+        pending = db.scalar(select(MetaReceipt))
+        assert pending.status == 'queued'
+        message = db.get(Message, identity)
+        message.delivery_status, message.channel_message_id, message.meta_acknowledged_at = 'sent', 'mid-1', now()
+    assert meta_receipts.store(receipt(watermark=int(delivered_at.timestamp() * 1000))) == 1
+    assert meta_receipts.process_one()
+    with Session() as db:
+        assert db.get(Message, identity).delivery_status == 'read'
+
+
+def test_missing_audio_validator_is_a_setup_error(client, tenant, account, monkeypatch):
+    from app.services import audio_validation
+    def unavailable(*args, **kwargs):
+        raise FileNotFoundError('private executable path')
+    monkeypatch.setattr(audio_validation.subprocess, 'run', unavailable)
+    response = client.post(f'/api/v1/inbox/conversations/{account[1]}/media',
+        headers={**tenant['headers'], 'Idempotency-Key': 'unavailable'},
+        files={'file': ('reply.wav', wav(), 'audio/wav')})
+    assert response.status_code == 503 and 'private executable path' not in response.text

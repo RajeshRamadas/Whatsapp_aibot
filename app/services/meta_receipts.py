@@ -119,7 +119,7 @@ def process_one():
                     status = 'read'
                 if RANK[status] > RANK[message.delivery_status]:
                     message.delivery_status, message.error, changed = status, None, True
-            if not receipt.mids and receipt.kind == 'delivered':
+            if not receipt.mids:
                 pending = bool(db.scalar(select(Message.id).where(Message.conversation_id == conv.id,
                     Message.direction == 'outbound', Message.delivery_status == 'sending').limit(1)))
         if pending and receipt.received_at > now() - timedelta(minutes=10):

@@ -6,7 +6,7 @@ import httpx
 
 from ..config import settings
 from ..observability import integration
-from . import media
+from . import audio_validation, media
 from .crypto import decrypt
 from .meta_signup import MetaSignupError
 
@@ -20,6 +20,8 @@ def stage(tenant_id, item, data):
             or hashlib.sha256(data).hexdigest() != item.get('sha256')):
         raise ValueError('Invalid Meta attachment')
     media.validate(data, item['mime_type'], item['kind'])
+    if item['kind'] == 'audio':
+        audio_validation.validate(data, item['mime_type'])
     media.storage().put(item['key'], data)
     item['status'] = 'ready'
 

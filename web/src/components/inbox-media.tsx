@@ -5,7 +5,7 @@ import { mediaUrl, queueMedia, type Attachment } from '@/api/media';
 
 const field = 'min-h-11 min-w-0 rounded border border-border bg-surface p-2';
 const metaTypes = ['image/jpeg', 'image/png', 'application/pdf', 'audio/aac', 'audio/mp4', 'audio/wav',
-  'audio/x-m4a', 'audio/m4a', 'audio/x-wav'];
+  'audio/x-m4a', 'audio/m4a', 'audio/x-wav', 'video/mp4'];
 
 export function MessageMedia({ conversationId, attachments }: { conversationId: string; attachments: Attachment[] }) {
   const copy = useCopy('media');
@@ -31,7 +31,7 @@ export function InboxMedia({ conversationId, recipient, onQueued, meta = false }
   const input = useRef<HTMLInputElement>(null); const attempt = useRef<{ file: File; caption: string; key: string } | undefined>(undefined);
   const [preview, setPreview] = useState('');
   useEffect(() => {
-    if (!meta || !file?.type.startsWith('audio/') || !metaTypes.includes(file.type)) { setPreview(''); return; }
+    if (!meta || !file || (!file.type.startsWith('audio/') && file.type !== 'video/mp4') || !metaTypes.includes(file.type)) { setPreview(''); return; }
     const url = URL.createObjectURL(file); setPreview(url);
     return () => URL.revokeObjectURL(url);
   }, [meta, file]);

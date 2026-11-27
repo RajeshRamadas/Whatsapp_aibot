@@ -283,3 +283,19 @@ audio generation, microphone recording or WhatsApp audio uploads. Fake-provider
 checks cover both channels and the supported MIME types; real audio delivery still
 needs Meta test assets and permission validation. See
 [the audio reply flow](screenshots/t10-8-meta-agent-audio.png).
+
+Roll out compatible **workers first** and drain older worker instances before
+releasing the API/web audio controls. Old workers cannot claim audio messages.
+For rollback, remove the audio controls/API first and keep compatible workers
+running until queued audio is drained before reverting them.
+The API and workers require `ffprobe` and `ffmpeg` (included in the existing
+container image). Missing validation tools return a setup error without queueing.
+Validation uses bounded local processes, private temporary files, forced demuxers
+and disabled external MOV references/network protocols. Files must have an audio
+track, no video track, and a decodable opening frame. This also allows audio-only
+MP4 files reported by browsers as `video/mp4`; video clips are rejected.
+
+Claims recheck in-flight/earlier replies using a fresh statement after acquiring
+conversation/tenant locks. Early Messenger reads remain pending while a reply is
+in flight. Read status still requires a safe acceptance bound; delayed MID-bearing
+delivery evidence can apply the stored read watermark without guessing.

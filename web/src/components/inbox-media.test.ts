@@ -52,7 +52,8 @@ it('confirms Meta recipient and sends a supported file with no caption', async (
   expect(onQueued).toHaveBeenCalledOnce();
 });
 
-it('previews selected audio locally, sends only after confirmation and releases the preview', async () => {
+it.each([{ mime: 'audio/wav', name: 'reply.wav' }, { mime: 'video/mp4', name: 'reply.mp4' }])(
+  'previews $mime locally, sends only after confirmation and releases the preview', async ({ mime, name }) => {
   const revoke = vi.fn(); const OriginalURL = URL;
   vi.stubGlobal('URL', class extends OriginalURL {
     static createObjectURL = vi.fn(() => 'blob:private-audio');
@@ -62,13 +63,13 @@ it('previews selected audio locally, sends only after confirmation and releases 
   vi.mocked(queueMedia).mockResolvedValue({ status: 'queued', message_id: 2 });
   const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
   render(createElement(InboxMedia, { conversationId: 'one', recipient: 'customer', meta: true, onQueued: vi.fn() }));
-  const file = new File(['RIFFxxxxWAVE'], 'reply.wav', { type: 'audio/wav' });
+  const file = new File(['fixture'], name, { type: mime });
   fireEvent.change(screen.getByLabelText('Image, PDF or audio'), { target: { files: [file] } });
   expect((await screen.findByLabelText('Preview audio before sending')).getAttribute('src')).toBe('blob:private-audio');
   expect(queueMedia).not.toHaveBeenCalled();
   fireEvent.submit(screen.getByRole('form', { name: 'Send an attachment' }));
   await screen.findByRole('status');
-  expect(confirm).toHaveBeenCalledWith(expect.stringContaining('reply.wav\ncustomer'));
+  expect(confirm).toHaveBeenCalledWith(expect.stringContaining(name + '\ncustomer'));
   expect(queueMedia).toHaveBeenCalledWith('one', file, '', expect.any(String));
   await waitFor(() => expect(revoke).toHaveBeenCalledWith('blob:private-audio'));
   expect(screen.queryByLabelText('Preview audio before sending')).toBeNull();

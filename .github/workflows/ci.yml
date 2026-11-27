@@ -33,7 +33,7 @@ jobs:
       - run: pip install -r requirements.txt -r requirements-dev.txt
       - name: Ensure media and OCR tools are available
         run: |
-          if command -v ffmpeg && command -v pdftoppm && command -v prlimit && command -v tesseract && tesseract --list-langs | grep -qx hin; then
+          if command -v ffmpeg && command -v ffprobe && command -v pdftoppm && command -v prlimit && command -v tesseract && tesseract --list-langs | grep -qx hin; then
             exit 0
           fi
           sudo apt-get update

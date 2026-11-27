@@ -4,13 +4,14 @@ from datetime import timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 
 from ..config import settings
 from ..db import Channel, Message, Session, now, uid
-from ..services import media, meta_outbound_media
+from ..services import audio_validation, media, meta_outbound_media
 from ..services.events import publish_sync
 from ..services.meta_bot import cancel as cancel_meta_bot
 from ..services.storage import LocalStorage, storage
@@ -72,15 +73,20 @@ async def reply(conversation_id: UUID, file: UploadFile = File(...), caption: st
                 idempotency_key: str = Header(..., min_length=1, max_length=128),
                 principal: Principal = Depends(require_role('agent'))):
     mime = (file.content_type or '').split(';')[0].lower()
-    mime = {'audio/x-m4a': 'audio/mp4', 'audio/m4a': 'audio/mp4', 'audio/x-wav': 'audio/wav'}.get(mime, mime)
+    mime = {'audio/x-m4a': 'audio/mp4', 'audio/m4a': 'audio/mp4', 'video/mp4': 'audio/mp4',
+            'audio/x-wav': 'audio/wav'}.get(mime, mime)
     kind = 'image' if mime.startswith('image/') else 'audio' if mime.startswith('audio/') else 'document'
     data = await file.read(settings.media_max_bytes + 1)
     if len(data) > settings.media_max_bytes:
         raise HTTPException(413, 'Attachment exceeds the size limit')
     try:
         media.validate(data, mime, kind)
+        if kind == 'audio':
+            await run_in_threadpool(audio_validation.validate, data, mime)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from None
+    except audio_validation.Unavailable as exc:
+        raise HTTPException(503, str(exc)) from None
     digest = hashlib.sha256(data).hexdigest()
     with Session.begin() as db:
         conv = conversation(db, principal.tenant.id, str(conversation_id))
