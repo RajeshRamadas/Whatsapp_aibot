@@ -46,7 +46,8 @@ def validate(data, mime):
                 outputs.append(['-map', '0:a:0', '-vn', '-t', '0.1', '-frames:a', '1', '-ac', '1', '-ar', '8000',
                                 '-f', 's16le', 'pipe:1'])
             # Bound video decoder memory/CPU independently of its small output frame.
-            limits = ['prlimit', '--as=536870912', '--cpu=4', '--'] if videos else []
+            # Allow shared-library mappings on newer distro builds while bounding decoding.
+            limits = ['prlimit', '--as=1073741824', '--cpu=4', '--'] if videos else []
             for output in outputs:
                 try:
                     decoded = subprocess.run([*limits, 'ffmpeg', '-nostdin', '-threads', '1', '-filter_threads', '1',

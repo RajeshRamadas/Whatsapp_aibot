@@ -40,6 +40,20 @@ def queue(client, tenant, conv, payload=None, key='video', **kwargs):
         files={'file': ('reply.mp4', clip() if payload is None else payload, 'video/mp4')}, **kwargs)
 
 
+@pytest.mark.parametrize('audio', [None, 'aac'])
+def test_native_video_decoder_accepts_real_clip(monkeypatch, audio):
+    data, run = clip(audio=audio), audio_validation.subprocess.run
+    def diagnostic(command, **kwargs):
+        kwargs['stderr'] = subprocess.PIPE
+        try:
+            return run(command, **kwargs)
+        except subprocess.CalledProcessError as exc:
+            # Synthetic fixture only: surface native-tool startup failures in CI.
+            pytest.fail('Native media decoder failed: ' + exc.stderr.decode(errors='replace')[-1500:])
+    monkeypatch.setattr(audio_validation.subprocess, 'run', diagnostic)
+    assert audio_validation.validate(data, 'video/mp4') == 'video'
+
+
 @pytest.mark.parametrize('kind', ['instagram', 'messenger'])
 @pytest.mark.parametrize('audio', [None, 'aac'])
 def test_video_delivery_private_playback_receipts_and_expiry(client, tenant, account, monkeypatch,

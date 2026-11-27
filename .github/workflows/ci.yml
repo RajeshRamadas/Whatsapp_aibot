@@ -45,6 +45,8 @@ jobs:
           alembic downgrade 0048_spreadsheet_tables
           alembic upgrade head
       - run: alembic check
+      - name: Check native video decoder compatibility
+        run: pytest -q tests/test_meta_video_replies.py -k native_video_decoder
       - run: pytest -q
       - name: Validate monitoring configuration
         run: |
