@@ -59,6 +59,12 @@
     "action": "Review lead sync",
     "minutes": 1440
   },
+  "Meta messaging account needs attention": {
+    "intro": "An Instagram or Messenger account needs administrator attention.",
+    "path": "/dashboard/channels",
+    "action": "Open messaging accounts",
+    "minutes": 1440
+  },
   "Webhook destination disabled": {
     "intro": "An outgoing event destination needs administrator attention.",
     "path": "/dashboard/developer",

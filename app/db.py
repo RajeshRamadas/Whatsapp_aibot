@@ -430,10 +430,16 @@ class Channel(Base):
     credentials_enc: Mapped[bytes | None] = mapped_column(LargeBinary)
     last_webhook_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     meta_bot_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text('false'))
+    meta_token_status: Mapped[str | None] = mapped_column(String(16))
+    meta_token_check_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     campaign_quality: Mapped[str] = mapped_column(String(16), default='UNKNOWN', server_default='UNKNOWN')
     campaign_limit: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
     campaign_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     campaign_portfolio: Mapped[str | None] = mapped_column(String(64), index=True)
+
+    @property
+    def meta_send_ready(self) -> bool:
+        return self.credentials_enc is not None and self.meta_token_status != 'invalid'
 
 
 class Template(Base):

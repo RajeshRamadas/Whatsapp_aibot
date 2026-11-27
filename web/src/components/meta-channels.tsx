@@ -34,7 +34,7 @@ export function MetaChannels({ workspaceId }: { workspaceId: string }) {
   }
   return <section className="mt-6 grid min-w-0 gap-4" aria-label={copy.title}>
     <p>{copy.help}</p>
-    <MetaAuthorization key={workspaceId} available={available} onConnected={() => refresh(value => value + 1)} />
+    <MetaAuthorization key={workspaceId} available={available} accounts={rows ?? []} onConnected={() => refresh(value => value + 1)} />
     <Button className="w-fit" variant="secondary" disabled={busy} onClick={() => refresh(v => v + 1)}>{copy.refresh}</Button>
     {!rows && !loadError && <p role="status">{copy.loading}</p>}
     {loadError && <p role="alert">{copy.loadError}</p>}{error && <p role="alert">{copy[error]}</p>}
@@ -42,10 +42,11 @@ export function MetaChannels({ workspaceId }: { workspaceId: string }) {
     {rows?.map(row => <section key={row.id} className="grid min-w-0 gap-3 rounded-xl border border-border p-4" aria-label={row.kind === 'instagram' ? copy.instagram : copy.messenger}>
       <h2 className="text-lg font-semibold">{row.kind === 'instagram' ? copy.instagram : copy.messenger}</h2>
       <p className="break-all">{row.display_name || row.external_id}</p><p className="break-all">{copy.asset}: {row.external_id}</p>
-      <p role="status">{row.status === 'configured' ? copy.connected : copy.disconnected}</p>
+      <p role="status">{row.meta_token_status === 'invalid' ? copy.tokenInvalid :
+        row.meta_token_status === 'expiring' ? copy.tokenExpiring : row.status === 'configured' ? copy.connected : copy.disconnected}</p>
       <p role="status">{row.meta_bot_enabled ? copy.botEnabled : copy.botDisabled}</p>
       <p className="text-sm text-muted">{copy.botHelp}</p>
-      <Button className="w-fit" variant="secondary" disabled={busy || row.status !== 'configured'} onClick={() => void act(() => metaClient.setBot(row.id, !row.meta_bot_enabled), 'bot')}>{row.meta_bot_enabled ? copy.botDisable : copy.botEnable}</Button>
+      <Button className="w-fit" variant="secondary" disabled={busy || row.status !== 'configured' || (!row.meta_bot_enabled && row.meta_token_status === 'invalid')} onClick={() => void act(() => metaClient.setBot(row.id, !row.meta_bot_enabled), 'bot')}>{row.meta_bot_enabled ? copy.botDisable : copy.botEnable}</Button>
       <p className="text-sm text-muted">{copy.disconnectHelp}</p>
       <Button className="w-fit" variant="secondary" disabled={busy} onClick={() => { if (window.confirm(copy.disconnectPrompt)) void act(() => metaClient.disconnect(row.id), 'disconnect'); }}>{copy.disconnect}</Button>
     </section>)}

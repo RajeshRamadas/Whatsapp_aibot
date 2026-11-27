@@ -7,11 +7,11 @@ from sqlalchemy import select
 
 from app.api.auth import COOKIE
 from app.config import settings
-from app.db import Channel, Membership, Session, UserSession, engine, now, uid
+from app.db import Channel, Conversation, Membership, Session, UserSession, engine, now, uid
 from app.models.meta_oauth import MetaAuthorization as Attempt
 from app.services import meta_oauth as oauth
 from app.services.auth import hash_token
-from app.services.crypto import decrypt
+from app.services.crypto import decrypt, encrypt
 from app.services.meta_signup import MetaSignupError
 from tests import test_meta_dm_connections as connections
 
@@ -49,15 +49,15 @@ def configured(admin, monkeypatch):
     return admin
 
 
-def begin(client, headers, kind='messenger'):
-    response = client.post(BASE + '/start', headers=headers, json={'kind': kind})
+def begin(client, headers, kind='messenger', **target):
+    response = client.post(BASE + '/start', headers=headers, json={'kind': kind, **target})
     assert response.status_code == 201, response.text
     body = response.json()
     return body['id'], parse_qs(urlparse(body['url']).query)['state'][0]
 
 
-def approve(client, headers, kind='messenger'):
-    identity, state = begin(client, headers, kind)
+def approve(client, headers, kind='messenger', **target):
+    identity, state = begin(client, headers, kind, **target)
     response = client.get(BASE + '/callback', headers=headers, params={'state': state, 'code': 'private-code'},
                           follow_redirects=False)
     assert response.status_code == 303
@@ -93,6 +93,62 @@ def test_authorize_discover_select_and_atomically_connect(client, configured, ki
     assert client.get(BASE + '/callback', headers=configured, params={'state': state, 'code': 'reuse'},
                       follow_redirects=False).status_code == 404
     assert client.post(BASE + '/' + identity + '/cancel', headers=configured).status_code == 409
+
+
+@pytest.mark.parametrize('scenario', ['success', 'wrong_asset', 'changed_credential'])
+def test_reauthorization_is_bound_to_the_existing_channel(client, configured, scenario):
+    tenant_id = configured['X-Workspace-Id']
+    external = '999999' if scenario == 'wrong_asset' else '888100'
+    channel_id = uid()
+    with Session.begin() as db:
+        db.add(Channel(id=channel_id, tenant_id=tenant_id, kind='messenger', external_id=external,
+            credentials_enc=encrypt(tenant_id, 'previous-private'), meta_token_status='invalid',
+            meta_token_check_at=now() + timedelta(days=1), meta_bot_enabled=True))
+        db.flush()
+        conversation = Conversation(tenant_id=tenant_id, channel='messenger', external_user='customer',
+                                    meta_channel_id=channel_id)
+        db.add(conversation)
+        db.flush()
+        conversation_id = conversation.id
+    assert client.post(BASE + '/start', headers=configured,
+                       json={'kind': 'instagram', 'channel_id': channel_id}).status_code == 404
+    other_workspace = client.post('/api/v1/workspaces', headers=configured, json={'name': 'Other workspace'})
+    assert other_workspace.status_code == 201
+    foreign = {**configured, 'X-Workspace-Id': other_workspace.json()['tenant_id']}
+    assert client.post(BASE + '/start', headers=foreign,
+                       json={'kind': 'messenger', 'channel_id': channel_id}).status_code == 404
+    assert client.post(BASE + '/start', headers=configured,
+                       json={'kind': 'messenger', 'channel_id': 'invalid'}).status_code == 422
+    attempt, _ = approve(client, configured, channel_id=channel_id)
+    assert oauth.process_one()
+    view = client.get(BASE + '/' + attempt, headers=configured).json()
+    if scenario == 'wrong_asset':
+        assert view['status'] == 'failed' and view['error'] == 'account_not_authorized'
+        assert not view['accounts']
+        return
+    assert [row['external_id'] for row in view['accounts']] == [external]
+    assert client.post(BASE + '/' + attempt + '/select', headers=configured,
+                       json={'external_id': external}).status_code == 202
+    if scenario == 'changed_credential':
+        def change_credential():
+            with Session.begin() as db:
+                db.get(Channel, channel_id).credentials_enc = encrypt(tenant_id, 'newer-private')
+        Graph.hook = change_credential
+    assert oauth.process_one()
+    result = client.get(BASE + '/' + attempt, headers=configured).json()
+    with Session() as db:
+        channel = db.get(Channel, channel_id)
+        assert db.get(Conversation, conversation_id).meta_channel_id == channel_id
+        assert channel.meta_bot_enabled is True
+        assert db.get(Attempt, attempt).secret_enc is None
+        if scenario == 'success':
+            assert result['status'] == 'complete' and result['channel_id'] == channel_id
+            assert decrypt(tenant_id, channel.credentials_enc) == b'page-private'
+            assert channel.meta_token_status is None and channel.meta_token_check_at is None
+        else:
+            assert result['status'] == 'failed' and result['error'] == 'connection_conflict'
+            assert decrypt(tenant_id, channel.credentials_enc) == b'newer-private'
+            assert channel.meta_token_status == 'invalid'
 
 
 def test_denial_expiry_and_cancellation_wipe_credentials(client, configured):

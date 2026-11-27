@@ -114,6 +114,7 @@ jobs:
             docs/screenshots/t10-6-commerce.png
             docs/screenshots/t10-7-knowledge-sync.png
             docs/screenshots/t10-8-meta-oauth.png
+            docs/screenshots/t10-8-meta-reauthorization.png
             docs/screenshots/t10-8-meta-receipts.png
             docs/screenshots/t10-8-meta-bot.png
             docs/screenshots/t10-8-meta-media.png

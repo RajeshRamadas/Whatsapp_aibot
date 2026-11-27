@@ -21,6 +21,19 @@ it('disables authorization until platform setup is available', async () => {
   await screen.findByText('Ask your platform administrator to configure Meta authorization.');
   expect((screen.getByRole('button', { name: 'Authorize with Meta' }) as HTMLButtonElement).disabled).toBe(true);
 });
+it('starts renewal for the selected existing account', async () => {
+  vi.mocked(client.config).mockResolvedValue({ configured: true });
+  vi.mocked(client.start).mockRejectedValue(new Error('Simulated response failure'));
+  const accounts = [{ id, kind: 'messenger', external_id: '123', display_name: 'Shop', status: 'configured' }];
+  render(createElement(MetaAuthorization, { available: ['instagram'], accounts, onConnected: vi.fn() }));
+  await screen.findByRole('option', { name: 'Messenger (Reauthorize with Meta)' });
+  fireEvent.change(screen.getByRole('combobox'), { target: { value: id } });
+  const reauthorize = screen.getByRole('button', { name: 'Reauthorize with Meta' }) as HTMLButtonElement;
+  await waitFor(() => expect(reauthorize.disabled).toBe(false));
+  fireEvent.click(reauthorize);
+  await waitFor(() => expect(client.start).toHaveBeenCalledWith('messenger', expect.any(AbortSignal), id));
+  await screen.findByRole('alert');
+});
 it('selects only a returned account and refreshes channels once after completion', async () => {
   const done = vi.fn(); show(done);
   await screen.findByRole('option', { name: 'Shop Instagram (123)' });

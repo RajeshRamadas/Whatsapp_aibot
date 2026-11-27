@@ -4531,6 +4531,8 @@ export interface components {
              * @enum {string}
              */
             kind: "instagram" | "messenger";
+            /** Channel Id */
+            channel_id?: string | null;
         };
         /** MetaOAuthURL */
         MetaOAuthURL: {

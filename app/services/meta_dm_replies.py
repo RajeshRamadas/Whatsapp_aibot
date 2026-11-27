@@ -31,7 +31,7 @@ def eligible(message, conv, tenant, channel):
            and (notice or (conv.status == 'bot' and not conv.handoff and within_hours(tenant))))
     return bool(not tenant.suspended and (human or bot) and conv.external_user
                 and channel and channel.id == conv.meta_channel_id and channel.tenant_id == tenant.id
-                and channel.kind == conv.channel and channel.credentials_enc and conv.last_inbound_at
+                and channel.kind == conv.channel and channel.meta_send_ready and conv.last_inbound_at
                 and now() - timedelta(hours=24) < conv.last_inbound_at <= now()
                 and len(message.content.encode('utf-8')) <= limit)
 
