@@ -11,7 +11,7 @@ from sqlalchemy import select, text
 
 from ..config import settings
 from ..db import Channel, Conversation, Message, MetaDmEvent, Session, Tenant, now
-from . import crypto, media, web_fetch
+from . import audio_validation, crypto, media, web_fetch
 from .events import publish_sync
 
 
@@ -19,7 +19,7 @@ def snapshot(tenant_id, event_id, parts):
     result = []
     for index, part in enumerate(parts[:10]):
         part = part if isinstance(part, dict) else {}
-        kind = {'image': 'image', 'audio': 'audio', 'file': 'document'}.get(
+        kind = {'image': 'image', 'audio': 'audio', 'video': 'video', 'file': 'document'}.get(
             part.get('type') if isinstance(part.get('type'), str) else '', 'unsupported')
         identity = str(uuid5(NAMESPACE_URL, f'meta:{tenant_id}:{event_id}:{index}'))
         item = {'id': identity, 'kind': kind}
@@ -70,6 +70,8 @@ async def download(url, kind):
                     if len(data) > limit:
                         raise ValueError('Attachment exceeds the size limit')
                 mime = media.validate(bytes(data), response.headers.get('content-type', ''), kind)
+                if kind == 'video' and await asyncio.to_thread(audio_validation.validate, bytes(data), mime) != 'video':
+                    raise ValueError('Attachment must contain a supported video track')
                 return bytes(data), mime
 
 

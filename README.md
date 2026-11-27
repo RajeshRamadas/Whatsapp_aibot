@@ -1324,7 +1324,7 @@ Owners/admins can enable or disable bot replies in **Messaging accounts** in
 English/Hindi. Inbox offers **Hand back to bot** only when that Meta account is
 enabled, connected and within its messaging window.
 
-Incoming Meta images, audio and documents now appear in Inbox through the same
+Incoming Meta images, audio, documents and supported MP4 videos appear in Inbox through the same
 authenticated private downloads as WhatsApp media. Apply migration 0057 and restart
 API/workers. Signed CDN URLs are encrypted until download completes; the worker
 enforces public Meta HTTPS destinations, size/type limits and account binding.
@@ -1349,3 +1349,11 @@ range downloads, retention and delivery/read tracking use the existing media flo
 No migration or new setting. Deploy compatible workers before API/web controls.
 See [Meta video replies](docs/META_DM.md#agent-video-replies-t108n); live delivery
 requires configured Meta test assets. No automatic captions or transcription.
+
+Customer MP4 clips also appear as private Inbox video players and downloads for
+Instagram/Messenger. Incoming clips use the same H.264/AAC, size/dimension and
+native decoder checks as staff video replies. Invalid clips stay unavailable;
+valid clips hand off to staff without model interpretation. No migration or new
+setting. Deploy compatible workers before API intake. See
+[incoming video](docs/META_DM.md#incoming-mp4-video-t108o); live provider verification
+still needs configured Meta assets.
