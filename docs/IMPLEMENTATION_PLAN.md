@@ -730,7 +730,7 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 | T10.5 | Grounding check | BOT-5 | T5.1 |
 | T10.6 | Shopify and WooCommerce | EC-1 to EC-3 | T10.3 |
 | T10.7 | Drive and Notion sync | KN-6, SYNC-1 to SYNC-3 | T2.2 |
-| T10.8 | Instagram and Messenger (verified connections, text replies, OAuth picker, receipts, knowledge bot, inbound attachments and agent image/PDF replies delivered; refresh and other outbound formats pending) | CH-4, META-1 | T6.1 |
+| T10.8 | Instagram and Messenger (verified connections, text replies, OAuth picker, receipts, knowledge bot, inbound attachments and agent image/PDF/audio replies delivered; refresh and other outbound formats pending) | CH-4, META-1 | T6.1 |
 | T10.9 | White-label and agency billing; impersonation | ADM-2, ADM-3 | T7.2 |
 | T10.10 | Lead follow-ups | LEAD-4 | T9.2 |
 
@@ -760,6 +760,19 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
   sends, stale claims and receipts; browser flow covers both channels, Hindi, axe and 320 px.
 - **Notes:** No migration. Text is a separate reply. Other media formats and automatic
   refresh remain later slices; live delivery requires Meta test assets/permissions.
+
+#### T10.8m Manual agent audio replies for Meta
+- **Delivers:** CH-4, META-1 (manual outbound audio slice)
+- **Depends on:** T10.8l (merged #132)
+- **Size:** S
+- **Steps:** add AAC/MP4/M4A/WAV files to the private sender and receipt handling;
+  normalize MIME aliases and keep size/signature/ownership/window guards; add local
+  playback preview and English/Hindi confirmation controls; retain disabled transcription.
+- **Done when:** fake-provider tests cover private delivery, auth/isolation/validation,
+  supported audio payloads, unknown-send replay prevention and receipts; browser
+  acceptance covers preview/playback, both channels, Hindi, axe and 320 px layout.
+- **Notes:** No migration or new setting. Microphone recording, speech-to-text,
+  WhatsApp audio sending, other outbound formats and token refresh stay outside this slice.
 
 ### Dependency overview
 
@@ -1016,3 +1029,14 @@ after storage I/O. Unknown sends never replay; temporary bytes clear on terminal
 or stale outcomes. Delivery/read receipts cover files as well as text. No migration
 or new setting. T10.8 remains open for automatic refresh, other outbound formats
 and live Meta validation; transcription remains unchanged.
+
+T10.8m: the Meta Inbox accepts manual AAC/MP4/M4A/WAV audio replies, previews
+selected files locally and requires explicit recipient/filename confirmation.
+Private staging, ordered single-attempt delivery, ownership/window guards, receipt
+updates and retention reuse the existing sender. MIME aliases normalize to stored
+types; unsupported formats fail explicitly. Preview URLs release after selection
+changes, successful sends or unmounting. No migration/new setting and no automatic
+transcription. T10.8 remains open for token refresh, other formats and live checks.
+Review hardening adds bounded local audio-track/frame validation, audio-only
+`video/mp4` normalization, fresh claim checks under conversation/tenant locks and
+pending early Messenger reads. Roll out compatible workers before API/web controls.

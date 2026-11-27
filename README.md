@@ -1336,3 +1336,9 @@ Staff can also send JPEG/PNG images and PDF files from the Meta Inbox within the
 takes over for staff and uses the ordered sender. Files remain private and upload
 directly to Meta using the connected Page token; text is sent as a separate reply.
 Unknown sends are never replayed automatically. No migration or new setting is needed.
+
+Staff can also upload AAC, MP4/M4A and WAV audio replies to Instagram/Messenger.
+The Inbox previews selected audio locally before confirmation, then sends through
+the same private, ordered pipeline with delivery/read receipts. Audio shares the
+16 MiB maximum and lower workspace limit. No transcript is generated, and the
+existing transcription setting stays disabled. See [Meta audio replies](docs/META_DM.md#agent-audio-replies-t108m).

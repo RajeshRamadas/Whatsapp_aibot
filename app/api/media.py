@@ -4,13 +4,14 @@ from datetime import timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 
 from ..config import settings
 from ..db import Channel, Message, Session, now, uid
-from ..services import media, meta_outbound_media
+from ..services import audio_validation, media, meta_outbound_media
 from ..services.events import publish_sync
 from ..services.meta_bot import cancel as cancel_meta_bot
 from ..services.storage import LocalStorage, storage
@@ -72,14 +73,20 @@ async def reply(conversation_id: UUID, file: UploadFile = File(...), caption: st
                 idempotency_key: str = Header(..., min_length=1, max_length=128),
                 principal: Principal = Depends(require_role('agent'))):
     mime = (file.content_type or '').split(';')[0].lower()
-    kind = 'image' if mime.startswith('image/') else 'document'
+    mime = {'audio/x-m4a': 'audio/mp4', 'audio/m4a': 'audio/mp4', 'video/mp4': 'audio/mp4',
+            'audio/x-wav': 'audio/wav'}.get(mime, mime)
+    kind = 'image' if mime.startswith('image/') else 'audio' if mime.startswith('audio/') else 'document'
     data = await file.read(settings.media_max_bytes + 1)
     if len(data) > settings.media_max_bytes:
         raise HTTPException(413, 'Attachment exceeds the size limit')
     try:
         media.validate(data, mime, kind)
+        if kind == 'audio':
+            await run_in_threadpool(audio_validation.validate, data, mime)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from None
+    except audio_validation.Unavailable as exc:
+        raise HTTPException(503, str(exc)) from None
     digest = hashlib.sha256(data).hexdigest()
     with Session.begin() as db:
         conv = conversation(db, principal.tenant.id, str(conversation_id))
@@ -98,12 +105,14 @@ async def reply(conversation_id: UUID, file: UploadFile = File(...), caption: st
             raise HTTPException(409, 'An open messaging conversation within the 24-hour window is required')
         if conv.channel in ('instagram', 'messenger'):
             if mime not in meta_outbound_media.MIMES or caption:
-                raise HTTPException(422, 'Meta supports JPEG/PNG images and PDF files; send text as a separate reply')
+                raise HTTPException(422, 'Choose a supported Meta attachment; send text as a separate reply')
             channel = db.scalar(select(Channel).where(Channel.id == conv.meta_channel_id,
                 Channel.tenant_id == principal.tenant.id, Channel.kind == conv.channel))
             if not channel or not channel.credentials_enc:
                 raise HTTPException(503, 'This Meta messaging channel is not connected')
         else:
+            if kind == 'audio':
+                raise HTTPException(422, 'Audio uploads are supported for Instagram and Messenger only')
             from ..services.channels import whatsapp_channel
             channel = whatsapp_channel(db, principal.tenant.id)
             if not settings.whatsapp_enabled or not (settings.whatsapp_access_token or

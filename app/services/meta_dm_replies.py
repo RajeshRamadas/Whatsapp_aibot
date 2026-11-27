@@ -42,7 +42,7 @@ def dispatch_one() -> bool:
         row = db.execute(select(Message, Conversation, Tenant)
             .join(Conversation, Conversation.id == Message.conversation_id)
             .join(Tenant, Tenant.id == Conversation.tenant_id)
-            .where(Message.role.in_(('agent', 'assistant')), Message.kind.in_(('text', 'image', 'document')),
+            .where(Message.role.in_(('agent', 'assistant')), Message.kind.in_(('text', 'image', 'document', 'audio')),
                    Message.delivery_status == 'queued',
                    Conversation.channel.in_(('instagram', 'messenger')),
                    ~exists(select(other.id).where(other.conversation_id == Conversation.id,
@@ -53,6 +53,13 @@ def dispatch_one() -> bool:
         if row is None:
             return False
         message, conv, tenant = row
+        # The locking SELECT's snapshot can predate a competing claim's commit.
+        # Tenant/conversation locks are now held; use a fresh statement before claiming.
+        if db.scalar(select(other.id).where(other.conversation_id == conv.id,
+            other.id != message.id, other.role.in_(('agent', 'assistant')),
+            (other.delivery_status == 'sending') |
+            ((other.delivery_status == 'queued') & (other.id < message.id))).limit(1)) is not None:
+            return False
         message_id, conversation_id, tenant_id = message.id, conv.id, tenant.id
         message.delivery_status, message.dispatch_started_at = 'sending', now()
     # A later dispatcher sees 'sending' and cannot overtake this conversation.

@@ -46,10 +46,10 @@ test('Meta attachments stay private, appear in Inbox and hand off to staff', asy
     expect(await messages.innerHTML()).not.toContain('signature=private-fixture');
     await expect(page.getByRole('button', { name: 'Take over', exact: true })).toBeVisible();
     await expect(page.getByLabel('Attachment caption (optional)', { exact: true })).toHaveCount(0);
-    const upload = page.getByLabel('Image or PDF', { exact: true });
+    const upload = page.getByLabel('Image, PDF or audio', { exact: true });
     await upload.setInputFiles({ name: 'unsupported.txt', mimeType: 'text/plain', buffer: Buffer.from('plain text') });
     await page.getByRole('button', { name: 'Send attachment', exact: true }).click();
-    await expect(page.getByText('Choose a JPEG/PNG image or a PDF file.', { exact: true })).toBeVisible();
+    await expect(page.getByText('Choose a JPEG/PNG image, PDF, or AAC/M4A/WAV audio file.', { exact: true })).toBeVisible();
     const imageBytes = await (await page.request.get((await links.filter({ hasText: 'attachment.png' }).getAttribute('href'))!)).body();
     for (const [name, mimeType, buffer] of [['requested.pdf', 'application/pdf', Buffer.from('%PDF-1.7\nRequested file')],
       ['agent.png', 'image/png', imageBytes]] as const) {
@@ -60,12 +60,28 @@ test('Meta attachments stay private, appear in Inbox and hand off to staff', asy
       await expect(saved).toBeVisible();
       expect((await page.request.get((await saved.getAttribute('href'))!)).ok()).toBeTruthy();
     }
-    await expect(messages.getByText('Sent', { exact: true })).toHaveCount(3);
+    const audioBytes = await (await page.request.get((await messages.getByLabel('Voice note', { exact: true }).getAttribute('src'))!)).body();
+    await upload.setInputFiles({ name: 'reply.wav', mimeType: 'audio/wav', buffer: audioBytes });
+    const preview = page.getByLabel('Preview audio before sending', { exact: true });
+    expect(await preview.getAttribute('src')).toMatch(/^blob:/);
+    expect(await preview.evaluate(async (audio: HTMLAudioElement) => { audio.muted = true; await audio.play(); audio.pause(); return audio.duration; })).toBeCloseTo(1);
+    page.once('dialog', dialog => { expect(dialog.message()).toContain('reply.wav'); return dialog.accept(); });
+    await page.getByRole('button', { name: 'Send attachment', exact: true }).click();
+    await expect(preview).toHaveCount(0);
+    const sentAudio = messages.getByRole('link', { name: 'Download attachment: reply.wav', exact: true });
+    await expect(sentAudio).toBeVisible();
+    expect(await sentAudio.locator('..').getByLabel('Voice note', { exact: true }).evaluate(async (audio: HTMLAudioElement) => {
+      audio.muted = true; await audio.play(); audio.pause(); return audio.duration;
+    })).toBeCloseTo(1);
+    expect((await (await page.request.get((await sentAudio.getAttribute('href'))!)).body()).subarray(0, 4).toString()).toBe('RIFF');
+    await expect(messages.getByLabel('Voice note', { exact: true })).toHaveCount(2);
+    await expect(messages.getByRole('heading', { name: 'Voice transcript', exact: true })).toHaveCount(0);
+    await expect(messages.getByText('Sent', { exact: true })).toHaveCount(4);
     expect((await page.request.post('/api/backend/_test/meta-dm/receipt', { data: { kind, external_id: identity, status: 'read' } })).ok()).toBeTruthy();
-    await expect(messages.getByText('Read', { exact: true })).toHaveCount(kind === 'instagram' ? 1 : 3);
+    await expect(messages.getByText('Read', { exact: true })).toHaveCount(kind === 'instagram' ? 1 : 4);
     await page.getByRole('button', { name: 'हिन्दी', exact: true }).click();
     await expect(page.getByText('अटैचमेंट उपलब्ध नहीं है या इसकी अवधि खत्म हो गई है।', { exact: true })).toBeVisible();
-    await expect(page.getByLabel('चित्र या PDF', { exact: true })).toBeVisible();
+    await expect(page.getByLabel('चित्र, PDF या ऑडियो', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'English', exact: true }).click();
     await expect(messages).toBeVisible();
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
@@ -74,7 +90,7 @@ test('Meta attachments stay private, appear in Inbox and hand off to staff', asy
     await page.setViewportSize({ width: 1280, height: 1000 });
     if (kind === 'instagram') {
       await messages.evaluate(node => { node.scrollTop = node.scrollHeight; });
-      await page.screenshot({ path: '../docs/screenshots/t10-8-meta-agent-media.png', fullPage: true });
+      await page.screenshot({ path: '../docs/screenshots/t10-8-meta-agent-audio.png', fullPage: true });
     }
     const anonymous = await playwright.request.newContext({ baseURL: 'http://localhost:3000' });
     expect((await anonymous.get(url)).status()).toBe(401); await anonymous.dispose();

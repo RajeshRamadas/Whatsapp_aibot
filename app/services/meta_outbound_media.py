@@ -6,11 +6,13 @@ import httpx
 
 from ..config import settings
 from ..observability import integration
-from . import media
+from . import audio_validation, media
 from .crypto import decrypt
 from .meta_signup import MetaSignupError
 
-MIMES = {'image/jpeg', 'image/png', 'application/pdf'}
+SUFFIXES = {'image/jpeg': '.jpg', 'image/png': '.png', 'application/pdf': '.pdf',
+            'audio/aac': '.aac', 'audio/mp4': '.m4a', 'audio/wav': '.wav'}
+MIMES = set(SUFFIXES)
 
 
 def stage(tenant_id, item, data):
@@ -18,6 +20,8 @@ def stage(tenant_id, item, data):
             or hashlib.sha256(data).hexdigest() != item.get('sha256')):
         raise ValueError('Invalid Meta attachment')
     media.validate(data, item['mime_type'], item['kind'])
+    if item['kind'] == 'audio':
+        audio_validation.validate(data, item['mime_type'])
     media.storage().put(item['key'], data)
     item['status'] = 'ready'
 
@@ -26,10 +30,10 @@ def stage(tenant_id, item, data):
 def send(channel, recipient, item, data):
     """Upload and send together: private files never need a publicly reachable URL."""
     token = decrypt(channel.tenant_id, channel.credentials_enc).decode()
-    suffix = {'image/jpeg': '.jpg', 'image/png': '.png', 'application/pdf': '.pdf'}[item['mime_type']]
+    suffix = SUFFIXES[item['mime_type']]
     form = {'recipient': json.dumps({'id': recipient}), 'messaging_type': 'RESPONSE',
             'message': json.dumps({'attachment': {
-                'type': 'image' if item['kind'] == 'image' else 'file', 'payload': {}}})}
+                'type': 'file' if item['kind'] == 'document' else item['kind'], 'payload': {}}})}
     try:
         with httpx.Client(timeout=60, follow_redirects=False) as client:
             # Page tokens resolve /me to the owning Page for both supported channel kinds.
