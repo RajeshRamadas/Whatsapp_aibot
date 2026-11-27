@@ -11,7 +11,7 @@ from .crypto import decrypt
 from .meta_signup import MetaSignupError
 
 SUFFIXES = {'image/jpeg': '.jpg', 'image/png': '.png', 'application/pdf': '.pdf',
-            'audio/aac': '.aac', 'audio/mp4': '.m4a', 'audio/wav': '.wav'}
+            'audio/aac': '.aac', 'audio/mp4': '.m4a', 'audio/wav': '.wav', 'video/mp4': '.mp4'}
 MIMES = set(SUFFIXES)
 
 
@@ -20,8 +20,8 @@ def stage(tenant_id, item, data):
             or hashlib.sha256(data).hexdigest() != item.get('sha256')):
         raise ValueError('Invalid Meta attachment')
     media.validate(data, item['mime_type'], item['kind'])
-    if item['kind'] == 'audio':
-        audio_validation.validate(data, item['mime_type'])
+    if item['kind'] in ('audio', 'video') and audio_validation.validate(data, item['mime_type']) != item['kind']:
+        raise ValueError('Attachment tracks do not match their type')
     media.storage().put(item['key'], data)
     item['status'] = 'ready'
 

@@ -15,6 +15,7 @@ export function MessageMedia({ conversationId, attachments }: { conversationId: 
       {/* eslint-disable-next-line @next/next/no-img-element */}
       {item.kind === 'image' && <img className="max-h-64 max-w-full rounded" src={mediaUrl(conversationId, item)} alt={copy.image} />}
       {item.kind === 'audio' && <audio className="w-full max-w-sm" controls preload="none" aria-label={copy.audio} src={mediaUrl(conversationId, item)} />}
+      {item.kind === 'video' && <video className="max-h-64 w-full max-w-sm rounded" controls playsInline preload="none" aria-label={copy.video} src={mediaUrl(conversationId, item)} />}
       <a className="block break-words underline" href={mediaUrl(conversationId, item)} target="_blank" rel="noopener noreferrer">{copy.download}: {item.filename}</a>
     </> : item.details ? <details><summary>{copy.details}</summary><pre className="whitespace-pre-wrap break-all text-sm">{JSON.stringify(item.details, null, 2)}</pre></details>
       : <p role="status">{item.status === 'queued' ? copy.pending : copy.unavailable}</p>}
@@ -51,7 +52,10 @@ export function InboxMedia({ conversationId, recipient, onQueued, meta = false }
   }}><h3 className="font-semibold">{copy.title}</h3><p className="text-sm">{meta ? copy.metaHelp : copy.help}</p>
     <label className="grid min-w-0 gap-1">{meta ? copy.metaFile : copy.file}<input ref={input} className={field + ' w-full'} required type="file" disabled={busy}
       accept={meta ? metaTypes.join(',') : 'image/jpeg,image/png,application/pdf,text/plain,.doc,.docx,.xls,.xlsx,.ppt,.pptx'} onChange={event => setFile(event.target.files?.[0])} /></label>
-    {preview && <div className="grid min-w-0 gap-2"><audio className="w-full max-w-sm" controls preload="metadata" aria-label={copy.audioPreview} src={preview} /><p className="text-sm">{copy.audioHelp}</p></div>}
+    {preview && <div className="grid min-w-0 gap-2">{file?.type === 'video/mp4'
+      ? <video className="max-h-64 w-full max-w-sm rounded" controls playsInline preload="metadata" aria-label={copy.videoPreview} src={preview} />
+      : <audio className="w-full max-w-sm" controls preload="metadata" aria-label={copy.audioPreview} src={preview} />}
+      <p className="text-sm">{file?.type === 'video/mp4' ? copy.videoHelp : copy.audioHelp}</p></div>}
     {!meta && <label className="grid gap-1">{copy.caption}<input className={field} disabled={busy} maxLength={1024} value={caption} onChange={event => setCaption(event.target.value)} /></label>}
     <button className={field} disabled={busy || !file}>{copy.send}</button>{error && <p role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}
   </form>;

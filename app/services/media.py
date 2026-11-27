@@ -13,7 +13,7 @@ from ..db import Conversation, InboundEvent, Message, Session, now
 from .channels import access_token
 from .storage import storage
 
-MIMES = {'image': {'image/jpeg', 'image/png'}, 'audio': {
+MIMES = {'image': {'image/jpeg', 'image/png'}, 'video': {'video/mp4'}, 'audio': {
     'audio/ogg', 'audio/mpeg', 'audio/mp4', 'audio/wav', 'audio/amr', 'audio/aac'}, 'document': {
     'application/pdf', 'text/plain', 'application/msword', 'application/vnd.ms-excel',
     'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -31,6 +31,7 @@ def validate(data, mime, kind):
                   'application/pdf': data.startswith(b'%PDF-'), 'audio/ogg': data.startswith(b'OggS'),
                   'audio/wav': data.startswith(b'RIFF') and data[8:12] == b'WAVE',
                   'audio/amr': data.startswith(b'#!AMR'), 'audio/mp4': data[4:8] == b'ftyp',
+                  'video/mp4': data[4:8] == b'ftyp',
                   'audio/mpeg': data.startswith(b'ID3') or data[:1] == b'\xff',
                   'audio/aac': data[:1] == b'\xff'}
     if mime.startswith('application/vnd.openxmlformats'):

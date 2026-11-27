@@ -1342,3 +1342,10 @@ The Inbox previews selected audio locally before confirmation, then sends throug
 the same private, ordered pipeline with delivery/read receipts. Audio shares the
 16 MiB maximum and lower workspace limit. No transcript is generated, and the
 existing transcription setting stays disabled. See [Meta audio replies](docs/META_DM.md#agent-audio-replies-t108m).
+
+Staff can preview and send H.264 MP4 videos with optional AAC audio from the Meta
+Inbox, up to 1920×1920 and 16 MiB (or the lower workspace limit). Private playback,
+range downloads, retention and delivery/read tracking use the existing media flow.
+No migration or new setting. Deploy compatible workers before API/web controls.
+See [Meta video replies](docs/META_DM.md#agent-video-replies-t108n); live delivery
+requires configured Meta test assets. No automatic captions or transcription.

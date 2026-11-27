@@ -1,7 +1,7 @@
 {
   "title": "Instagram and Messenger",
   "intro": "Connect an account and reply to its customers from Inbox.",
-  "help": "Staff can send text, JPEG/PNG images, PDFs and supported audio files for 24 hours after a customer message. Bot text replies are optional per account. Incoming attachments go to staff for review.",
+  "help": "Staff can send text, JPEG/PNG images, PDFs, supported audio and MP4 video files for 24 hours after a customer message. Bot text replies are optional per account. Incoming attachments go to staff for review.",
   "refresh": "Refresh channels",
   "loading": "Loading channels…",
   "loadError": "Could not load channels. Refresh to try again.",

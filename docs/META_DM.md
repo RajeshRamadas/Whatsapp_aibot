@@ -4,7 +4,7 @@ Signed text DMs from verified workspace assets enter the shared inbox and wait f
 staff. Human agents can send short text replies within the conservative 24-hour
 customer messaging window. OAuth account selection and delivery/read receipts
 and opt-in bot text replies are available. Incoming attachments are private and
-go to staff; agents can send images, PDFs and audio. Other outbound media and automatic token
+go to staff; agents can send images, PDFs, audio and MP4 video. Other formats and automatic token
 refresh remain later slices.
 
 ## Connect an asset
@@ -299,3 +299,29 @@ Claims recheck in-flight/earlier replies using a fresh statement after acquiring
 conversation/tenant locks. Early Messenger reads remain pending while a reply is
 in flight. Read status still requires a safe acceptance bound; delayed MID-bearing
 delivery evidence can apply the stored read watermark without guessing.
+
+## Agent video replies (T10.8n)
+
+The **Image, PDF, audio or video** picker accepts H.264 MP4 clips with optional AAC
+audio, up to 1920×1920 and 16 MiB (or the lower `MEDIA_MAX_BYTES` limit). The local
+preview plays before upload; staff confirm the filename and recipient to queue.
+Selected MP4 files containing only audio keep the existing audio send behaviour.
+Other video containers/codecs, captions and empty or undecodable tracks are rejected.
+
+Video uses the same multipart endpoint, private storage, verified Page token,
+24-hour window, staff takeover, FIFO claim/staging fences, single-attempt send,
+Unknown handling, cleanup and delivery/read receipts. Inbox playback and downloads
+are authenticated, support byte ranges and expire under normal media retention.
+Validation runs outside SQL sessions using forced demuxers, disabled external MOV
+references/network protocols, bounded probes and opening-frame decoding. Video
+processes also cap CPU and address space; the existing image includes `ffmpeg`,
+`ffprobe` and `prlimit`. Missing tools return a setup error without queueing.
+
+No migration, endpoint, setting or credential is added. Roll out compatible
+**workers first**, draining old workers before releasing API/web video controls.
+For rollback, remove API/web video controls first and retain compatible workers
+until queued video drains. This does not add incoming video, WhatsApp video sends,
+recording, generation, captions or transcription. Automatic transcription stays
+disabled. Fake-provider and browser checks exercise both channels; live delivery
+still requires configured Meta test assets and permissions. See
+[the video reply flow](screenshots/t10-8-meta-agent-video.png).

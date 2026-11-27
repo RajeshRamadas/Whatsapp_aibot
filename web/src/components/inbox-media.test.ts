@@ -30,11 +30,11 @@ it('limits Meta attachments to supported files and omits captions', async () => 
   vi.mocked(queueMedia).mockClear();
   render(createElement(InboxMedia, { conversationId: 'one', recipient: 'customer', meta: true, onQueued: vi.fn() }));
   expect(screen.queryByLabelText('Attachment caption (optional)')).toBeNull();
-  const input = screen.getByLabelText('Image, PDF or audio');
+  const input = screen.getByLabelText('Image, PDF, audio or video');
   expect(input.getAttribute('accept')).toContain('audio/wav');
   fireEvent.change(input, { target: { files: [new File(['text'], 'file.txt', { type: 'text/plain' })] } });
   fireEvent.submit(screen.getByRole('form', { name: 'Send an attachment' }));
-  expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Choose a JPEG/PNG image, PDF, or AAC/M4A/WAV audio file.');
+  expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Choose a JPEG/PNG image, PDF, AAC/M4A/WAV audio or MP4 video file.');
   expect(queueMedia).not.toHaveBeenCalled();
 });
 
@@ -44,7 +44,7 @@ it('confirms Meta recipient and sends a supported file with no caption', async (
   const onQueued = vi.fn();
   render(createElement(InboxMedia, { conversationId: 'one', recipient: 'customer', meta: true, onQueued }));
   const file = new File(['%PDF-1.7'], 'file.pdf', { type: 'application/pdf' });
-  fireEvent.change(screen.getByLabelText('Image, PDF or audio'), { target: { files: [file] } });
+  fireEvent.change(screen.getByLabelText('Image, PDF, audio or video'), { target: { files: [file] } });
   fireEvent.submit(screen.getByRole('form', { name: 'Send an attachment' }));
   expect((await screen.findByRole('status')).textContent).toContain('Attachment queued.');
   expect(confirm).toHaveBeenCalledWith(expect.stringContaining('file.pdf\ncustomer'));
@@ -52,8 +52,9 @@ it('confirms Meta recipient and sends a supported file with no caption', async (
   expect(onQueued).toHaveBeenCalledOnce();
 });
 
-it.each([{ mime: 'audio/wav', name: 'reply.wav' }, { mime: 'video/mp4', name: 'reply.mp4' }])(
-  'previews $mime locally, sends only after confirmation and releases the preview', async ({ mime, name }) => {
+it.each([{ mime: 'audio/wav', name: 'reply.wav', label: 'Preview audio before sending' },
+  { mime: 'video/mp4', name: 'reply.mp4', label: 'Preview video before sending' }])(
+  'previews $mime locally, sends only after confirmation and releases the preview', async ({ mime, name, label }) => {
   const revoke = vi.fn(); const OriginalURL = URL;
   vi.stubGlobal('URL', class extends OriginalURL {
     static createObjectURL = vi.fn(() => 'blob:private-audio');
@@ -64,13 +65,43 @@ it.each([{ mime: 'audio/wav', name: 'reply.wav' }, { mime: 'video/mp4', name: 'r
   const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
   render(createElement(InboxMedia, { conversationId: 'one', recipient: 'customer', meta: true, onQueued: vi.fn() }));
   const file = new File(['fixture'], name, { type: mime });
-  fireEvent.change(screen.getByLabelText('Image, PDF or audio'), { target: { files: [file] } });
-  expect((await screen.findByLabelText('Preview audio before sending')).getAttribute('src')).toBe('blob:private-audio');
+  fireEvent.change(screen.getByLabelText('Image, PDF, audio or video'), { target: { files: [file] } });
+  expect((await screen.findByLabelText(label)).getAttribute('src')).toBe('blob:private-audio');
   expect(queueMedia).not.toHaveBeenCalled();
   fireEvent.submit(screen.getByRole('form', { name: 'Send an attachment' }));
   await screen.findByRole('status');
   expect(confirm).toHaveBeenCalledWith(expect.stringContaining(name + '\ncustomer'));
   expect(queueMedia).toHaveBeenCalledWith('one', file, '', expect.any(String));
   await waitFor(() => expect(revoke).toHaveBeenCalledWith('blob:private-audio'));
-  expect(screen.queryByLabelText('Preview audio before sending')).toBeNull();
+  expect(screen.queryByLabelText(label)).toBeNull();
+});
+
+it('releases video previews on replacement and unmount without uploading', async () => {
+  const revoke = vi.fn(); const OriginalURL = URL;
+  vi.stubGlobal('URL', class extends OriginalURL {
+    static createObjectURL = vi.fn().mockReturnValueOnce('blob:first').mockReturnValueOnce('blob:second');
+    static revokeObjectURL = revoke;
+  });
+  vi.mocked(queueMedia).mockClear();
+  const view = render(createElement(InboxMedia, { conversationId: 'one', recipient: 'customer', meta: true, onQueued: vi.fn() }));
+  const input = screen.getByLabelText('Image, PDF, audio or video');
+  for (const name of ['first', 'second']) {
+    fireEvent.change(input, { target: { files: [new File(['video'], name + '.mp4', { type: 'video/mp4' })] } });
+    expect((await screen.findByLabelText('Preview video before sending')).getAttribute('src')).toBe('blob:' + name);
+  }
+  expect(revoke).toHaveBeenCalledWith('blob:first');
+  view.unmount();
+  expect(revoke).toHaveBeenCalledWith('blob:second');
+  expect(queueMedia).not.toHaveBeenCalled();
+});
+
+it('plays ready videos privately and leaves failed videos unavailable', () => {
+  render(createElement(MessageMedia, { conversationId: 'one', attachments: [
+    { id: 'video', kind: 'video', status: 'ready', mime_type: 'video/mp4', filename: 'reply.mp4', size: 100 },
+    { id: 'failed', kind: 'video', status: 'failed', size: 0 },
+  ] }));
+  expect(screen.getByLabelText('Video attachment').getAttribute('src')).toBe('/private/attachment');
+  expect(screen.getByLabelText('Video attachment').hasAttribute('autoplay')).toBe(false);
+  expect(screen.getAllByRole('link')).toHaveLength(1);
+  expect(screen.getByText('Attachment is unavailable or expired.')).toBeTruthy();
 });
