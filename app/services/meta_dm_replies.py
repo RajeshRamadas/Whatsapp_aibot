@@ -42,7 +42,7 @@ def dispatch_one() -> bool:
         row = db.execute(select(Message, Conversation, Tenant)
             .join(Conversation, Conversation.id == Message.conversation_id)
             .join(Tenant, Tenant.id == Conversation.tenant_id)
-            .where(Message.role.in_(('agent', 'assistant')), Message.kind.in_(('text', 'image', 'document')),
+            .where(Message.role.in_(('agent', 'assistant')), Message.kind.in_(('text', 'image', 'document', 'audio')),
                    Message.delivery_status == 'queued',
                    Conversation.channel.in_(('instagram', 'messenger')),
                    ~exists(select(other.id).where(other.conversation_id == Conversation.id,

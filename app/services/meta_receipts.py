@@ -100,7 +100,7 @@ def process_one():
                     conv.meta_read_watermark is None or receipt.watermark > conv.meta_read_watermark):
                 conv.meta_read_watermark = receipt.watermark
             query = select(Message).where(Message.conversation_id == conv.id, Message.direction == 'outbound',
-                Message.role.in_(('agent', 'assistant')), Message.kind.in_(('text', 'image', 'document')),
+                Message.role.in_(('agent', 'assistant')), Message.kind.in_(('text', 'image', 'document', 'audio')),
                 Message.delivery_status.in_(RANK), Message.channel_message_id.is_not(None))
             query = query.where(Message.channel_message_id.in_(receipt.mids)) if receipt.mids else query.where(
                 Message.meta_acknowledged_at <= receipt.watermark)

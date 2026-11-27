@@ -1,9 +1,11 @@
 'use client';
 import { useCopy } from '@/i18n/provider';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { mediaUrl, queueMedia, type Attachment } from '@/api/media';
 
 const field = 'min-h-11 min-w-0 rounded border border-border bg-surface p-2';
+const metaTypes = ['image/jpeg', 'image/png', 'application/pdf', 'audio/aac', 'audio/mp4', 'audio/wav',
+  'audio/x-m4a', 'audio/m4a', 'audio/x-wav'];
 
 export function MessageMedia({ conversationId, attachments }: { conversationId: string; attachments: Attachment[] }) {
   const copy = useCopy('media');
@@ -27,9 +29,15 @@ export function InboxMedia({ conversationId, recipient, onQueued, meta = false }
   const [file, setFile] = useState<File>(); const [caption, setCaption] = useState('');
   const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [notice, setNotice] = useState('');
   const input = useRef<HTMLInputElement>(null); const attempt = useRef<{ file: File; caption: string; key: string } | undefined>(undefined);
+  const [preview, setPreview] = useState('');
+  useEffect(() => {
+    if (!meta || !file?.type.startsWith('audio/') || !metaTypes.includes(file.type)) { setPreview(''); return; }
+    const url = URL.createObjectURL(file); setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [meta, file]);
   return <form aria-label={copy.title} className="mt-4 grid min-w-0 gap-2 rounded border border-border p-3" onSubmit={async event => {
     event.preventDefault(); if (!file || busy) return;
-    if (meta && !['image/jpeg', 'image/png', 'application/pdf'].includes(file.type)) { setError(copy.metaType); return; }
+    if (meta && !metaTypes.includes(file.type)) { setError(copy.metaType); return; }
     if (file.size > (file.type.startsWith('image/') ? 5242880 : 16777216)) { setError(copy.size); return; }
     if (!window.confirm(copy.confirm + '\n' + file.name + '\n' + recipient)) return;
     if (attempt.current?.file !== file || attempt.current.caption !== caption) attempt.current = { file, caption, key: crypto.randomUUID() };
@@ -42,7 +50,8 @@ export function InboxMedia({ conversationId, recipient, onQueued, meta = false }
     finally { setBusy(false); }
   }}><h3 className="font-semibold">{copy.title}</h3><p className="text-sm">{meta ? copy.metaHelp : copy.help}</p>
     <label className="grid min-w-0 gap-1">{meta ? copy.metaFile : copy.file}<input ref={input} className={field + ' w-full'} required type="file" disabled={busy}
-      accept={meta ? 'image/jpeg,image/png,application/pdf' : 'image/jpeg,image/png,application/pdf,text/plain,.doc,.docx,.xls,.xlsx,.ppt,.pptx'} onChange={event => setFile(event.target.files?.[0])} /></label>
+      accept={meta ? metaTypes.join(',') : 'image/jpeg,image/png,application/pdf,text/plain,.doc,.docx,.xls,.xlsx,.ppt,.pptx'} onChange={event => setFile(event.target.files?.[0])} /></label>
+    {preview && <div className="grid min-w-0 gap-2"><audio className="w-full max-w-sm" controls preload="metadata" aria-label={copy.audioPreview} src={preview} /><p className="text-sm">{copy.audioHelp}</p></div>}
     {!meta && <label className="grid gap-1">{copy.caption}<input className={field} disabled={busy} maxLength={1024} value={caption} onChange={event => setCaption(event.target.value)} /></label>}
     <button className={field} disabled={busy || !file}>{copy.send}</button>{error && <p role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}
   </form>;

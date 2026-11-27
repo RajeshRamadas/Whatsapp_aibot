@@ -4,7 +4,7 @@ Signed text DMs from verified workspace assets enter the shared inbox and wait f
 staff. Human agents can send short text replies within the conservative 24-hour
 customer messaging window. OAuth account selection and delivery/read receipts
 and opt-in bot text replies are available. Incoming attachments are private and
-go to staff; agents can send images/PDFs. Other outbound media and automatic token
+go to staff; agents can send images, PDFs and audio. Other outbound media and automatic token
 refresh remain later slices.
 
 ## Connect an asset
@@ -232,7 +232,7 @@ channels; real Meta attachment delivery remains a deployment check. See the
 
 ## Agent image and PDF replies (T10.8l)
 
-In Inbox, staff can choose **Image or PDF**, review the filename and recipient,
+In Inbox, staff can choose a supported file, review the filename and recipient,
 then confirm **Send attachment**. JPEG/PNG images are limited to 5 MiB and PDFs
 to 16 MiB, subject to the lower workspace `MEDIA_MAX_BYTES` setting. Send text
 as a separate reply; Meta captions and other file formats are rejected explicitly.
@@ -260,3 +260,26 @@ No migration or new setting is needed. Automated checks use fake providers;
 live image/PDF sending still needs configured Meta test assets and permissions.
 Other outbound formats and automatic token refresh remain future slices. See
 [the agent attachment flow](screenshots/t10-8-meta-agent-media.png).
+
+## Agent audio replies (T10.8m)
+
+The **Image, PDF or audio** picker now accepts AAC, MP4/M4A and WAV recordings for
+Instagram/Messenger. Selected audio has a local playback preview; it is uploaded
+only after staff confirm the filename and recipient. Preview URLs are released
+when the selection changes, sends successfully or the form closes. Captions remain
+unsupported; send text separately. No automatic transcript is created.
+
+The existing multipart endpoint normalizes common M4A/WAV MIME aliases, checks
+content signatures and enforces `MEDIA_MAX_BYTES` up to 16 MiB. OGG/MP3 and other
+unlisted formats are rejected. Manual audio sends use the existing Page token,
+private storage, tenant/role checks, 24-hour window and staff takeover. They share
+FIFO with other replies, post-staging eligibility checks, single-attempt delivery,
+Unknown handling and temporary-byte cleanup. Confirmed sends receive the same
+delivery/read receipts. Staff playback/downloads remain authenticated and expire
+under the existing retention policy.
+
+No migration or new credential is needed. This does not enable speech-to-text,
+audio generation, microphone recording or WhatsApp audio uploads. Fake-provider
+checks cover both channels and the supported MIME types; real audio delivery still
+needs Meta test assets and permission validation. See
+[the audio reply flow](screenshots/t10-8-meta-agent-audio.png).
