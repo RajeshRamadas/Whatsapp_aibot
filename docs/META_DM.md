@@ -3,9 +3,9 @@
 Signed text DMs from verified workspace assets enter the shared inbox and wait for
 staff. Human agents can send short text replies within the conservative 24-hour
 customer messaging window. OAuth account selection and delivery/read receipts
-and opt-in bot text replies are available. Incoming attachments are private and
-go to staff; agents can send images, PDFs, audio and MP4 video. Other formats and automatic token
-refresh remain later slices.
+and opt-in bot text replies are available. Incoming images, audio, documents and
+supported MP4 videos are private and go to staff; agents can send images, PDFs,
+audio and MP4 video. Other formats and automatic token refresh remain later slices.
 
 ## Connect an asset
 
@@ -322,8 +322,39 @@ processes also cap CPU and address space; the existing image includes `ffmpeg`,
 No migration, endpoint, setting or credential is added. Roll out compatible
 **workers first**, draining old workers before releasing API/web video controls.
 For rollback, remove API/web video controls first and retain compatible workers
-until queued video drains. This does not add incoming video, WhatsApp video sends,
-recording, generation, captions or transcription. Automatic transcription stays
-disabled. Fake-provider and browser checks exercise both channels; live delivery
+until queued video drains. Incoming video is covered below. This does not add
+WhatsApp video sends, recording, generation, captions or transcription. Automatic
+transcription stays disabled. Fake-provider and browser checks exercise both channels; live delivery
 still requires configured Meta test assets and permissions. See
 [the video reply flow](screenshots/t10-8-meta-agent-video.png).
+
+## Incoming MP4 video (T10.8o)
+
+Signed Instagram/Messenger `video` attachments now appear in the same Inbox as
+private video players and downloads. Supported clips use H.264 MP4 up to
+1920×1920, with optional AAC audio, and the lower of 16 MiB or `MEDIA_MAX_BYTES`.
+The worker validates content signatures, tracks and decodable opening frames using
+the same bounded local decoder as manual video replies. Audio-only MP4 sent as a
+video, unsupported codecs/containers, oversized, malformed or unavailable clips
+remain visible as unavailable attachments. Missing or timed-out decoders never
+publish an unchecked file.
+
+The existing encrypted, workspace-bound source snapshot, pinned public Meta CDN
+HTTPS, redirect/compression rejection and token-free download rules apply. Video
+fetching and validation run outside SQL sessions. Publication rechecks account
+binding, suspension, the claim and retention; discarded bytes are removed. Signed
+URLs are erased on completion. Media access stays authenticated, supports byte
+ranges and expires under `MEDIA_RETENTION_DAYS`.
+
+Incoming video always routes the conversation to staff and cancels queued bot
+work. It is not interpreted, transcribed, captioned or answered by a model.
+Automatic transcription remains disabled. The existing player and unavailable
+states work in English/Hindi and narrow layouts.
+
+No migration, endpoint, setting or credential is added. Deploy compatible
+**workers before API intake**, draining older workers so every accepted clip uses
+native validation. Roll back API intake first and keep compatible workers until
+accepted video jobs drain. Other formats and automatic token refresh remain future
+work. Automated checks use fake providers; a live incoming-video check still needs
+configured Meta assets and permissions. See
+[the incoming video view](screenshots/t10-8-meta-incoming-video.png).

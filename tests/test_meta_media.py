@@ -3,6 +3,7 @@ import asyncio
 import base64
 import json
 from datetime import timedelta
+from pathlib import Path
 
 import httpx
 import pytest
@@ -11,12 +12,15 @@ from sqlalchemy import select
 from app.config import settings
 from app.db import Channel, Conversation, Message, MetaDmEvent, Session, Tenant, now, uid
 from app.models.meta_bot import MetaBotTurn
-from app.services import media, meta_media
+from app.services import audio_validation, media, meta_media
 from app.services.meta_dm import process_one
 from tests import test_media
+from tests import test_meta_audio_replies as audio_fixtures
+from tests import test_meta_video_replies as video_fixtures
 from tests.test_meta_dm import signed
 
 PDF = b'%PDF-1.7\nprivate Meta document'
+VIDEO = (Path(__file__).resolve().parents[1] / 'web/e2e/fixtures/meta-video.mp4').read_bytes()
 SOURCE = 'https://lookaside.fbsbx.com/ig_messaging_cdn/?asset_id=123&signature=private-url'
 no_session_io = test_media.no_session_io
 
@@ -46,16 +50,19 @@ def accept(client, body):
 
 
 @pytest.mark.parametrize('kind', ['instagram', 'messenger'])
-def test_inbound_private_media_once_and_staff_handoff(client, tenant, account, kind, monkeypatch, no_session_io, chats):
+@pytest.mark.parametrize('attachment', ['document', 'video'])
+def test_inbound_private_media_once_and_staff_handoff(client, tenant, account, kind, attachment,
+                                                    monkeypatch, no_session_io, chats):
     with Session.begin() as db:
         db.get(Channel, account).kind = kind
     calls = []
+    data, mime = (VIDEO, 'video/mp4') if attachment == 'video' else (PDF, 'application/pdf')
     async def download(url, kind):
-        assert no_session_io() and (url, kind) == (SOURCE, 'document')
+        assert no_session_io() and (url, kind) == (SOURCE, attachment)
         calls.append(url)
-        return PDF, 'application/pdf'
+        return data, mime
     monkeypatch.setattr(meta_media, 'download', download)
-    body = incoming(kind)
+    body = incoming(kind, parts=[{'type': 'video' if attachment == 'video' else 'file', 'payload': {'url': SOURCE}}])
     assert client.post('/webhooks/meta-dm', json=body).status_code == 401
     accept(client, body)
     accept(client, body)
@@ -73,15 +80,19 @@ def test_inbound_private_media_once_and_staff_handoff(client, tenant, account, k
         conversation_id = conv.id
     messages_url = f'/api/v1/conversations/{conversation_id}/messages'
     queued = client.get(messages_url, headers=tenant['headers']).json()[0]['attachments'][0]
-    assert queued['status'] == 'queued'
+    assert queued['status'] == 'queued' and queued['kind'] == attachment
     assert meta_media.process_one() and not meta_media.process_one()
     response = client.get(messages_url, headers=tenant['headers'])
     item = response.json()[0]['attachments'][0]
-    assert item['status'] == 'ready' and item['mime_type'] == 'application/pdf'
+    assert item['status'] == 'ready' and item['mime_type'] == mime
     assert 'source_enc' not in response.text and 'key' not in item and SOURCE not in response.text
     url = f'/api/v1/conversations/{conversation_id}/media/{item["id"]}'
     result = client.get(url, headers=tenant['headers'])
-    assert result.content == PDF and result.headers['cache-control'] == 'private, no-store'
+    assert result.content == data and result.headers['cache-control'] == 'private, no-store'
+    if attachment == 'video':
+        assert result.headers['content-disposition'].startswith('inline;')
+        partial = client.get(url, headers={**tenant['headers'], 'Range': 'bytes=0-15'})
+        assert partial.status_code == 206 and partial.content == VIDEO[:16]
     assert client.get(url).status_code == 401
     assert client.get(url.replace(item['id'], 'bad'), headers=tenant['headers']).status_code == 422
     foreign = client.post('/api/v1/tenants', headers={'X-Bootstrap-Token': 'test-bootstrap'},
@@ -99,7 +110,8 @@ def test_inbound_private_media_once_and_staff_handoff(client, tenant, account, k
     assert all(not fake.calls for fake in chats.values())
 
 
-def test_attachment_cancels_pending_bot_work(client, tenant, account):
+@pytest.mark.parametrize('attachment', ['file', 'video'])
+def test_attachment_cancels_pending_bot_work(client, tenant, account, attachment):
     body = incoming(mid='text-first')
     del body['entry'][0]['messaging'][0]['message']['attachments']
     accept(client, body)
@@ -109,7 +121,7 @@ def test_attachment_cancels_pending_bot_work(client, tenant, account):
         assert db.scalar(select(MetaBotTurn)).status == 'queued'
         db.add(Message(conversation_id=conv.id, role='assistant', direction='outbound',
                        content='stale draft', delivery_status='queued'))
-    accept(client, incoming())
+    accept(client, incoming(parts=[{'type': attachment, 'payload': {'url': SOURCE}}]))
     assert process_one()
     with Session() as db:
         assert db.scalar(select(MetaBotTurn)).status == 'cancelled'
@@ -118,8 +130,9 @@ def test_attachment_cancels_pending_bot_work(client, tenant, account):
 
 
 @pytest.mark.parametrize('change', ['disconnect', 'suspend', 'stale', 'deleted', 'expired', 'provider_failure'])
-def test_download_completion_is_fenced(client, tenant, account, monkeypatch, change):
-    accept(client, incoming())
+@pytest.mark.parametrize('attachment', ['document', 'video'])
+def test_download_completion_is_fenced(client, tenant, account, monkeypatch, change, attachment):
+    accept(client, incoming(parts=[{'type': 'video' if attachment == 'video' else 'file', 'payload': {'url': SOURCE}}]))
     assert process_one()
     paths = []
     async def download(*args):
@@ -141,7 +154,7 @@ def test_download_completion_is_fenced(client, tenant, account, monkeypatch, cha
             meta_media.expire_stale()
         if change == 'provider_failure':
             raise httpx.ReadTimeout('synthetic secret URL')
-        return PDF, 'application/pdf'
+        return (VIDEO, 'video/mp4') if attachment == 'video' else (PDF, 'application/pdf')
     monkeypatch.setattr(meta_media, 'download', download)
     assert meta_media.process_one() and not meta_media.process_one()
     with Session() as db:
@@ -158,7 +171,7 @@ def test_unsupported_missing_and_bounded_attachments_are_visible(client, tenant,
         calls.append(args)
         raise AssertionError('No supported URL should be downloaded')
     monkeypatch.setattr(meta_media, 'download', unexpected)
-    parts = [{'type': []}, 'bad', {'type': 'video', 'payload': {'url': SOURCE}}, {'type': 'audio'}] * 3
+    parts = [{'type': []}, 'bad', {'type': 'unknown', 'payload': {'url': SOURCE}}, {'type': 'audio'}] * 3
     body = incoming(parts=parts)
     del body['entry'][0]['messaging'][0]['message']['text']
     accept(client, body)
@@ -217,10 +230,12 @@ def test_stale_sweep_cannot_delete_a_concurrently_completed_download(client, ten
 
 @pytest.mark.parametrize('scenario', ['ok', 'redirect', 'compressed', 'length', 'stream', 'mime', 'signature',
                                      'private', 'untrusted', 'credentials', 'scheme', 'dns_private'])
-def test_pinned_cdn_download_bounds(monkeypatch, scenario):
+@pytest.mark.parametrize('kind', ['document', 'video'])
+def test_pinned_cdn_download_bounds(monkeypatch, scenario, kind):
     calls = []
-    body = PDF
-    headers = {'content-type': 'application/pdf'}
+    body = VIDEO if kind == 'video' else PDF
+    mime = 'video/mp4' if kind == 'video' else 'application/pdf'
+    headers = {'content-type': mime}
     status = 200
     source = SOURCE
     if scenario == 'redirect':
@@ -255,10 +270,10 @@ def test_pinned_cdn_download_bounds(monkeypatch, scenario):
         return httpx.MockTransport(route)
     monkeypatch.setattr(meta_media.httpx, 'AsyncHTTPTransport', transport)
     if scenario == 'ok':
-        assert asyncio.run(meta_media.download(source, 'document')) == (PDF, 'application/pdf')
+        assert asyncio.run(meta_media.download(source, kind)) == (body, mime)
     else:
         with pytest.raises(ValueError):
-            asyncio.run(meta_media.download(source, 'document'))
+            asyncio.run(meta_media.download(source, kind))
     assert len(calls) == (0 if scenario in ('private', 'untrusted', 'credentials', 'scheme', 'dns_private') else 1)
 
 
@@ -269,3 +284,43 @@ def test_image_and_audio_cdn_download(monkeypatch, kind, mime, body):
     monkeypatch.setattr(meta_media.httpx, 'AsyncHTTPTransport', lambda **kwargs: httpx.MockTransport(
         lambda request: httpx.Response(200, headers={'content-type': mime}, stream=httpx.ByteStream(body))))
     assert asyncio.run(meta_media.download(SOURCE, kind)) == (body, mime)
+
+
+@pytest.mark.parametrize('case', ['valid', 'audio_only', 'fake', 'codec', 'mime', 'unavailable', 'timeout'])
+def test_video_cdn_validation_before_private_publication(client, tenant, account, monkeypatch,
+                                                       no_session_io, chats, case):
+    data = (video_fixtures.clip(audio='aac') if case == 'valid' else
+            audio_fixtures.encoded('m4a') if case == 'audio_only' else
+            video_fixtures.clip('mpeg4') if case == 'codec' else
+            b'\0\0\0\x18ftypfixture' if case == 'fake' else VIDEO)
+    mime = 'video/webm' if case == 'mime' else 'video/mp4'
+    calls, validator = [], audio_validation.validate
+    def route(request):
+        assert no_session_io() and request.url.host == '8.8.8.8'
+        assert request.headers['host'] == 'lookaside.fbsbx.com'
+        assert 'authorization' not in request.headers and 'cookie' not in request.headers
+        calls.append(request)
+        return httpx.Response(200, headers={'content-type': mime}, stream=httpx.ByteStream(data))
+    def validate(*args):
+        assert no_session_io()
+        if case == 'unavailable':
+            raise audio_validation.Unavailable('Synthetic missing decoder')
+        if case == 'timeout':
+            raise TimeoutError('Synthetic decoder timeout')
+        return validator(*args)
+    monkeypatch.setattr(meta_media.web_fetch, 'resolve', lambda _: '8.8.8.8')
+    monkeypatch.setattr(meta_media.httpx, 'AsyncHTTPTransport', lambda **kwargs: httpx.MockTransport(route))
+    monkeypatch.setattr(audio_validation, 'validate', validate)
+    accept(client, incoming(parts=[{'type': 'video', 'payload': {'url': SOURCE}}]))
+    assert process_one() and meta_media.process_one() and not meta_media.process_one()
+    with Session() as db:
+        message = db.scalar(select(Message).where(Message.role == 'user'))
+        item = message.attachments[0]
+        assert item['kind'] == 'video' and item['status'] == ('ready' if case == 'valid' else 'failed')
+        assert media.storage()._path(item['key']).exists() == (case == 'valid')
+        if case == 'valid':
+            assert item['mime_type'] == 'video/mp4' and item['filename'] == 'attachment.mp4'
+            assert media.storage().get(item['key']) == data
+        assert db.scalar(select(MetaDmEvent)).attachments == []
+        assert db.scalar(select(Conversation)).handoff and not db.scalar(select(MetaBotTurn))
+    assert len(calls) == 1 and all(not fake.calls for fake in chats.values())

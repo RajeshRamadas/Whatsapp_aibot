@@ -5,6 +5,7 @@ import hmac
 import json
 from datetime import timedelta
 from io import BytesIO
+from pathlib import Path
 
 import httpx
 from fastapi.responses import JSONResponse
@@ -56,6 +57,9 @@ async def download_fixture(url, kind):
     if kind == 'audio':
         from tests.browser_app import browser_media
         return browser_media()
+    if kind == 'video':
+        path = Path(__file__).resolve().parents[1] / 'web/e2e/fixtures/meta-video.mp4'
+        return path.read_bytes(), 'video/mp4'
     return b'%PDF-1.7\nPrivate Meta browser fixture', 'application/pdf'
 
 

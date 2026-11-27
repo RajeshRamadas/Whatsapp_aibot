@@ -730,7 +730,7 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 | T10.5 | Grounding check | BOT-5 | T5.1 |
 | T10.6 | Shopify and WooCommerce | EC-1 to EC-3 | T10.3 |
 | T10.7 | Drive and Notion sync | KN-6, SYNC-1 to SYNC-3 | T2.2 |
-| T10.8 | Instagram and Messenger (verified connections, text replies, OAuth picker, receipts, knowledge bot, inbound attachments and agent image/PDF/audio/video replies delivered; refresh and other formats pending) | CH-4, META-1 | T6.1 |
+| T10.8 | Instagram and Messenger (verified connections, text replies, OAuth picker, receipts, knowledge bot, private inbound images/audio/documents/MP4 and agent media replies delivered; refresh and other formats pending) | CH-4, META-1 | T6.1 |
 | T10.9 | White-label and agency billing; impersonation | ADM-2, ADM-3 | T7.2 |
 | T10.10 | Lead follow-ups | LEAD-4 | T9.2 |
 
@@ -787,6 +787,20 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 - **Notes:** No migration, endpoint or new setting. Workers deploy first; incoming
   video, WhatsApp video sending, automatic captions/transcription and token refresh
   remain outside this slice. Live delivery needs configured Meta test assets.
+
+#### T10.8o Private incoming MP4 video for Meta
+- **Delivers:** CH-4, META-1 (incoming video slice)
+- **Depends on:** T10.8k (merged #131), T10.8n (merged #134)
+- **Size:** S
+- **Steps:** accept signed video snapshots, reuse pinned private CDN downloads and
+  bounded H.264/AAC validation, and show authenticated video playback/downloads in
+  the English/Hindi Inbox. Keep staff handoff, encrypted URLs and retention.
+- **Done when:** fake-provider tests cover both channels, replay, private access,
+  byte ranges, hostile URLs, invalid tracks, unavailable decoders, completion fences
+  and expiry; browser acceptance covers playback, Hindi, axe and 320 px layout.
+- **Notes:** No migration, endpoint or setting. Deploy compatible workers before
+  API intake. Other video formats, automatic interpretation and token refresh stay
+  outside this slice; live delivery needs configured Meta test assets.
 
 ### Dependency overview
 
@@ -1062,3 +1076,12 @@ size, dimensions, decoder time/memory/CPU, tracks and opening frames. Audio-only
 MP4 remains an audio reply. No migration or new setting; compatible workers roll
 out before API/web. Transcription stays disabled. Incoming video, token refresh,
 other formats and real Meta permission/delivery checks remain future work.
+
+T10.8o: signed Instagram/Messenger video events now enter private attachment jobs.
+H.264 MP4 with optional AAC audio uses the same size/dimension/decoder bounds as
+manual video replies. CDN fetching stays pinned and token-free, URLs stay encrypted
+until completion, and invalid/unsupported clips remain unavailable placeholders.
+Inbox playback/range downloads reuse authenticated controls and retention. Incoming
+video hands off to staff without AI interpretation. No migration/new setting;
+workers deploy before API intake. Transcription stays disabled. Other formats,
+automatic token refresh and real Meta permission/delivery checks remain pending.
