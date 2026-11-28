@@ -154,6 +154,10 @@ calls are reported separately. Redis failures preserve request/job outcomes and 
 
 ## Getting started
 
+On **Create workspace**, choose **Beauty salon** to prefill a friendly booking
+persona, lead fields and an editable accuracy test set for salon services and
+AI look previews. [Industry template and acceptance steps](docs/INDUSTRY_TEMPLATES.md)
+
 1. Copy `.env.example` to `.env`. Set a long random `ADMIN_BOOTSTRAP_TOKEN` and the API key of at least one provider (see [AI providers](#ai-providers)).
 2. Run `docker compose up --build` (the API service applies Alembic migrations before starting).
 3. Open `http://localhost:8000/docs` for the API documentation.

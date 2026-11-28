@@ -3,8 +3,16 @@ import { useCopy } from '@/i18n/provider';
 import { useEffect, useState } from 'react';
 import { WhatsAppSignup } from '@/components/whatsapp-signup';
 import { api } from '@/lib/api';
+import type { TemplateText } from '@/api/workspaces';
+import { IndustryKnowledge } from '@/components/workspace-industry';
 
-type Steps = { connect_whatsapp: boolean; add_knowledge: boolean; test_bot: boolean; go_live: boolean };
+type Steps = {
+  connect_whatsapp: boolean;
+  add_knowledge: boolean;
+  test_bot: boolean;
+  go_live: boolean;
+  suggested_knowledge?: TemplateText[];
+};
 const keys = ['connect_whatsapp', 'add_knowledge', 'test_bot', 'go_live'] as const;
 export function OnboardingChecklist({ workspaceId, canConnect }: { workspaceId: string; canConnect: boolean }) {
   const messages = useCopy('base');
@@ -29,6 +37,10 @@ export function OnboardingChecklist({ workspaceId, canConnect }: { workspaceId: 
         <span className="ml-auto text-sm text-muted">{steps[key] ? messages.complete : messages.pending}</span>
       </li>)}
     </ul>}
+    {steps?.suggested_knowledge && !steps.add_knowledge &&
+      <div className="mt-4 rounded-xl border border-border p-4">
+        <IndustryKnowledge items={steps.suggested_knowledge} heading="h3" />
+      </div>}
     {canConnect && <WhatsAppSignup workspaceId={workspaceId} onConnected={() => setReload(n => n + 1)} />}
   </section>;
 }

@@ -1295,6 +1295,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workspaces/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Templates */
+        get: operations["list_templates_api_v1_workspaces_templates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workspaces": {
         parameters: {
             query?: never;
@@ -4227,6 +4244,17 @@ export interface components {
             /** Consents Recorded */
             consents_recorded: number;
         };
+        /** IndustryTemplatePreview */
+        IndustryTemplatePreview: {
+            /** Id */
+            id: string;
+            name: components["schemas"]["TemplateText"];
+            description: components["schemas"]["TemplateText"];
+            /** Suggested Knowledge */
+            suggested_knowledge: components["schemas"]["TemplateText"][];
+            /** Sample Qa */
+            sample_qa: components["schemas"]["SampleQuestion"][];
+        };
         /** InviteInput */
         InviteInput: {
             /**
@@ -5070,6 +5098,11 @@ export interface components {
             /** Finished At */
             finished_at: string | null;
         };
+        /** SampleQuestion */
+        SampleQuestion: {
+            question: components["schemas"]["TemplateText"];
+            answer: components["schemas"]["TemplateText"];
+        };
         /** SegmentFilters */
         SegmentFilters: {
             /**
@@ -5559,6 +5592,13 @@ export interface components {
             /** Values */
             values?: string[];
         };
+        /** TemplateText */
+        TemplateText: {
+            /** En */
+            en: string;
+            /** Hi */
+            hi: string;
+        };
         /** TemplateView */
         TemplateView: {
             /** Id */
@@ -5807,6 +5847,8 @@ export interface components {
             name: string;
             /** Allowed Origins */
             allowed_origins?: string[];
+            /** Industry Template */
+            industry_template?: string | null;
         };
         /** Binding */
         app__api__campaigns__Binding: {
@@ -8964,6 +9006,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_templates_api_v1_workspaces_templates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndustryTemplatePreview"][];
                 };
             };
         };

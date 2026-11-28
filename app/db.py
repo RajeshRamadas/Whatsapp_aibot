@@ -50,6 +50,7 @@ class Tenant(Base):
     __tablename__ = 'tenants'
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
     name: Mapped[str] = mapped_column(String(200))
+    industry_template: Mapped[str | None] = mapped_column(String(64))
     lead_fields: Mapped[dict] = mapped_column(JSONB, default=dict)
     admin_key_hash: Mapped[str] = mapped_column(String(64), unique=True)
     public_key: Mapped[str] = mapped_column(String(80), unique=True)

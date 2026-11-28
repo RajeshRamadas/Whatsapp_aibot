@@ -2,20 +2,24 @@
 import json
 import secrets
 from datetime import timedelta
+from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
+import yaml
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import func, select, update
 
-from ..db import Invitation, Membership, ProductEvent, Session, Tenant, User, now, uid
+from ..db import EvalCase, Invitation, Membership, ProductEvent, Session, Tenant, User, now, uid
 from ..services import auth as security
 from ..services import email
 from ..services.analytics import record
 from ..services.audit import audit
 from .auth import _csrf, _session
+from .leads import LeadField
 from .principal import Principal, require_role
-from .shared import sha, tenant_view
+from .shared import EvalCaseInput, sha, tenant_view
 
 router = APIRouter(prefix='/api/v1', tags=['workspaces'])
 Role = Literal['owner', 'admin', 'agent', 'viewer']
@@ -25,6 +29,45 @@ InviteRole = Literal['admin', 'agent', 'viewer']
 class WorkspaceInput(BaseModel):
     name: str = Field(min_length=2, max_length=200)
     allowed_origins: list[str] = Field(default_factory=list)
+    industry_template: str | None = Field(None, min_length=1, max_length=64)
+
+
+class TemplateText(BaseModel):
+    en: str
+    hi: str
+
+
+class SampleQuestion(BaseModel):
+    question: TemplateText
+    answer: TemplateText
+
+
+class IndustryTemplatePreview(BaseModel):
+    id: str
+    name: TemplateText
+    description: TemplateText
+    suggested_knowledge: list[TemplateText]
+    sample_qa: list[SampleQuestion]
+
+
+class IndustryTemplate(IndustryTemplatePreview):
+    bot_persona: str = Field(min_length=1, max_length=2000)
+    bot_tone: Literal['neutral', 'friendly', 'formal']
+    bot_rules: str = Field(min_length=1, max_length=4000)
+    lead_fields: dict[LeadField, Literal['required', 'optional']]
+    eval_cases: list[EvalCaseInput] = Field(min_length=1, max_length=100)
+
+
+@lru_cache(maxsize=1)
+def industry_templates() -> dict[str, IndustryTemplate]:
+    directory = Path(__file__).resolve().parents[1] / 'templates'
+    catalog = {}
+    for path in sorted(directory.glob('*.yaml')):
+        template = IndustryTemplate.model_validate(yaml.safe_load(path.read_text(encoding='utf-8')))
+        if template.id != path.stem:
+            raise ValueError('Industry template ID must match its filename')
+        catalog[template.id] = template
+    return catalog
 
 
 class InviteInput(BaseModel):
@@ -47,16 +90,34 @@ def _user(request: Request) -> User:
     return user
 
 
+@router.get('/workspaces/templates', response_model=list[IndustryTemplatePreview])
+def list_templates(user: User = Depends(_user)):
+    return list(industry_templates().values())
+
+
 @router.post('/workspaces', status_code=201)
 def create_workspace(body: WorkspaceInput, user: User = Depends(_user)):
+    template = None
+    if body.industry_template is not None:
+        template = industry_templates().get(body.industry_template)
+        if template is None:
+            raise HTTPException(422, 'Unknown industry template')
     key = 'adm_' + secrets.token_urlsafe(32)
     tenant = Tenant(id=uid(), name=body.name, admin_key_hash=sha(key),
                     public_key='pub_' + secrets.token_urlsafe(18),
                     allowed_origins=json.dumps(body.allowed_origins))
+    if template:
+        tenant.industry_template = template.id
+        tenant.bot_persona = template.bot_persona
+        tenant.bot_tone = template.bot_tone
+        tenant.bot_rules = template.bot_rules
+        tenant.lead_fields = dict(template.lead_fields)
     with Session.begin() as db:
         db.add(tenant)
         db.flush()
         db.add(Membership(id=uid(), user_id=user.id, tenant_id=tenant.id, role='owner'))
+        if template:
+            db.add_all([EvalCase(tenant_id=tenant.id, **case.model_dump()) for case in template.eval_cases])
         record(db, 'workspace_created', tenant.id)
         db.execute(update(ProductEvent).where(ProductEvent.event_key == f'{user.id}:signup_completed',
                                               ProductEvent.tenant_id.is_(None)).values(tenant_id=tenant.id))

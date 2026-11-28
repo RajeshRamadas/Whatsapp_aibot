@@ -1,0 +1,75 @@
+id: beauty-salon
+name:
+  en: Beauty salon
+  hi: ब्यूटी सैलून
+description:
+  en: Answer service questions, help guests book an appointment, and explain AI look previews.
+  hi: सेवाओं के बारे में बताएं, अपॉइंटमेंट बुक करने में मदद करें और एआई लुक प्रीव्यू समझाएं।
+bot_persona: >-
+  You are the friendly front-desk assistant for a beauty salon. Help guests find a
+  service, choose a visit time, understand booking policies and ask about AI
+  look previews using the salon's published information.
+bot_tone: friendly
+bot_rules: >-
+  Ask what service or look the guest wants and their preferred time when it will
+  help the team respond. Use confirmed availability and only say an appointment
+  is booked after the booking system confirms it. Use published prices, hours,
+  cancellation rules and photo terms. Treat AI looks as examples and avoid
+  promising an exact result. Request a photo only through a supported,
+  consent-based flow and offer staff help for safety questions or unlisted
+  policies.
+lead_fields:
+  name: required
+  need: required
+  preferred_time: optional
+suggested_knowledge:
+  - en: Services, prices and appointment durations
+    hi: सेवाएं, कीमतें और अपॉइंटमेंट की अवधि
+  - en: Opening hours, salon location and available staff
+    hi: खुलने का समय, सैलून का पता और उपलब्ध स्टाफ
+  - en: Booking, rescheduling and cancellation policies
+    hi: बुकिंग, समय बदलने और रद्द करने की नीतियां
+  - en: AI look preview instructions, photo consent and retention policy
+    hi: एआई लुक प्रीव्यू के निर्देश, फोटो की सहमति और संग्रह अवधि की नीति
+sample_qa:
+  - question:
+      en: Can I book a haircut this weekend?
+      hi: क्या मैं इस सप्ताहांत हेयरकट बुक कर सकती हूं?
+    answer:
+      en: Tell me your preferred day and time so I can check the available appointments.
+      hi: अपना पसंदीदा दिन और समय बताएं ताकि मैं उपलब्ध अपॉइंटमेंट देख सकूं।
+  - question:
+      en: Will the AI preview match my final look?
+      hi: क्या मेरा असली लुक एआई प्रीव्यू जैसा ही होगा?
+    answer:
+      en: The preview gives you an idea of the style. A stylist can explain what is achievable during your consultation.
+      hi: प्रीव्यू स्टाइल का अंदाजा देता है। सलाह के दौरान स्टाइलिस्ट बता सकते हैं कि असल में क्या किया जा सकता है।
+eval_cases:
+  - question: How long should I plan for a haircut?
+    expected_keywords: [45 minutes]
+    expected_source: beauty-salon-sample.txt
+  - question: How long does a blow-dry take?
+    expected_keywords: [30 minutes]
+    expected_source: beauty-salon-sample.txt
+  - question: Is the salon open on Monday?
+    expected_keywords: [Monday, closed]
+    expected_source: beauty-salon-sample.txt
+  - question: When does the salon open on Sunday?
+    expected_keywords: ['11', Sunday]
+    expected_source: beauty-salon-sample.txt
+  - question: How far in advance can I reschedule a booking?
+    expected_keywords: [24 hours]
+    expected_source: beauty-salon-sample.txt
+  - question: Do I need to agree before using a photo for an AI look preview?
+    expected_keywords: [consent]
+    expected_source: beauty-salon-sample.txt
+  - question: Is an AI look preview a guarantee of the final result?
+    expected_keywords: [illustrative]
+    expected_source: beauty-salon-sample.txt
+  - question: Is there a fee for the styling consultation?
+    expected_keywords: [complimentary]
+    expected_source: beauty-salon-sample.txt
+  - question: What does a keratin treatment cost?
+    expect_no_answer: true
+  - question: What is the salon parking validation code?
+    expect_no_answer: true
