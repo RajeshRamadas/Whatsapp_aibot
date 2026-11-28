@@ -20,8 +20,20 @@ empty=$(psql -X -Atq -v ON_ERROR_STOP=1 -c "
     SELECT NOT EXISTS (
         SELECT FROM pg_namespace WHERE nspname !~ '^pg_' AND nspname NOT IN ('public', 'information_schema')
     ) AND NOT EXISTS (
-        SELECT FROM pg_class WHERE relnamespace = 'public'::regnamespace
-            AND relkind IN ('r', 'p', 'v', 'm', 'S', 'f')
+        SELECT FROM pg_depend AS object
+        WHERE object.refclassid = 'pg_namespace'::regclass AND object.refobjid = 'public'::regnamespace
+            AND object.deptype = 'n'
+            AND NOT EXISTS (
+                SELECT FROM pg_extension AS extension WHERE extension.extname = 'vector' AND (
+                    (object.classid = 'pg_extension'::regclass AND object.objid = extension.oid)
+                    OR EXISTS (
+                        SELECT FROM pg_depend AS member
+                        WHERE member.classid = object.classid AND member.objid = object.objid
+                            AND member.objsubid = object.objsubid AND member.deptype = 'e'
+                            AND member.refclassid = 'pg_extension'::regclass AND member.refobjid = extension.oid
+                    )
+                )
+            )
     )")
 if [[ "$connected" != "$PGDATABASE" || "$empty" != t ]]; then
     printf 'Restore requires an explicitly named, empty recovery database.\n' >&2

@@ -34,13 +34,20 @@ dc config --quiet
 dc build api web
 ```
 
-Configure TLS at the host reverse proxy. The [Caddy example](Caddyfile.example)
-routes signed provider webhooks, widget requests and public API traffic to the
-API and serves the dashboard through the web container. Only the reverse proxy
-needs public ports. Restrict forwarding trust to the actual proxy hops. If
-using Cloudflare, use Full (strict) TLS and allow signed webhook requests
-through the WAF without a browser challenge. Serve `/metrics` only to an
-authorized private scraper. [Monitoring configuration](prometheus.yml)
+Configure TLS at the host reverse proxy. The Caddy example sends `/api/v1/*`,
+including payment webhooks and OAuth callbacks, to the API. The web container
+serves the dashboard and its `/api/backend/*` routes. Only the reverse proxy
+needs public ports. Give each stack a distinct `PROXY_SUBNET`. Uvicorn trusts
+forwarded headers from the Docker bridge gateway and the web container's fixed
+IP. During staging, verify that API requests retain the client IP through both
+paths. If using Cloudflare, use Full (strict) TLS and set Caddy to trust only
+Cloudflare's proxy ranges. Allow signed webhooks through the WAF without a
+browser challenge. [Caddy configuration](Caddyfile.example)
+
+Set `METRICS_TOKEN` and give Prometheus the same token in its credentials file.
+Scrape `/metrics` over a private connection. Use `api:8000` from the stack's
+Docker network or the loopback API port from the deployment host.
+[Monitoring configuration](prometheus.yml)
 
 ## Deploy and verify
 
@@ -109,8 +116,8 @@ queue and bucket before repairing spreadsheet access. Reader roles are derived
 from the target database ID and must be rebuilt after a logical restore.
 
 ```bash
-dc run --rm --no-deps api python -m app.spreadsheets.restore_roles
 dc run --rm --no-deps migrate
+dc run --rm --no-deps api python -m app.spreadsheets.restore_roles
 ```
 
 Before enabling traffic or starting production workers, verify restored
@@ -121,14 +128,21 @@ backup time, restore time and smoke-check results.
 
 ## Roll back
 
-Take intake offline and stop the new scheduler and worker. Review the migration
-notes for the two releases. If the old images accept the existing schema, set
-the recorded old tags in the Compose environment and start the old stack
-without running an older migration over a newer schema. If schema rollback is
-required, test the documented downgrade on a recovery copy first. For an
-irreversible migration, recover to an isolated point in time and reconcile work
-accepted since that point before promotion. Repeat the smoke checks and monitor
-queue and webhook metrics as traffic resumes.
+Take intake offline and stop the new stack. Review the migration notes for the
+two releases. If the old images accept the existing schema, restore the previous
+image tags in the Compose environment and run the following commands. They skip
+the migration service and use the saved images.
+
+```bash
+dc up -d --no-deps --no-build --wait --wait-timeout 180 worker scheduler
+dc up -d --no-deps --no-build --wait --wait-timeout 180 api
+dc up -d --no-deps --no-build --wait --wait-timeout 180 web
+```
+
+If schema rollback is required, test the documented downgrade on a recovery copy
+first. For an irreversible migration, recover to an isolated point in time and
+reconcile work accepted since that point before promotion. Repeat the smoke
+checks and monitor queue and webhook metrics as traffic resumes.
 
 ## Rotate secrets and respond to an incident
 

@@ -1,5 +1,5 @@
 staging.example.invalid {
-    @api path /health /widget.js /webhooks/* /api/v1/chat/* /api/v1/public/*
+    @api path /health /widget.js /webhooks/* /api/v1/*
     handle @api {
         reverse_proxy 127.0.0.1:8088
     }

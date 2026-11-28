@@ -4,12 +4,24 @@ import asyncio
 import pytest
 from arq import create_pool
 from arq.connections import RedisSettings
-from arq.worker import Worker
+from arq.worker import Worker, create_worker
 from sqlalchemy import select
 
 from app.config import settings
 from app.db import AuditLog, Session
-from app.jobs.worker import sample_job
+from app.jobs.worker import QueueWorkerSettings, SchedulerSettings, WorkerSettings, sample_job
+
+
+def test_production_worker_roles_register_separate_queues():
+    async def check():
+        queue = create_worker(QueueWorkerSettings)
+        scheduler = create_worker(SchedulerSettings)
+        assert queue.cron_jobs == []
+        assert 'sample_job' in queue.functions
+        assert scheduler.queue_name != queue.queue_name
+        assert set(scheduler.functions) == {job.name for job in WorkerSettings.cron_jobs}
+
+    asyncio.run(check())
 
 
 @pytest.fixture
