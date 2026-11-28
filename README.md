@@ -736,6 +736,9 @@ configured email sender. The default sender records a delivery request in logs.
 
 ### Razorpay subscriptions
 
+Owners can consolidate eligible client workspaces under one subscription and
+pooled AI quota. [Agency billing](docs/AGENCY_BILLING.md)
+
 Run the database migrations, then set `RAZORPAY_KEY_ID`,
 `RAZORPAY_KEY_SECRET` and `RAZORPAY_WEBHOOK_SECRET` on the API and worker.
 In test mode, provision each monthly plan with

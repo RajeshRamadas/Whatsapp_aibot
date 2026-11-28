@@ -12,6 +12,7 @@ type Policy = 'pause' | 'overage';
 type Usage = {
   month: string; as_of: string; ai_messages: number; quota_behavior: Policy;
   limits: { ai_messages: number; overage_inr?: number };
+  managed_by?: string | null;
 };
 
 
@@ -91,13 +92,13 @@ export function UsageMeter({ workspaceId, manage = false, revision = 0 }: {
           : 'rounded-lg bg-amber-100 p-3 text-amber-950 dark:bg-amber-950 dark:text-amber-100'}>
           <p className="font-medium">{percent >= 100 ? copy.limitReached : copy.limitWarning}</p>
           <p className="text-sm">{usage.quota_behavior === 'overage' ? copy.overageSummary : copy.pauseSummary}</p>
-          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
+          {!usage.managed_by && <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
             <Link href={manage ? '#plans' : '/dashboard/billing#plans'} className="underline">{copy.compare}</Link>
             <Link href={manage ? '#quota-policy' : '/dashboard/billing#quota-policy'}
               className="underline">{copy.choosePolicy}</Link>
-          </div>
+          </div>}
         </div>}
-        {manage && <form id="quota-policy" className="scroll-mt-4 space-y-2 border-t border-border pt-3"
+        {manage && !usage.managed_by && <form id="quota-policy" className="scroll-mt-4 space-y-2 border-t border-border pt-3"
           onSubmit={event => { event.preventDefault(); void save(); }}>
           <fieldset className="space-y-2" disabled={busy}>
             <legend className="font-semibold">{copy.policyTitle}</legend>

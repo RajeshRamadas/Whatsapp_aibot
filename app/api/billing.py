@@ -13,7 +13,7 @@ from sqlalchemy.dialects.postgresql import insert
 from ..config import settings
 from ..db import BillingEvent, Plan, Session, Subscription, Tenant, now, uid
 from ..services.analytics import record
-from ..services.billing import TERMINAL, apply_snapshot, configured, entitled, save_snapshot
+from ..services.billing import TERMINAL, apply_snapshot, billing_workspace, configured, entitled, save_snapshot
 from ..services.billing_provider import BillingError, provider
 from ..services.invoices import issue
 from .principal import tenant_for_role
@@ -46,12 +46,23 @@ def mapped(plan):
     return value
 
 
+def own_billing(tenant):
+    if tenant.agency_id:
+        raise HTTPException(409, 'This workspace is billed through its agency')
+
+
 @router.get('/api/v1/billing')
 def status(tenant: Tenant = Depends(tenant_for_role('owner'))):
     with Session() as db:
+        payer = billing_workspace(db, tenant)
+        if tenant.agency_id and payer:
+            return {'enabled': False, 'trial_ends_at': payer.trial_ends_at, 'current_plan': payer.plan_id,
+                    'timezone': tenant.timezone, 'tax_rate': None, 'entitled': entitled(db, payer, now()),
+                    'subscription': None, 'plans': [], 'managed_by': payer.name}
         row = db.get(Subscription, tenant.id)
         plans = db.scalars(select(Plan).order_by(Plan.id)).all()
         return {'enabled': configured(), 'trial_ends_at': tenant.trial_ends_at, 'current_plan': tenant.plan_id,
+                'managed_by': None,
                 'timezone': tenant.timezone,
                 'tax_rate': str(settings.gst_invoice_issuer.tax_rate) if settings.gst_invoice_issuer else None,
                 'entitled': entitled(db, tenant, now()), 'subscription': public_view(row) if row else None,
@@ -61,10 +72,12 @@ def status(tenant: Tenant = Depends(tenant_for_role('owner'))):
 
 @router.post('/api/v1/billing/checkout')
 def checkout(body: PlanChoice, tenant: Tenant = Depends(tenant_for_role('owner'))):
+    own_billing(tenant)
     graph = billing_provider()
     remote_plan = mapped(body.plan)
     with Session.begin() as db:
         workspace = db.get(Tenant, tenant.id, with_for_update=True)
+        own_billing(workspace)
         if settings.gst_invoice_issuer is not None and not workspace.billing_details:
             raise HTTPException(409, 'Save your billing details before checkout')
         trial_end = workspace.trial_ends_at
@@ -105,6 +118,7 @@ def checkout(body: PlanChoice, tenant: Tenant = Depends(tenant_for_role('owner')
 
 @router.patch('/api/v1/billing/subscription')
 def change_plan(body: PlanChoice, tenant: Tenant = Depends(tenant_for_role('owner'))):
+    own_billing(tenant)
     graph = billing_provider()
     remote_plan = mapped(body.plan)
     with Session() as db:
@@ -131,6 +145,7 @@ def change_plan(body: PlanChoice, tenant: Tenant = Depends(tenant_for_role('owne
 
 @router.post('/api/v1/billing/subscription/cancel')
 def cancel(tenant: Tenant = Depends(tenant_for_role('owner'))):
+    own_billing(tenant)
     graph = billing_provider()
     with Session() as db:
         row = db.get(Subscription, tenant.id)

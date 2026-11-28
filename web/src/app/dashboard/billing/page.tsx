@@ -2,6 +2,7 @@
 import { useCopy, useDisplayLocale } from '@/i18n/provider';
 
 import { useEffect, useState } from 'react';
+import { AgencyBillingSettings } from '@/components/agency-billing';
 import { InvoiceSettings } from '@/components/invoice-settings';
 import { UsageMeter } from '@/components/usage-meter';
 import { useWorkspace } from '@/components/app-shell';
@@ -20,6 +21,7 @@ type Plan = {
 type Billing = {
   enabled: boolean; trial_ends_at: string; current_plan: string; entitled: boolean;
   timezone: string; tax_rate: string | null; subscription: Subscription | null; plans: Plan[];
+  managed_by?: string | null;
 };
 const field = 'min-h-11 rounded border border-border bg-surface px-3 py-2';
 
@@ -119,7 +121,13 @@ function WorkspaceBilling({ id }: { id: string }) {
       <button className={field} onClick={() => { setLoadError(false); refresh(); }}>{copy.retry}</button>
     </div>}
     {!data && !loadError && <p role="status">{copy.loading}</p>}
-    {data && <>
+    {data?.managed_by && <Card className="space-y-2">
+      <h2 className="font-semibold">{copy.agency.managed.replace('{name}', data.managed_by)}</h2>
+      <p>{copy.current}: {name(data.current_plan)}</p>
+      {!data.entitled && <p role="status">{copy.paused}</p>}
+    </Card>}
+    {data && !data.managed_by && <>
+      <AgencyBillingSettings workspace={id} changed={refresh} />
       <Card className="space-y-2">
         <h2 className="font-semibold">{copy.subscription}</h2>
         <p>{copy.current}: {name(data.current_plan)}</p>

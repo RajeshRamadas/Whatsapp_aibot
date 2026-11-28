@@ -1,12 +1,13 @@
 """Workspace usage and owner quota policy."""
 from typing import Literal
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import select
 
 from ..db import Plan, Session, Tenant, UsageDaily, now
-from ..services.usage import month_start, monthly_count
+from ..services.billing import billing_workspace
+from ..services.usage import billing_monthly_count, month_start, monthly_count
 from .principal import tenant_for_role
 
 router = APIRouter(prefix='/api/v1/usage')
@@ -21,13 +22,15 @@ def summary(days: int = Query(30, ge=1, le=90), tenant: Tenant = Depends(tenant_
     as_of = now()
     start = month_start(as_of)
     with Session() as db:
-        plan = db.get(Plan, tenant.plan_id)
-        count = monthly_count(db, tenant.id, start)
+        payer = billing_workspace(db, tenant) or tenant
+        plan = db.get(Plan, payer.plan_id)
+        count = monthly_count(db, tenant.id, start) if tenant.agency_id else billing_monthly_count(db, tenant.id, start)
         rows = db.scalars(select(UsageDaily).where(UsageDaily.tenant_id == tenant.id)
                           .order_by(UsageDaily.day.desc()).limit(days)).all()
     return {'plan': plan.id, 'limits': plan.limits, 'month': start.date(),
             'as_of': as_of, 'ai_messages': count,
-            'quota_behavior': tenant.quota_behavior, 'daily': [
+            'managed_by': payer.name if tenant.agency_id else None,
+            'quota_behavior': payer.quota_behavior, 'daily': [
                 {'day': row.day, 'ai_messages': row.ai_messages, 'overage_messages': row.overage_messages,
                  'ai_calls': row.ai_calls, 'input_tokens': row.input_tokens, 'output_tokens': row.output_tokens,
                  'cost_usd': str(row.cost_usd), 'unpriced_calls': row.unpriced_calls} for row in rows
@@ -37,5 +40,8 @@ def summary(days: int = Query(30, ge=1, le=90), tenant: Tenant = Depends(tenant_
 @router.put('/quota-policy')
 def change_policy(body: QuotaPolicy, tenant: Tenant = Depends(tenant_for_role('owner'))):
     with Session.begin() as db:
-        db.get(Tenant, tenant.id, with_for_update=True).quota_behavior = body.behavior
+        row = db.get(Tenant, tenant.id, with_for_update=True)
+        if row.agency_id:
+            raise HTTPException(409, 'The agency billing workspace manages the quota policy')
+        row.quota_behavior = body.behavior
     return body

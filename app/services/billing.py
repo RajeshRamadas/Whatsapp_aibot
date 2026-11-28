@@ -24,7 +24,14 @@ def timestamp(value):
     return datetime.fromtimestamp(value, timezone.utc) if isinstance(value, int) and value > 0 else None
 
 
+def billing_workspace(db, tenant, *, lock=False):
+    return db.get(Tenant, tenant.agency_id, with_for_update=lock) if tenant.agency_id else tenant
+
+
 def entitled(db, tenant, at):
+    tenant = billing_workspace(db, tenant)
+    if tenant is None or tenant.suspended:
+        return False
     subscription = db.get(Subscription, tenant.id)
     if not configured() and subscription is None:
         return True

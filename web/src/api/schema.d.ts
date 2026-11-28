@@ -4,6 +4,41 @@
  */
 
 export interface paths {
+    "/api/v1/agency/billing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Summary */
+        get: operations["summary_api_v1_agency_billing_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agency/clients/{client_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Link Client */
+        put: operations["link_client_api_v1_agency_clients__client_id__put"];
+        post?: never;
+        /** Unlink Client */
+        delete: operations["unlink_client_api_v1_agency_clients__client_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/knowledge-sync": {
         parameters: {
             query?: never;
@@ -3414,6 +3449,33 @@ export interface components {
             /** Last Error */
             last_error: string | null;
         };
+        /** AgencyBilling */
+        AgencyBilling: {
+            /** Clients */
+            clients: components["schemas"]["AgencyClient"][];
+            /** Candidates */
+            candidates: components["schemas"]["AgencyWorkspace"][];
+            /** Ai Messages */
+            ai_messages: number;
+            /** Ai Message Limit */
+            ai_message_limit: number;
+        };
+        /** AgencyClient */
+        AgencyClient: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Ai Messages */
+            ai_messages: number;
+        };
+        /** AgencyWorkspace */
+        AgencyWorkspace: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+        };
         /** AgentReply */
         AgentReply: {
             /** Message */
@@ -5998,6 +6060,104 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    summary_api_v1_agency_billing_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgencyBilling"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    link_client_api_v1_agency_clients__client_id__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgencyWorkspace"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unlink_client_api_v1_agency_clients__client_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path: {
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     listing_api_v1_knowledge_sync_get: {
         parameters: {
             query?: never;
