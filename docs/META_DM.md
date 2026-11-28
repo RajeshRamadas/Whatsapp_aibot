@@ -397,3 +397,6 @@ The worker downloads media from the pinned CDN URL in the signed event and sends
 with Meta's existing private multipart media request. No migration or new
 setting. Deploy compatible workers before API and web. Live GIF delivery still
 requires Meta test assets and permission verification.
+
+Recovery for interrupted incoming media removes private files, retries failed
+deletions, and keeps concurrently completed downloads available.
