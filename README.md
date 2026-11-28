@@ -346,6 +346,10 @@ Do not deploy this starter to a public-facing production service without address
 
 ### Workspace membership and permissions
 
+On **Create workspace**, choose **Beauty salon** to prefill a friendly booking
+persona, lead fields and an editable accuracy test set for salon services and
+AI look previews. [Industry template and acceptance steps](docs/INDUSTRY_TEMPLATES.md)
+
 After signing in, create a workspace with `POST /api/v1/workspaces` and an
 `X-CSRF-Token` header matching the `chatbot_csrf` cookie. For workspace-scoped
 requests send `X-Workspace-Id: <tenant_id>`; unsafe requests also require

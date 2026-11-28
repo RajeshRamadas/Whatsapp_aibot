@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { securityClient } from '@/api/security';
+import { createWorkspace } from '@/api/workspaces';
 import { SecondFactor } from './second-factor';
+import { IndustryPicker } from './workspace-industry';
 import { Button } from '@/components/ui/button';
 import { Input, Card } from '@/components/ui/primitives';
 
@@ -37,6 +39,9 @@ export function AuthForm({ mode }: { mode: Mode }) {
       const payload: Record<string, string> = {};
       for (const field of fields[mode]) payload[field] = values[field] ?? '';
       const result = mode === 'login' ? await securityClient.login(payload.email, payload.password)
+        : mode === 'workspace' ? await createWorkspace({
+          name: payload.name, industry_template: values.industry_template || undefined,
+        })
         : await api<{ tenant_id?: string }>(endpoints[mode], { method: 'POST', body: JSON.stringify(payload) });
       if (mode === 'login' && 'mfa_required' in result) {
         setChallenge(result.challenge); setValues(v => ({ ...v, password: '' })); return;
@@ -62,6 +67,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
           autoComplete={field === 'password' ? (mode === 'login' ? 'current-password' : 'new-password') : undefined}
           value={values[field] ?? ''} onChange={event => setValues(current => ({ ...current, [field]: event.target.value }))} />
       </label>)}
+      {mode === 'workspace' && <IndustryPicker value={values.industry_template ?? ''}
+        onChange={industry_template => setValues(current => ({ ...current, industry_template }))} disabled={busy} />}
       {error && <p role="alert" className="text-red-700 dark:text-red-300">{error}</p>}
       {success && <p role="status">{success}</p>}
       <Button type="submit" disabled={busy}>{busy ? messages.loading : messages.submit}</Button>

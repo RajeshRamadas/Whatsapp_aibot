@@ -100,7 +100,8 @@ class AgentReply(BaseModel):
 
 def tenant_view(t: Tenant) -> dict:
     provider, model = llm.resolve_chat(t.chat_provider, t.chat_model)
-    return {'tenant_id': t.id, 'name': t.name, 'public_key': t.public_key, 'allowed_origins': origins(t),
+    return {'tenant_id': t.id, 'name': t.name, 'industry_template': t.industry_template,
+            'public_key': t.public_key, 'allowed_origins': origins(t),
             'whatsapp_opt_out_keywords': t.whatsapp_opt_out_keywords,
             'chat_provider': provider, 'chat_model': model, 'whatsapp_phone_number_id': t.whatsapp_phone_number_id,
             'bot_name': t.bot_name, 'bot_persona': t.bot_persona, 'bot_tone': t.bot_tone,

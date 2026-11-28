@@ -111,6 +111,7 @@ jobs:
         with:
           name: browser-acceptance
           path: |
+            docs/screenshots/t8-1-beauty-salon.png
             docs/screenshots/t10-6-commerce.png
             docs/screenshots/t10-7-knowledge-sync.png
             docs/screenshots/t10-8-meta-oauth.png

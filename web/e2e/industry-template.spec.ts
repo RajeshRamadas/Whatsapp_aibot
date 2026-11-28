@@ -1,0 +1,30 @@
+import { randomUUID } from 'node:crypto';
+import { expect, test } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
+
+test('create a salon workspace with template suggestions and accuracy cases', async ({ page }) => {
+  const credentials = { email: `industry-${randomUUID()}@example.com`, password: 'template-test-passphrase' };
+  const signup = await page.request.post('/api/backend/auth/signup', { data: { name: 'Salon Owner', ...credentials } });
+  expect(signup.status()).toBe(201);
+  expect((await page.request.post('/api/backend/auth/login', { data: credentials })).ok()).toBeTruthy();
+  await page.goto('/create-workspace');
+  await page.getByLabel('Business name', { exact: true }).fill('Sample Salon');
+  const templates = page.getByRole('combobox', { name: 'Industry template' });
+  await expect(templates.getByRole('option', { name: 'Beauty salon' })).toHaveCount(1);
+  await templates.selectOption('beauty-salon');
+  await expect(page.getByText('Services, prices and appointment durations', { exact: true })).toBeVisible();
+  await page.getByText('Sample questions and answers', { exact: true }).click();
+  await expect(page.getByText('Will the AI preview match my final look?', { exact: true })).toBeVisible();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.setViewportSize({ width: 320, height: 900 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.screenshot({ path: '../docs/screenshots/t8-1-beauty-salon.png', fullPage: true });
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.getByText('Services, prices and appointment durations', { exact: true })).toBeVisible();
+  const tenant = await (await page.request.get('/api/backend/tenant')).json();
+  expect(tenant).toMatchObject({ industry_template: 'beauty-salon', bot_tone: 'friendly', bot_live: false });
+  const cases = await (await page.request.get('/api/backend/evals')).json();
+  expect(cases).toHaveLength(10);
+});
