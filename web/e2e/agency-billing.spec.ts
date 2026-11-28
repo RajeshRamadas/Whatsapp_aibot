@@ -14,7 +14,8 @@ test('owner links a client to consolidated billing and can unlink it', async ({ 
   }
   await page.goto('/dashboard/billing');
   const panel = page.getByRole('region', { name: 'Agency billing', exact: true });
-  await panel.getByLabel('Client workspace', { exact: true }).selectOption({ label: 'Client Billing Fixture' });
+  await panel.getByRole('combobox', { name: 'Client workspace', exact: true })
+    .selectOption({ label: 'Client Billing Fixture' });
   await panel.getByRole('button', { name: 'Link client workspace', exact: true }).click();
   await expect(panel.getByRole('list', { name: 'Billed workspaces' })).toContainText('Client Billing Fixture');
   await page.setViewportSize({ width: 320, height: 900 });
