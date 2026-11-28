@@ -26,7 +26,7 @@ def view(channel):
             'campaign_checked_at': channel.campaign_checked_at,
             'campaign_portfolio': channel.campaign_portfolio,
             'meta_bot_enabled': channel.meta_bot_enabled,
-            'meta_token_status': channel.meta_token_status,
+            'meta_token_status': 'invalid' if channel.meta_authorization_paused else channel.meta_token_status,
             'status': 'configured' if configured else 'unconfigured', 'has_channel_token': has_token}
 
 

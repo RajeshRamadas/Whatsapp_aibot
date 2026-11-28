@@ -112,6 +112,7 @@ def persist_connection(body, tenant_id, name, encrypted, guard=None, finalize=No
             channel = renewal_channel(db, body, tenant_id, renewal, lock=True)
             channel.credentials_enc = encrypted
             channel.meta_token_status, channel.meta_token_check_at = None, None
+            channel.meta_token_expires_at, channel.meta_token_alerted = None, False
             if name:
                 channel.display_name = name
         else:
