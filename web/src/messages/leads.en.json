@@ -44,5 +44,26 @@
   "loadError": "Could not load leads.",
   "loadOwnersError": "Could not load lead owners.",
   "saveError": "Could not save the lead.",
-  "exportError": "Could not export leads."
+  "exportError": "Could not export leads.",
+  "followUp": {
+    "title": "Lead follow-ups",
+    "description": "Send one approved WhatsApp template to an opted-in lead who stays quiet. A reply or opt-out stops the follow-up.",
+    "enabled": "Follow-ups enabled",
+    "paused": "Follow-ups paused",
+    "templateChanged": "The saved template changed or lost approval. Choose an approved template or pause follow-ups.",
+    "templateError": "Could not load approved templates.",
+    "loadingTemplates": "Loading approved templates…",
+    "noTemplates": "Approve a WhatsApp template in Campaigns to enable follow-ups.",
+    "template": "Approved WhatsApp template",
+    "chooseTemplate": "Choose a template",
+    "unavailableTemplate": "Saved template unavailable",
+    "delay": "Wait (hours)",
+    "variable": "Template value {number}",
+    "save": "Save follow-up settings",
+    "enable": "Enable follow-ups",
+    "pause": "Pause follow-ups",
+    "saved": "Follow-up settings saved.",
+    "loadError": "Could not load follow-up settings.",
+    "saveError": "Could not save follow-up settings. Check the template and try again."
+  }
 }

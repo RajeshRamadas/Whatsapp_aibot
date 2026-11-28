@@ -6,11 +6,17 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 
-from ..db import Conversation, Lead, Membership, Session, Tenant, User
-from .principal import tenant_for_role
+from ..db import Conversation, Lead, Membership, Session, Tenant, User, now
+from ..models.lead_follow_ups import LeadFollowUpRule
+from ..services import lead_follow_ups
+from ..services.audit import audit
+from ..services.channels import whatsapp_channel
+from ..services.templates import render, template_for_send
+from .principal import Principal, require_role, tenant_for_role
+from .templates import TextValue
 
 router = APIRouter(prefix='/api/v1')
 LeadField = Literal['name', 'phone', 'need', 'budget', 'location', 'preferred_time', 'email']
@@ -26,6 +32,75 @@ class LeadUpdate(BaseModel):
     status: LeadStatus | None = None
     owner_id: str | None = Field(None, min_length=1, max_length=36)
     notes: str | None = Field(None, max_length=8000)
+
+
+class FollowUpInput(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    enabled: bool = Field(strict=True)
+    delay_hours: int = Field(24, ge=1, le=168, strict=True)
+    template_id: str | None = Field(None, min_length=1, max_length=36)
+    values: list[TextValue] = Field(default_factory=list, max_length=20)
+
+
+class FollowUpView(FollowUpInput):
+    enabled: bool = False
+    template_available: bool = False
+
+
+class FollowUpPause(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    enabled: Literal[False]
+
+
+def follow_up_view(db, tenant_id, rule):
+    if rule is None:
+        return FollowUpView()
+    channel = whatsapp_channel(db, tenant_id)
+    return FollowUpView(enabled=rule.enabled, delay_hours=rule.delay_hours, template_id=rule.template_id,
+        values=rule.values, template_available=bool(lead_follow_ups.configured_template(db, rule, channel)))
+
+
+@router.get('/lead-follow-up', response_model=FollowUpView)
+def get_follow_up(tenant: Tenant = Depends(tenant_for_role('admin'))):
+    with Session() as db:
+        return follow_up_view(db, tenant.id, db.get(LeadFollowUpRule, tenant.id))
+
+
+@router.put('/lead-follow-up', response_model=FollowUpView)
+def set_follow_up(body: FollowUpPause | FollowUpInput, principal: Principal = Depends(require_role('admin'))):
+    tenant_id = principal.tenant.id
+    pausing = isinstance(body, FollowUpPause)
+    if not pausing and body.template_id is None and (body.enabled or body.values):
+        raise HTTPException(422, 'Choose an approved WhatsApp template')
+    with Session.begin() as db:
+        db.get(Tenant, tenant_id, with_for_update=True)
+        rule = db.get(LeadFollowUpRule, tenant_id, with_for_update=True)
+        if pausing and rule is None:
+            return FollowUpView()
+        fields = body.model_dump() if pausing else {**body.model_dump(), 'snapshot': {}}
+        if not pausing and body.template_id:
+            channel = whatsapp_channel(db, tenant_id)
+            template = template_for_send(db, channel.id, body.template_id) if channel and channel.waba_id else None
+            if template and template.category in lead_follow_ups.CATEGORIES:
+                try:
+                    render(template.body, body.values)
+                except ValueError as exc:
+                    raise HTTPException(422, str(exc)) from None
+                fields['snapshot'] = lead_follow_ups.snapshot(template, channel)
+            else:
+                raise HTTPException(404, 'Approved template not found')
+        if rule is None or any(getattr(rule, key) != value for key, value in fields.items()):
+            if rule is None:
+                rule = LeadFollowUpRule(tenant_id=tenant_id)
+                db.add(rule)
+            for key, value in fields.items():
+                setattr(rule, key, value)
+            rule.configured_at = rule.next_check_at = now()
+            audit(db, tenant_id, 'lead_follow_up.configured', details={
+                'enabled': rule.enabled, 'template_id': rule.template_id, 'delay_hours': rule.delay_hours,
+            }, actor_user_id=principal.user.id if principal.user else None,
+                actor_type='user' if principal.user else 'api_key')
+        return follow_up_view(db, tenant_id, rule)
 
 
 @router.get('/lead-config')

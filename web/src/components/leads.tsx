@@ -4,6 +4,7 @@ import { useCopy } from '@/i18n/provider';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import type { Workspace } from '@/components/app-shell';
+import { LeadFollowUps } from '@/components/lead-follow-ups';
 import { api } from '@/lib/api';
 
 
@@ -150,6 +151,7 @@ export function Leads({ workspace }: { workspace: Workspace }) {
   const visible = rows?.slice(0, size) ?? [];
   return <main id="main" tabIndex={-1} className="min-w-0 space-y-4 p-4">
     <h1 className="text-2xl font-semibold">{messages.leads}</h1>
+    {(workspace.role === 'owner' || workspace.role === 'admin') && <LeadFollowUps workspaceId={workspace.id} />}
     <div className="flex flex-wrap gap-2">
       <button className={control} aria-pressed={!board} onClick={() => setBoard(false)}>{copy.list}</button>
       <button className={control} aria-pressed={board} onClick={() => setBoard(true)}>{copy.board}</button>

@@ -8,8 +8,9 @@ from sqlalchemy import exists, func, select, text, update
 
 from .. import whatsapp
 from ..config import settings
-from ..db import Campaign, Channel, Contact, Session, Tenant, now
+from ..db import Campaign, Channel, Contact, Conversation, Message, Session, Tenant, now
 from ..db import CampaignRecipient as Recipient
+from ..models.lead_follow_ups import FOLLOW_UP_REPLY_KEY
 from ..rate_limits import RateLimiter
 from .analytics import record
 from .audit import audit
@@ -119,6 +120,39 @@ def maintain():
         notify(tenant_id, identity)
 
 
+def capacity_available(db, channel, recipient_phone):
+    # The provider's portfolio budget spans phones, workspaces and both send queues.
+    db.execute(text('SELECT pg_advisory_xact_lock(hashtext(:key))'),
+               {'key': 'campaign-portfolio:' + channel.campaign_portfolio})
+    cap = db.scalar(select(func.min(Channel.campaign_limit)).where(
+        Channel.campaign_portfolio == channel.campaign_portfolio))
+    since = now() - timedelta(days=1)
+    campaign_phones = select(Contact.external_user).join(Recipient, Recipient.contact_id == Contact.id).join(
+        Campaign, Campaign.id == Recipient.campaign_id).where(
+        Campaign.snapshot['portfolio_id'].astext == channel.campaign_portfolio, Recipient.claimed_at >= since)
+    follow_up_phones = select(Conversation.external_user).join(Message, Message.conversation_id == Conversation.id
+        ).where(Message.reply_key == FOLLOW_UP_REPLY_KEY, Message.dispatch_started_at >= since,
+                Message.template_payload['portfolio_id'].astext == channel.campaign_portfolio)
+    phones = campaign_phones.union(follow_up_phones).subquery()
+    used, already = db.execute(select(func.count(), func.bool_or(phones.c.external_user == recipient_phone))).one()
+    return bool(already) or used < min(cap, settings.campaign_daily_limit)
+
+
+def send_rate_available(phone_id):
+    try:
+        limiter = RateLimiter(settings.campaign_sends_per_second, window_seconds=1, namespace='campaign-send')
+        return limiter.allow(phone_id)
+    except RedisError:
+        return False
+
+
+def provider_error_code(response):
+    try:
+        return int(response.json().get('error', {}).get('code', 0))
+    except (ValueError, TypeError, AttributeError):
+        return 0
+
+
 def deliver(identity, tenant_id):
     with Session() as db:
         recipient = scoped(db, Recipient, identity, tenant_id)
@@ -157,26 +191,10 @@ def deliver(identity, tenant_id):
             campaign.state, campaign.reason = 'paused', 'template_changed'
             return
         campaign.snapshot = {**campaign.snapshot, 'portfolio_id': channel.campaign_portfolio}
-        # Meta's portfolio budget crosses phone/workspace boundaries. Only aggregate capacity is read.
-        db.execute(text('SELECT pg_advisory_xact_lock(hashtext(:key))'),
-                   {'key': 'campaign-portfolio:' + channel.campaign_portfolio})
-        cap = db.scalar(select(func.min(Channel.campaign_limit)).where(
-            Channel.campaign_portfolio == channel.campaign_portfolio))
-        reservations = select(Contact.external_user).join(Recipient, Recipient.contact_id == Contact.id)\
-            .join(Campaign, Campaign.id == Recipient.campaign_id).where(
-            Campaign.snapshot['portfolio_id'].astext == channel.campaign_portfolio,
-            Recipient.claimed_at >= now() - timedelta(days=1))
-        used = db.scalar(select(func.count()).select_from(reservations.distinct().subquery()))
-        already = db.scalar(reservations.where(Contact.external_user == contact.external_user).limit(1))
-        if not already and used >= min(cap, settings.campaign_daily_limit):
+        if not capacity_available(db, channel, contact.external_user):
             row.error_code = 'daily_limit'
             return
-        try:
-            allowed = RateLimiter(settings.campaign_sends_per_second, window_seconds=1,
-                                  namespace='campaign-send').allow(channel.external_id)
-        except RedisError:
-            allowed = False
-        if not allowed:
+        if not send_rate_available(channel.external_id):
             row.next_attempt_at, row.error_code = now() + timedelta(seconds=1), 'rate_limit'
             return
         row.state, row.attempts, row.claimed_at = 'sending', row.attempts + 1, now()
@@ -193,10 +211,7 @@ def deliver(identity, tenant_id):
         if not isinstance(provider_id, str) or not 1 <= len(provider_id) <= 128:
             raise ValueError()
     except httpx.HTTPStatusError as exc:
-        try:
-            code = int(exc.response.json().get('error', {}).get('code', 0))
-        except (ValueError, TypeError, AttributeError):
-            code = 0
+        code = provider_error_code(exc.response)
         error = f'meta_{code}' if 0 < code < 1000000000 else f'http_{exc.response.status_code}'
         transient = exc.response.status_code == 429 or exc.response.status_code >= 500 or code in (
             4, 17, 32, 613, 80007, 130429, 131000, 131016, 131056)

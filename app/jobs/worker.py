@@ -22,6 +22,7 @@ from ..services import (
     evaluation_runs,
     google_jobs,
     knowledge_sync,
+    lead_follow_ups,
     lead_sync_worker,
     media,
     payment_notifications,
@@ -333,6 +334,21 @@ async def dispatch_campaigns(ctx):
 
 
 @observed_job
+async def send_lead_follow_up(ctx, tenant_id):
+    await asyncio.to_thread(lead_follow_ups.deliver, tenant_id)
+
+
+@observed_job
+async def dispatch_lead_follow_ups(ctx):
+    for tenant_id, stamp in await asyncio.to_thread(lead_follow_ups.pending):
+        try:
+            await enqueue('send_lead_follow_up', tenant_id=tenant_id,
+                          _job_id=f'lead-follow-up:{tenant_id}:{stamp.timestamp()}')
+        except RuntimeError:
+            continue  # Duplicate enqueue; the database rule still determines eligibility.
+
+
+@observed_job
 async def dispatch_commerce(ctx):
     from ..services import order_lookup
     await asyncio.to_thread(order_lookup.maintain)
@@ -512,6 +528,7 @@ class WorkerSettings:
                  cron(dispatch_websites, second={0, 10, 20, 30, 40, 50}),
                  cron(dispatch_agent_replies, second={0, 10, 20, 30, 40, 50}),
                  cron(dispatch_campaigns, second=set(range(60))),
+                 cron(dispatch_lead_follow_ups, second=set(range(0, 60, 5))),
                  cron(dispatch_email, second=set(range(60))),
                  cron(notify_inbox, second={5, 15, 25, 35, 45, 55}),
                  cron(dispatch_widget_turn, second=set(range(0, 60, 2)), timeout=600),
@@ -521,7 +538,8 @@ class WorkerSettings:
                  cron(dispatch_usage_alerts, second=25),
                  cron(reconcile_billing, hour=2, minute=0, second=0, timeout=600)]
     functions = [sample_job, func(ingest_source, timeout=1800), func(handle_message, timeout=600),
-                 cache_email_certificate, send_campaign_recipient, func(crawl_website, timeout=3600)]
+                 cache_email_certificate, send_campaign_recipient,
+                 func(send_lead_follow_up, timeout=120, keep_result=0), func(crawl_website, timeout=3600)]
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
     max_jobs = 10
     job_timeout = 60
