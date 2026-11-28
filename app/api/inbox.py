@@ -36,7 +36,8 @@ def view(conv: Conversation, db=None, enabled=None) -> dict:
     meta = conv.channel in ('instagram', 'messenger')
     if meta and enabled is None and db is not None:
         enabled = set(db.scalars(select(Channel.id).where(Channel.tenant_id == conv.tenant_id,
-            Channel.meta_bot_enabled, Channel.credentials_enc.is_not(None))))
+            Channel.meta_bot_enabled, Channel.credentials_enc.is_not(None),
+            ~Channel.meta_authorization_paused)))
     can_hand_back = not meta or bool(conv.meta_channel_id in (enabled or ()) and can_reply(conv))
     return {'id': conv.id, 'channel': conv.channel, 'user': conv.external_user, 'handoff': conv.handoff,
             'contact_id': conv.contact_id, 'status': conv.status, 'assignee_user_id': conv.assignee_user_id,
@@ -100,7 +101,8 @@ def inbox_list(status: str | None = None, channel: str | None = None, assignee: 
         rows = db.scalars(query.order_by(Conversation.created_at.desc(), Conversation.id.desc())
                           .limit(limit + 1)).all()
         enabled = set(db.scalars(select(Channel.id).where(Channel.tenant_id == tenant_id,
-            Channel.meta_bot_enabled, Channel.credentials_enc.is_not(None))))
+            Channel.meta_bot_enabled, Channel.credentials_enc.is_not(None),
+            ~Channel.meta_authorization_paused)))
         items = [view(row, db, enabled) for row in rows[:limit]]
     return {'items': items,
             'next_cursor': rows[limit - 1].id if len(rows) > limit else None, 'counts': counts}
@@ -177,8 +179,8 @@ def reply(conversation_id: str, body: Reply, principal: Principal = Depends(requ
             channel = db.scalar(select(Channel).where(Channel.tenant_id == principal.tenant.id,
                                                        Channel.id == conv.meta_channel_id,
                                                        Channel.kind == conv.channel))
-            if not channel or not channel.credentials_enc:
-                raise HTTPException(503, 'This Meta messaging channel is not connected')
+            if not channel or not channel.meta_send_ready:
+                raise HTTPException(503, 'This Meta messaging channel needs authorization')
             limit = 1000 if conv.channel == 'instagram' else 2000
             if len(body.message.encode('utf-8')) > limit:
                 raise HTTPException(422, f'This channel accepts at most {limit} UTF-8 bytes per text reply')

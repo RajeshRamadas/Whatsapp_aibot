@@ -86,8 +86,8 @@ def set_bot(channel_id: UUID, body: MetaBotChange, principal: Principal = Depend
             Channel.tenant_id == principal.tenant.id, Channel.kind.in_(('instagram', 'messenger'))).with_for_update())
         if not channel:
             raise HTTPException(404, 'Meta channel not found')
-        if body.enabled and not channel.credentials_enc:
-            raise HTTPException(409, 'Connect the account before enabling bot replies')
+        if body.enabled and not channel.meta_send_ready:
+            raise HTTPException(409, 'Authorize the account before enabling bot replies')
         conversations = db.scalars(select(Conversation).where(Conversation.tenant_id == principal.tenant.id,
             Conversation.meta_channel_id == channel.id).with_for_update()).all()
         identities = [conv.id for conv in conversations]

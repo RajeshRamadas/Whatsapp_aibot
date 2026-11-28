@@ -20,6 +20,7 @@ router = APIRouter(prefix='/api/v1/meta-dm/oauth', tags=['meta-dm-oauth'])
 class MetaOAuthStart(BaseModel):
     model_config = ConfigDict(extra='forbid')
     kind: Literal['instagram', 'messenger']
+    channel_id: UUID | None = None
 
 
 class MetaOAuthURL(BaseModel):
@@ -69,7 +70,7 @@ def config(who: service.Actor = Depends(actor)):
 
 @router.post('/start', response_model=MetaOAuthURL, status_code=201)
 def start(body: MetaOAuthStart, who: service.Actor = Depends(actor)):
-    return run(service.start, who, body.kind)
+    return run(service.start, who, body.kind, str(body.channel_id) if body.channel_id else None)
 
 
 @router.get('/callback', response_class=RedirectResponse)

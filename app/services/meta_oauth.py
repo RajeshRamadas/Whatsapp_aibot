@@ -9,7 +9,7 @@ from pydantic import SecretStr
 from sqlalchemy import delete, func, or_, select, true, update
 
 from ..config import settings
-from ..db import Membership, Session, Tenant, UserSession, now, uid
+from ..db import Channel, Membership, Session, Tenant, UserSession, now, uid
 from ..integrations import meta_oauth as provider
 from ..models.meta_oauth import MetaAuthorization as Attempt
 from . import crypto, meta_connections
@@ -80,12 +80,22 @@ def expire(tenant_id=None):
         db.execute(delete(Attempt).where(scope, Attempt.expires_at < now() - timedelta(days=1)))
 
 
-def start(actor, kind):
+def start(actor, kind, channel_id=None):
     if not provider.configured():
         raise ConnectionError(503, 'Meta authorization is not configured')
     state = secrets.token_urlsafe(32)
+    packet = {'redirect_uri': settings.meta_dm_oauth_redirect_uri}
+    if channel_id:
+        with Session() as db:
+            channel = db.scalar(select(Channel).where(Channel.id == channel_id, Channel.tenant_id == actor.tenant_id,
+                Channel.kind == kind))
+            if not channel:
+                raise ConnectionError(404, 'Meta channel not found')
+            packet['renewal'] = {'channel_id': channel.id, 'external_id': channel.external_id,
+                                 'credential_digest': meta_connections.credential_digest(channel)}
+    # Encryption may create a data key in its own transaction before we acquire the tenant lock.
     try:
-        packet = crypto.encrypt(actor.tenant_id, json.dumps({'redirect_uri': settings.meta_dm_oauth_redirect_uri}))
+        encrypted = crypto.encrypt(actor.tenant_id, json.dumps(packet))
     except ValueError:
         raise ConnectionError(503, 'Credential encryption is unavailable') from None
     expire(actor.tenant_id)
@@ -97,7 +107,7 @@ def start(actor, kind):
             raise ConnectionError(409, 'Finish or cancel an existing authorization first')
         row = Attempt(tenant_id=actor.tenant_id, user_id=actor.user_id, session_hash=actor.session_hash,
             app_id=settings.whatsapp_app_id, kind=kind, state_hash=digest(state),
-            expires_at=now() + timedelta(minutes=10), secret_enc=packet)
+            expires_at=now() + timedelta(minutes=10), secret_enc=encrypted)
         authorize(db, row)
         db.add(row)
         db.flush()
@@ -177,12 +187,15 @@ def process_one():
                 return True
             authorize(db, current)
         secret = json.loads(crypto.decrypt(tenant_id, packet))
+        renewal = secret.get('renewal')
         if operation == 'discovering':
             accounts = provider.discover(MetaSignup(), secret['code'], secret['redirect_uri'], kind)
+            if renewal:
+                accounts = [account for account in accounts if account['external_id'] == renewal['external_id']]
             if not accounts:
-                error = 'no_accounts'
+                error = 'account_not_authorized' if renewal else 'no_accounts'
             else:
-                result = crypto.encrypt(tenant_id, json.dumps({'accounts': accounts}))
+                result = crypto.encrypt(tenant_id, json.dumps({'accounts': accounts, 'renewal': renewal}))
         else:
             def guard(db):
                 current = db.scalar(select(Attempt).where(Attempt.id == identity, Attempt.tenant_id == tenant_id)
@@ -195,11 +208,13 @@ def process_one():
                 current = db.get(Attempt, identity)
                 current.channel_id = channel.id
                 finish(current, 'complete')
-                audit(db, tenant_id, 'meta.authorization_connected', channel.id, actor_type='user',
+                action = 'meta.authorization_renewed' if renewal else 'meta.authorization_connected'
+                audit(db, tenant_id, action, channel.id, actor_type='user',
                       actor_user_id=current.user_id)
             selected = next(account for account in secret['accounts'] if account['external_id'] == row.selected_id)
             meta_connections.connect(meta_connections.ConnectionRequest(kind, selected['external_id'],
-                SecretStr(selected['token'])), tenant_id, graph=MetaSignup(), guard=guard, finalize=complete)
+                SecretStr(selected['token'])), tenant_id, graph=MetaSignup(), guard=guard, finalize=complete,
+                renewal=renewal)
     except ConnectionError as exc:
         error = {403: 'authorization_changed', 409: 'connection_conflict', 424: 'cleanup_required',
                  503: 'setup_unavailable'}.get(exc.status, 'provider_failed')

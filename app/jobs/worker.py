@@ -482,11 +482,20 @@ async def dispatch_meta_media(ctx):
     await asyncio.to_thread(process_one)
 
 
+@observed_job
+async def check_meta_tokens(ctx):
+    from ..services.meta_token_health import process_one
+    for _ in range(10):
+        if not await asyncio.to_thread(process_one):
+            break
+
+
 class WorkerSettings:
     on_startup = startup
     cron_jobs = [cron(dispatch_meta_media, second=set(range(0, 60, 5)), timeout=300),
                  cron(dispatch_meta_bot, second=set(range(0, 60, 5)), timeout=900),
                  cron(dispatch_meta_oauth, second=set(range(0, 60, 5)), timeout=900),
+                 cron(check_meta_tokens, second=20, timeout=150),
                  cron(dispatch_meta_dm_replies, second={0, 10, 20, 30, 40, 50}),
                  cron(dispatch_meta_dm, second=set(range(0, 60, 5))),
                  cron(dispatch_knowledge_sync, second={10, 40}, timeout=900),

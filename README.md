@@ -1357,3 +1357,8 @@ valid clips hand off to staff without model interpretation. No migration or new
 setting. Deploy compatible workers before API intake. See
 [incoming video](docs/META_DM.md#incoming-mp4-video-t108o); live provider verification
 still needs configured Meta assets.
+
+Instagram and Messenger credentials are checked in the worker. An owner or
+administrator can reauthorize an expiring or revoked credential from
+**Messaging accounts** while preserving the account and Inbox history. Apply
+migration 0058 before restarting API and workers. [Meta credential health](docs/META_DM.md#credential-health-and-reauthorization-t108p)

@@ -24,7 +24,7 @@ def window(at):
 
 
 def ready(tenant, channel, conv):
-    return bool(tenant and not tenant.suspended and tenant.bot_live and channel and channel.credentials_enc
+    return bool(tenant and not tenant.suspended and tenant.bot_live and channel and channel.meta_send_ready
         and channel.meta_bot_enabled and channel.tenant_id == tenant.id and conv and conv.tenant_id == tenant.id
         and conv.meta_channel_id == channel.id and conv.channel == channel.kind and window(conv.last_inbound_at))
 

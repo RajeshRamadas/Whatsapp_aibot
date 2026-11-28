@@ -38,6 +38,10 @@ def eligible(message, conv, tenant, channel):
 
 def dispatch_one() -> bool:
     other = aliased(Message)
+    paused = exists(select(Channel.id).where(Channel.id == Conversation.meta_channel_id,
+        Channel.tenant_id == Conversation.tenant_id, Channel.kind == Conversation.channel,
+        Channel.meta_authorization_paused, Conversation.last_inbound_at > now() - timedelta(hours=24),
+        Conversation.last_inbound_at <= now()))
     with Session.begin() as db:
         row = db.execute(select(Message, Conversation, Tenant)
             .join(Conversation, Conversation.id == Message.conversation_id)
@@ -46,6 +50,7 @@ def dispatch_one() -> bool:
                    Message.kind.in_(('text', 'image', 'document', 'audio', 'video')),
                    Message.delivery_status == 'queued',
                    Conversation.channel.in_(('instagram', 'messenger')),
+                   ~paused,
                    ~exists(select(other.id).where(other.conversation_id == Conversation.id,
                                                  other.role.in_(('agent', 'assistant')),
                                                  other.delivery_status == 'sending')))
@@ -84,16 +89,23 @@ def dispatch_one() -> bool:
             if message.role != 'agent' or content or not data:
                 raise ValueError('Invalid Meta attachment reply')
             meta_outbound_media.stage(tenant_id, attachment, data)
-            # Private storage can take time. Recheck ownership, binding and window after I/O.
-            with Session() as db:
-                current = db.get(Message, message_id)
+        if ready:
+            # This is the send claim. Health updates take the same tenant lock.
+            # Recheck after staging, and release the lock before calling Meta.
+            with Session.begin() as db:
+                tenant = db.get(Tenant, tenant_id, with_for_update=True)
+                current = db.get(Message, message_id, with_for_update=True)
                 conv = db.scalar(select(Conversation).where(Conversation.id == conversation_id,
                     Conversation.tenant_id == tenant_id))
-                tenant = db.get(Tenant, tenant_id)
                 channel = db.scalar(select(Channel).where(Channel.id == conv.meta_channel_id,
                     Channel.tenant_id == tenant_id)) if conv else None
                 ready = bool(current and conv and tenant and current.delivery_status == 'sending'
                              and eligible(current, conv, tenant, channel))
+                if ready and channel.meta_authorization_paused:
+                    current.delivery_status, current.dispatch_started_at = 'queued', None
+                    return True
+                if ready:
+                    current.dispatch_started_at = now()
         # Detached scalar channel data; no database connection survives the HTTP call.
         if ready:
             attempted = True

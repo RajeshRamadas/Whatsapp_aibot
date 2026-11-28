@@ -5,7 +5,8 @@ staff. Human agents can send short text replies within the conservative 24-hour
 customer messaging window. OAuth account selection and delivery/read receipts
 and opt-in bot text replies are available. Incoming images, audio, documents and
 supported MP4 videos are private and go to staff; agents can send images, PDFs,
-audio and MP4 video. Other formats and automatic token refresh remain later slices.
+audio and MP4 video. The worker checks credential health and Messaging accounts
+supports reauthorization. Other formats remain later slices.
 
 ## Connect an asset
 
@@ -358,3 +359,32 @@ accepted video jobs drain. Other formats and automatic token refresh remain futu
 work. Automated checks use fake providers; a live incoming-video check still needs
 configured Meta assets and permissions. See
 [the incoming video view](screenshots/t10-8-meta-incoming-video.png).
+
+## Credential health and reauthorization (T10.8p)
+
+Apply migration 0058 before restarting API and workers. No new settings are
+required. Once a day the worker checks each connected Instagram and Messenger
+credential against Meta. When Meta reports an expiry, the worker schedules a
+check ahead of the deadline and alerts verified workspace owners and admins at
+most once per period of expiring or invalid status. A temporary provider or
+configuration error leaves the last known status in place and schedules a retry.
+A known expiry pauses replies at its deadline even if a later check fails.
+An unreadable credential also requires attention. Email staging retries
+independently of the account status.
+
+Queued replies wait for reauthorization and send only if they still meet the
+existing ownership and messaging-window checks. A send already claimed for
+delivery may finish. Incoming messages remain available while Meta continues
+delivering signed webhooks.
+
+Under **Messaging accounts**, choose the existing channel in the Meta
+authorization control, choose **Reauthorize with Meta**, grant its permissions,
+and select the same account. The worker verifies the Page and replaces only its
+credential. The channel ID, conversations and bot setting stay in place. A
+cancelled consent, disconnected account or already replaced credential cannot
+overwrite the current connection.
+
+The Facebook Login integration obtains long-lived Page tokens, which normally
+have no scheduled expiry. Revocation or expired authorization requires a new
+grant through Meta. The worker does not retain the user's temporary OAuth token.
+See [Meta's Page token documentation](https://developers.facebook.com/documentation/facebook-login/guides/access-tokens/get-long-lived#long-lived-page-token).

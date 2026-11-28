@@ -38,7 +38,8 @@ def process_one() -> bool:
                                                     Conversation.meta_channel_id == owner.id,
                                                     Conversation.external_user == sender))
         workspace = db.get(Tenant, tenant_id)
-        enabled = bool(owner.meta_bot_enabled and workspace and workspace.bot_live and not workspace.suspended
+        enabled = bool(owner.meta_bot_enabled and not owner.meta_authorization_paused and workspace
+                       and workspace.bot_live and not workspace.suspended
                        and window(event.sent_at))
         if conv is None:
             conv = Conversation(id=uid(), tenant_id=tenant_id, channel=channel,

@@ -111,8 +111,8 @@ async def reply(conversation_id: UUID, file: UploadFile = File(...), caption: st
                 raise HTTPException(422, 'Choose a supported Meta attachment; send text as a separate reply')
             channel = db.scalar(select(Channel).where(Channel.id == conv.meta_channel_id,
                 Channel.tenant_id == principal.tenant.id, Channel.kind == conv.channel))
-            if not channel or not channel.credentials_enc:
-                raise HTTPException(503, 'This Meta messaging channel is not connected')
+            if not channel or not channel.meta_send_ready:
+                raise HTTPException(503, 'This Meta messaging channel needs authorization')
         else:
             if kind in ('audio', 'video'):
                 raise HTTPException(422, 'Audio/video uploads are supported for Instagram and Messenger only')

@@ -17,11 +17,15 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    and_,
     create_engine,
     event,
+    func,
+    or_,
     text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 from .config import settings
@@ -430,10 +434,29 @@ class Channel(Base):
     credentials_enc: Mapped[bytes | None] = mapped_column(LargeBinary)
     last_webhook_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     meta_bot_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text('false'))
+    meta_token_status: Mapped[str | None] = mapped_column(String(16))
+    meta_token_check_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    meta_token_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    meta_token_alerted: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text('false'))
     campaign_quality: Mapped[str] = mapped_column(String(16), default='UNKNOWN', server_default='UNKNOWN')
     campaign_limit: Mapped[int] = mapped_column(Integer, default=0, server_default='0')
     campaign_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     campaign_portfolio: Mapped[str | None] = mapped_column(String(64), index=True)
+
+    @hybrid_property
+    def meta_authorization_paused(self) -> bool:
+        return (self.meta_token_status == 'invalid'
+                or (self.meta_token_expires_at is not None and self.meta_token_expires_at <= now()))
+
+    @meta_authorization_paused.inplace.expression
+    @classmethod
+    def _meta_authorization_paused(cls):
+        return or_(cls.meta_token_status.is_not_distinct_from('invalid'),
+                   and_(cls.meta_token_expires_at.is_not(None), cls.meta_token_expires_at <= func.now()))
+
+    @property
+    def meta_send_ready(self) -> bool:
+        return self.credentials_enc is not None and not self.meta_authorization_paused
 
 
 class Template(Base):

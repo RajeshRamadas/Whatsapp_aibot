@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { metaOAuthClient as client, type MetaAuthorizationView, type MetaKind } from '@/api/meta-oauth';
+import type { MetaChannel } from '@/api/meta-dm';
 import { useCopy } from '@/i18n/provider';
 import { Button } from './ui/button';
 import { field } from './appointment-settings';
@@ -9,11 +10,15 @@ function clearReturn() {
   const url = new URL(window.location.href); url.searchParams.delete('meta_oauth');
   window.history.replaceState(null, '', url.pathname + url.search + url.hash);
 }
-export function MetaAuthorization({ available, onConnected }: { available: string[]; onConnected: () => void }) {
+export function MetaAuthorization({ available, accounts = [], onConnected }: {
+  available: string[];
+  accounts?: MetaChannel[];
+  onConnected: () => void;
+}) {
   const copy = useCopy('metaChannels');
   const [configured, setConfigured] = useState<boolean | null>(null), [error, setError] = useState(false);
   const [identity, setIdentity] = useState(''), [view, setView] = useState<MetaAuthorizationView | null>(null);
-  const [kind, setKind] = useState<MetaKind>('instagram'), [account, setAccount] = useState('');
+  const [target, setTarget] = useState('instagram'), [account, setAccount] = useState('');
   const [busy, setBusy] = useState(false), [revision, retry] = useState(0);
   const lifecycle = useRef<AbortController | null>(null), notified = useRef('');
   const connected = useRef(onConnected); connected.current = onConnected;
@@ -41,13 +46,16 @@ export function MetaAuthorization({ available, onConnected }: { available: strin
     }
     void poll(); return () => { controller.abort(); clearTimeout(timer); };
   }, [identity, revision]);
-  const selectedKind = (available.includes(kind) ? kind : available[0] ?? 'instagram') as MetaKind;
+  const options = [...available.map(kind => ({ value: kind, kind, channelId: undefined })),
+    ...accounts.map(row => ({ value: row.id, kind: row.kind, channelId: row.id }))];
+  const selected = options.find(option => option.value === target) ?? options[0];
   const active = !!identity && (!view || !terminal.includes(view.status));
   async function act(operation: 'start' | 'select' | 'cancel') {
+    if (operation === 'start' && !selected) return;
     const signal = lifecycle.current?.signal; setBusy(true); setError(false);
     try {
-      if (operation === 'start') {
-        const result = await client.start(selectedKind, signal);
+      if (operation === 'start' && selected) {
+        const result = await client.start(selected.kind as MetaKind, signal, selected.channelId);
         if (signal?.aborted) return;
         setView(null); setAccount(''); setIdentity(result.id); window.location.assign(result.url);
       } else {
@@ -60,7 +68,8 @@ export function MetaAuthorization({ available, onConnected }: { available: strin
     finally { if (!signal?.aborted) setBusy(false); }
   }
   const reason = view?.error;
-  const failure = reason === 'no_accounts' ? copy.oauthNoAccounts : reason === 'cleanup_required' ? copy.oauthCleanup :
+  const failure = reason === 'account_not_authorized' ? copy.oauthWrongAccount :
+    reason === 'no_accounts' ? copy.oauthNoAccounts : reason === 'cleanup_required' ? copy.oauthCleanup :
     reason === 'connection_conflict' ? copy.conflictError : reason === 'authorization_changed' ? copy.sessionError :
     reason === 'setup_unavailable' ? copy.unavailableError : copy.oauthFailed;
   return <section className="grid min-w-0 max-w-xl gap-3 rounded-xl border border-border p-4" aria-label={copy.oauthTitle}>
@@ -76,10 +85,14 @@ export function MetaAuthorization({ available, onConnected }: { available: strin
       </select></label><Button disabled={busy || !account}>{copy.oauthConnect}</Button>
     </form>}
     {active && <Button variant="secondary" disabled={busy} onClick={() => void act('cancel')}>{copy.oauthCancel}</Button>}
-    {!active && available.length > 0 && <>
-      <label className="grid gap-1">{copy.oauthChannel}<select className={field} value={selectedKind} disabled={busy} onChange={event => setKind(event.target.value as MetaKind)}>
-        {available.map(value => <option key={value} value={value}>{value === 'instagram' ? copy.instagram : copy.messenger}</option>)}
-      </select></label><Button disabled={configured !== true || busy} onClick={() => void act('start')}>{copy.oauthAuthorize}</Button>
+    {!active && selected && <>
+      <label className="grid gap-1">{copy.oauthChannel}<select className={field} value={selected.value} disabled={busy} onChange={event => setTarget(event.target.value)}>
+        {options.map(option => <option key={option.value} value={option.value}>
+          {option.kind === 'instagram' ? copy.instagram : copy.messenger}{option.channelId ? ` (${copy.oauthReauthorize})` : ''}
+        </option>)}
+      </select></label><Button disabled={configured !== true || busy} onClick={() => void act('start')}>
+        {selected.channelId ? copy.oauthReauthorize : copy.oauthAuthorize}
+      </Button>
     </>}
   </section>;
 }

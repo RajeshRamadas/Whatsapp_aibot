@@ -730,7 +730,7 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 | T10.5 | Grounding check | BOT-5 | T5.1 |
 | T10.6 | Shopify and WooCommerce | EC-1 to EC-3 | T10.3 |
 | T10.7 | Drive and Notion sync | KN-6, SYNC-1 to SYNC-3 | T2.2 |
-| T10.8 | Instagram and Messenger (verified connections, text replies, OAuth picker, receipts, knowledge bot, private inbound images/audio/documents/MP4 and agent media replies delivered; refresh and other formats pending) | CH-4, META-1 | T6.1 |
+| T10.8 | Instagram and Messenger (verified connections, OAuth, replies, receipts, private media, credential checks and same-account reauthorization; additional formats and live verification pending) | CH-4, META-1 | T6.1 |
 | T10.9 | White-label and agency billing; impersonation | ADM-2, ADM-3 | T7.2 |
 | T10.10 | Lead follow-ups | LEAD-4 | T9.2 |
 
@@ -801,6 +801,16 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 - **Notes:** No migration, endpoint or setting. Deploy compatible workers before
   API intake. Other video formats, automatic interpretation and token refresh stay
   outside this slice; live delivery needs configured Meta test assets.
+
+#### T10.8p Meta credential health and same-account reauthorization
+- **Delivers:** CH-4, META-1, INT-4 as supported by Facebook Login
+- **Depends on:** T10.8h, T10.8o (merged #135)
+- **Steps:** check connected Page tokens in the worker, notify workspace
+  administrators, and reuse verified OAuth to replace a credential in place.
+- **Done when:** fake-provider tests cover expiry, revocation, temporary errors,
+  concurrent credential replacement, isolation and account history preservation.
+- **Notes:** Migration 0058 schedules checks. Long-lived Page tokens have no
+  scheduled expiry. Expired or revoked access requires a fresh grant from Meta.
 
 ### Dependency overview
 
@@ -1085,3 +1095,8 @@ Inbox playback/range downloads reuse authenticated controls and retention. Incom
 video hands off to staff without AI interpretation. No migration/new setting;
 workers deploy before API intake. Transcription stays disabled. Other formats,
 automatic token refresh and real Meta permission/delivery checks remain pending.
+
+T10.8p adds background token validity and expiry checks, administrator alerts,
+and in-place reauthorization in English and Hindi. Long-lived Facebook Login
+Page tokens have no scheduled refresh. Expired or revoked grants require consent
+again. Additional media formats and live Meta verification remain open.
