@@ -25,6 +25,7 @@ test('Meta attachments stay private, appear in Inbox and hand off to staff', asy
       kind, external_id: identity, text: 'Please review these files', attachments: [
         { type: 'image', payload: { url: source } }, { type: 'audio', payload: { url: source } },
         { type: 'video', payload: { url: source } },
+        { type: 'image', payload: { url: source + '&gif=1' } },
         { type: 'file', payload: { url: source } }, { type: 'file', payload: { url: source + '-unavailable' } },
       ],
     } })).ok()).toBeTruthy();
@@ -44,7 +45,19 @@ test('Meta attachments stay private, appear in Inbox and hand off to staff', asy
     expect(duration).toBeCloseTo(1);
     await expect(messages.getByRole('heading', { name: 'Voice transcript', exact: true })).toHaveCount(0);
     const links = messages.getByRole('link', { name: /Download attachment/ });
-    await expect(links).toHaveCount(4);
+    await expect(links).toHaveCount(5);
+    const gif = links.filter({ hasText: 'attachment.gif' });
+    const gifUrl = (await gif.getAttribute('href'))!;
+    const gifRow = gif.locator('..');
+    await expect(gifRow.getByRole('img')).toHaveCount(0);
+    await gifRow.getByRole('button', { name: 'Play GIF', exact: true }).click();
+    await expect.poll(() => gifRow.getByRole('img').evaluate((node: HTMLImageElement) => node.naturalWidth)).toBe(240);
+    if (kind === 'instagram') {
+      await gifRow.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: '../docs/screenshots/t10-8-meta-gif.png', fullPage: true });
+    }
+    await gifRow.getByRole('button', { name: 'Stop GIF', exact: true }).click();
+    await expect(gifRow.getByRole('img')).toHaveCount(0);
     const url = (await links.filter({ hasText: 'attachment.pdf' }).getAttribute('href'))!;
     const download = await page.request.get(url);
     expect(download.ok()).toBeTruthy(); expect((await download.body()).toString()).toContain('%PDF-');
@@ -66,7 +79,7 @@ test('Meta attachments stay private, appear in Inbox and hand off to staff', asy
     const upload = page.getByLabel('Image, PDF, audio or video', { exact: true });
     await upload.setInputFiles({ name: 'unsupported.txt', mimeType: 'text/plain', buffer: Buffer.from('plain text') });
     await page.getByRole('button', { name: 'Send attachment', exact: true }).click();
-    await expect(page.getByText('Choose a JPEG/PNG image, PDF, AAC/M4A/WAV audio or MP4 video file.', { exact: true })).toBeVisible();
+    await expect(page.getByText('Choose a JPEG, PNG or GIF image, PDF, AAC/M4A/WAV audio or MP4 video file.', { exact: true })).toBeVisible();
     const imageBytes = await (await page.request.get((await links.filter({ hasText: 'attachment.png' }).getAttribute('href'))!)).body();
     for (const [name, mimeType, buffer] of [['requested.pdf', 'application/pdf', Buffer.from('%PDF-1.7\nRequested file')],
       ['agent.png', 'image/png', imageBytes]] as const) {
@@ -110,6 +123,14 @@ test('Meta attachments stay private, appear in Inbox and hand off to staff', asy
     await expect(messages.getByText('Sent', { exact: true })).toHaveCount(5);
     expect((await page.request.post('/api/backend/_test/meta-dm/receipt', { data: { kind, external_id: identity, status: 'read' } })).ok()).toBeTruthy();
     await expect(messages.getByText('Read', { exact: true })).toHaveCount(kind === 'instagram' ? 1 : 5);
+    const gifDownload = await page.request.get(gifUrl);
+    expect(gifDownload.headers()['content-type']).toBe('image/gif');
+    await upload.setInputFiles({ name: 'reply.gif', mimeType: 'image/gif', buffer: await gifDownload.body() });
+    page.once('dialog', dialog => { expect(dialog.message()).toContain('reply.gif'); return dialog.accept(); });
+    await page.getByRole('button', { name: 'Send attachment', exact: true }).click();
+    const sentGif = messages.getByRole('link', { name: 'Download attachment: reply.gif', exact: true });
+    await expect(sentGif).toBeVisible();
+    await expect(sentGif.locator('..').getByRole('button', { name: 'Play GIF', exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'हिन्दी', exact: true }).click();
     await expect(page.getByText('अटैचमेंट उपलब्ध नहीं है या इसकी अवधि खत्म हो गई है।', { exact: true })).toBeVisible();
     await expect(page.getByLabel('चित्र, PDF, ऑडियो या वीडियो', { exact: true })).toBeVisible();
@@ -126,6 +147,7 @@ test('Meta attachments stay private, appear in Inbox and hand off to staff', asy
     }
     const anonymous = await playwright.request.newContext({ baseURL: 'http://localhost:3000' });
     expect((await anonymous.get(url)).status()).toBe(401);
-    expect((await anonymous.get(incomingVideoUrl)).status()).toBe(401); await anonymous.dispose();
+    expect((await anonymous.get(incomingVideoUrl)).status()).toBe(401);
+    expect((await anonymous.get(gifUrl)).status()).toBe(401); await anonymous.dispose();
   }
 });

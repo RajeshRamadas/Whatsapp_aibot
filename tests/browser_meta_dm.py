@@ -52,6 +52,11 @@ async def download_fixture(url, kind):
         image = Image.new('RGB', (240, 120), '#243c5a')
         ImageDraw.Draw(image).text((22, 50), 'Sample customer image', fill='white')
         output = BytesIO()
+        if 'gif=1' in url:
+            second = Image.new('RGB', image.size, '#3a624c')
+            ImageDraw.Draw(second).text((22, 50), 'Sample customer GIF', fill='white')
+            image.save(output, format='GIF', save_all=True, append_images=[second], duration=400, loop=0)
+            return output.getvalue(), 'image/gif'
         image.save(output, format='PNG')
         return output.getvalue(), 'image/png'
     if kind == 'audio':

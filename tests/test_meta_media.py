@@ -17,6 +17,7 @@ from app.services.meta_dm import process_one
 from tests import test_media
 from tests import test_meta_audio_replies as audio_fixtures
 from tests import test_meta_video_replies as video_fixtures
+from tests.meta_gif_fixture import gif_bytes
 from tests.test_meta_dm import signed
 
 PDF = b'%PDF-1.7\nprivate Meta document'
@@ -217,15 +218,55 @@ def test_stale_sweep_cannot_delete_a_concurrently_completed_download(client, ten
         item = db.scalar(select(Message).where(Message.role == 'user')).attachments[0]
     media.storage().put(item['key'], PDF)
     completed = {**item, 'status': 'ready', 'mime_type': 'application/pdf', 'size': len(PDF)}
-    finish = meta_media.finish
-    def concurrent_finish(event_id, claim, attachments, **kwargs):
-        finish(identity, claimed_at, [completed])
-        finish(event_id, claim, attachments, **kwargs)
-    monkeypatch.setattr(meta_media, 'finish', concurrent_finish)
+    clean = meta_media.clean_abandoned
+    def concurrent_finish(event_id, claim):
+        meta_media.finish(identity, claimed_at, [completed])
+        clean(event_id, claim)
+    monkeypatch.setattr(meta_media, 'clean_abandoned', concurrent_finish)
     meta_media.expire_stale()
     with Session() as db:
         assert db.scalar(select(Message).where(Message.role == 'user')).attachments[0]['status'] == 'ready'
     assert media.storage().get(item['key']) == PDF
+
+
+def test_stale_download_retries_private_cleanup_after_storage_failure(client, tenant, account, monkeypatch,
+                                                                     no_session_io):
+    accept(client, incoming())
+    assert process_one()
+    with Session.begin() as db:
+        event = db.scalar(select(MetaDmEvent))
+        event.status, event.media_claimed_at = 'media_processing', now() - timedelta(minutes=11)
+        key = db.scalar(select(Message).where(Message.role == 'user')).attachments[0]['key']
+    store = media.storage()
+    store.put(key, PDF)
+    remove = store.delete
+
+    def fail_delete(key):
+        assert no_session_io()
+        raise OSError('Synthetic storage failure')
+
+    monkeypatch.setattr(media, 'storage', lambda: store)
+    with monkeypatch.context() as context:
+        context.setattr(store, 'delete', fail_delete)
+        meta_media.expire_stale()
+    with Session.begin() as db:
+        event = db.scalar(select(MetaDmEvent))
+        assert event.status == 'media_cleanup' and 'source_enc' not in event.attachments[0]
+        assert db.scalar(select(Message).where(Message.role == 'user')).attachments[0]['status'] == 'queued'
+        event.media_claimed_at = now() - timedelta(minutes=2)
+    assert store.get(key) == PDF
+
+    def delete(key):
+        assert no_session_io()
+        remove(key)
+
+    monkeypatch.setattr(store, 'delete', delete)
+    meta_media.expire_stale()
+    assert not store._path(key).exists()
+    with Session() as db:
+        event = db.scalar(select(MetaDmEvent))
+        assert event.status == 'processed' and not event.attachments
+        assert db.scalar(select(Message).where(Message.role == 'user')).attachments[0]['status'] == 'failed'
 
 
 @pytest.mark.parametrize('scenario', ['ok', 'redirect', 'compressed', 'length', 'stream', 'mime', 'signature',
@@ -278,12 +319,21 @@ def test_pinned_cdn_download_bounds(monkeypatch, scenario, kind):
 
 
 @pytest.mark.parametrize(('kind', 'mime', 'body'), [('image', 'image/png', b'\x89PNG\r\n\x1a\nfixture'),
+                                                   ('image', 'image/gif', gif_bytes()),
                                                    ('audio', 'audio/ogg', b'OggSfixture')])
 def test_image_and_audio_cdn_download(monkeypatch, kind, mime, body):
     monkeypatch.setattr(meta_media.web_fetch, 'resolve', lambda _: '8.8.8.8')
     monkeypatch.setattr(meta_media.httpx, 'AsyncHTTPTransport', lambda **kwargs: httpx.MockTransport(
         lambda request: httpx.Response(200, headers={'content-type': mime}, stream=httpx.ByteStream(body))))
     assert asyncio.run(meta_media.download(SOURCE, kind)) == (body, mime)
+
+
+@pytest.mark.parametrize('data', [b'GIF89a;', gif_bytes()[:-1], gif_bytes((1921, 1))])
+def test_gif_validation_rejects_malformed_or_oversized_frames(data):
+    with pytest.raises(ValueError):
+        media.validate(data, 'image/gif', 'image', allow_gif=True)
+    with pytest.raises(ValueError):
+        media.validate(gif_bytes(), 'image/gif', 'image')
 
 
 @pytest.mark.parametrize('case', ['valid', 'audio_only', 'fake', 'codec', 'mime', 'unavailable', 'timeout'])

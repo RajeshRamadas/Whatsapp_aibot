@@ -730,7 +730,7 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 | T10.5 | Grounding check | BOT-5 | T5.1 |
 | T10.6 | Shopify and WooCommerce | EC-1 to EC-3 | T10.3 |
 | T10.7 | Drive and Notion sync | KN-6, SYNC-1 to SYNC-3 | T2.2 |
-| T10.8 | Instagram and Messenger (verified connections, OAuth, replies, receipts, private media, credential checks and same-account reauthorization; additional formats and live verification pending) | CH-4, META-1 | T6.1 |
+| T10.8 | Instagram and Messenger (verified connections, OAuth, replies, receipts, private media including GIF, credential checks and same-account reauthorization; additional formats and live verification pending) | CH-4, META-1 | T6.1 |
 | T10.9 | White-label and agency billing; impersonation | ADM-2, ADM-3 | T7.2 |
 | T10.10 | Lead follow-ups | LEAD-4 | T9.2 |
 
@@ -811,6 +811,16 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
   concurrent credential replacement, isolation and account history preservation.
 - **Notes:** Migration 0058 schedules checks. Long-lived Page tokens have no
   scheduled expiry. Expired or revoked access requires a fresh grant from Meta.
+
+#### T10.8q Private GIF attachments for Meta
+- **Delivers:** CH-4, META-1 (additional image format)
+- **Depends on:** T10.8k, T10.8l, T10.8o (merged #135)
+- **Steps:** validate GIF image attachments before private storage and delivery.
+  Let staff start or stop an animation in the Inbox.
+- **Done when:** fake-provider and browser checks cover private incoming and
+  outgoing GIFs on both channels, malformed input, and playback controls.
+- **Notes:** Deploy compatible workers before API and web. Live verification
+  requires Meta test assets.
 
 ### Dependency overview
 
@@ -1100,3 +1110,7 @@ T10.8p adds background token validity and expiry checks, administrator alerts,
 and in-place reauthorization in English and Hindi. Long-lived Facebook Login
 Page tokens have no scheduled refresh. Expired or revoked grants require consent
 again. Additional media formats and live Meta verification remain open.
+
+T10.8q adds private GIF playback, downloads and staff replies on Instagram and
+Messenger. Animated GIF decoding is bounded and playback starts on request.
+Further format additions and live Meta verification remain pending.

@@ -1,7 +1,8 @@
 {
   "title": "Send an attachment", "file": "Image or document", "caption": "Attachment caption (optional)",
-  "metaFile": "Image, PDF, audio or video", "metaType": "Choose a JPEG/PNG image, PDF, AAC/M4A/WAV audio or MP4 video file.",
-  "metaHelp": "JPEG/PNG images: up to 5 MiB. PDF, AAC/M4A/WAV audio and MP4 video: up to 16 MiB. Workspace limits may be lower. Send text separately. Confirming the send hands the conversation to staff.",
+  "metaFile": "Image, PDF, audio or video", "metaType": "Choose a JPEG, PNG or GIF image, PDF, AAC/M4A/WAV audio or MP4 video file.",
+  "metaHelp": "JPEG, PNG and GIF images up to 5 MiB. PDFs, AAC/M4A/WAV audio and MP4 video up to 16 MiB. Workspace limits may be lower. Send text separately. Confirming the send hands the conversation to staff.",
+  "playGif": "Play GIF", "stopGif": "Stop GIF",
   "audioPreview": "Preview audio before sending", "audioHelp": "Review the audio before confirming. MP4 files must contain audio without video. No automatic transcript is created.",
   "videoPreview": "Preview video before sending", "videoHelp": "Review the clip before confirming. Use H.264 MP4 up to 1920×1920, with optional AAC audio. Audio-only MP4 files are sent as audio. No automatic transcript or captions are created.",
   "help": "Images: JPEG/PNG, up to 5 MiB. Documents: PDF, text or Office files, up to 16 MiB. Workspace limits may be lower.",

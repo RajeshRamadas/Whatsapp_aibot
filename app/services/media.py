@@ -2,10 +2,12 @@
 import hashlib
 import re
 from datetime import timedelta
+from io import BytesIO
 from urllib.parse import urlsplit
 from uuid import NAMESPACE_URL, uuid5
 
 import httpx
+from PIL import Image
 from sqlalchemy import select
 
 from ..config import settings
@@ -21,12 +23,36 @@ MIMES = {'image': {'image/jpeg', 'image/png'}, 'video': {'video/mp4'}, 'audio': 
     'application/vnd.openxmlformats-officedocument.presentationml.presentation'}}
 
 
-def validate(data, mime, kind):
+def validate_gif(data):
+    if not data.startswith((b'GIF87a', b'GIF89a')) or not data.endswith(b'\x3b'):
+        raise ValueError('Attachment content does not match its type')
+    pixels = 0
+    try:
+        with Image.open(BytesIO(data), formats=('GIF',)) as image:
+            for index in range(121):
+                try:
+                    image.seek(index)
+                except EOFError:
+                    return
+                width, height = image.size
+                pixels += width * height
+                if index == 120 or not (0 < width <= 1920 and 0 < height <= 1920) or pixels > 24_000_000:
+                    raise ValueError('GIF exceeds the frame or dimension limits')
+                image.load()
+    except (OSError, Image.DecompressionBombError):
+        raise ValueError('GIF attachment could not be decoded') from None
+
+
+def validate(data, mime, kind, *, allow_gif=False):
     mime = mime.split(';')[0].strip().lower()
-    if mime not in MIMES.get(kind, set()):
+    gif = allow_gif and kind == 'image' and mime == 'image/gif'
+    if not gif and mime not in MIMES.get(kind, set()):
         raise ValueError('This attachment type is not supported')
     if not data or len(data) > min(settings.media_max_bytes, 5242880 if kind == 'image' else 16777216):
         raise ValueError('Attachment is empty or exceeds the size limit')
+    if gif:
+        validate_gif(data)
+        return mime
     signatures = {'image/png': data.startswith(b'\x89PNG\r\n\x1a\n'), 'image/jpeg': data.startswith(b'\xff\xd8\xff'),
                   'application/pdf': data.startswith(b'%PDF-'), 'audio/ogg': data.startswith(b'OggS'),
                   'audio/wav': data.startswith(b'RIFF') and data[8:12] == b'WAVE',

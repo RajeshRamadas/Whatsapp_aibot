@@ -81,7 +81,7 @@ async def reply(conversation_id: UUID, file: UploadFile = File(...), caption: st
     if len(data) > settings.media_max_bytes:
         raise HTTPException(413, 'Attachment exceeds the size limit')
     try:
-        media.validate(data, mime, kind)
+        await run_in_threadpool(media.validate, data, mime, kind, allow_gif=True)
         if kind in ('audio', 'video'):
             kind = await run_in_threadpool(audio_validation.validate, data, mime)
             if mime == 'video/mp4' and kind == 'audio':
@@ -116,6 +116,8 @@ async def reply(conversation_id: UUID, file: UploadFile = File(...), caption: st
         else:
             if kind in ('audio', 'video'):
                 raise HTTPException(422, 'Audio/video uploads are supported for Instagram and Messenger only')
+            if mime == 'image/gif':
+                raise HTTPException(422, 'GIF uploads are supported for Instagram and Messenger only')
             from ..services.channels import whatsapp_channel
             channel = whatsapp_channel(db, principal.tenant.id)
             if not settings.whatsapp_enabled or not (settings.whatsapp_access_token or

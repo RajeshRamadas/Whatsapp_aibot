@@ -16,6 +16,7 @@ from app.services import media, meta_dm_replies, meta_outbound_media, meta_recei
 from app.services.crypto import encrypt
 from app.services.meta_signup import MetaSignupError
 from tests import test_media
+from tests.meta_gif_fixture import gif_bytes
 from tests.test_meta_dm_replies import setup_conversation
 from tests.test_meta_receipts import data as receipt
 
@@ -119,6 +120,37 @@ def test_api_auth_isolation_types_and_windows(client, tenant, account):
     with Session.begin() as db:
         db.get(Conversation, conv).last_inbound_at = now() - timedelta(hours=25)
     assert queue(client, tenant, conv).status_code == 409
+
+
+@pytest.mark.parametrize('kind', ['instagram', 'messenger', 'whatsapp'])
+def test_gif_reply_uses_private_staging_only_for_meta(client, tenant, account, monkeypatch, kind):
+    channel, conv = account
+    with Session.begin() as db:
+        db.get(Channel, channel).kind = db.get(Conversation, conv).channel = kind
+    path = f'/api/v1/inbox/conversations/{conv}/media'
+    headers = {**tenant['headers'], 'Idempotency-Key': 'gif'}
+    gif = gif_bytes()
+    assert client.post(path, headers=headers, files={'file': ('bad.gif', b'GIF89a;', 'image/gif')}).status_code == 422
+    result = client.post(path, headers=headers, files={'file': ('reply.gif', gif, 'image/gif')})
+    if kind == 'whatsapp':
+        assert result.status_code == 422
+        return
+    assert result.status_code == 202
+
+    def send(channel, recipient, item, data):
+        assert (channel.kind, item['mime_type'], item['kind'], data) == (kind, 'image/gif', 'image', gif)
+        assert media.storage().get(item['key']) == gif
+        return 'sent-gif'
+
+    monkeypatch.setattr(meta_outbound_media, 'send', send)
+    assert meta_dm_replies.dispatch_one()
+    with Session() as db:
+        row = db.get(Message, result.json()['message_id'])
+        assert row.delivery_status == 'sent'
+        url = f'/api/v1/conversations/{conv}/media/{row.attachments[0]["id"]}'
+    assert client.get(url).status_code == 401
+    response = client.get(url, headers=tenant['headers'])
+    assert response.content == gif and response.headers['content-type'] == 'image/gif'
 
 
 @pytest.mark.parametrize('change', ['closed', 'suspended', 'disconnected', 'hand_back', 'window', 'stale', 'storage'])
@@ -233,7 +265,8 @@ def test_one_multipart_request_and_private_provider_errors(client, tenant, accou
 
 
 @pytest.mark.parametrize(('mime', 'body', 'suffix'), [('image/png', b'\x89PNG\r\n\x1a\nfixture', '.png'),
-                                                    ('image/jpeg', b'\xff\xd8\xfffixture', '.jpg')])
+                                                    ('image/jpeg', b'\xff\xd8\xfffixture', '.jpg'),
+                                                    ('image/gif', gif_bytes(), '.gif')])
 def test_multipart_image_types(client, tenant, account, monkeypatch, mime, body, suffix):
     with Session() as db:
         channel = db.get(Channel, account[0])

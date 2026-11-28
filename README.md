@@ -1362,3 +1362,7 @@ Instagram and Messenger credentials are checked in the worker. An owner or
 administrator can reauthorize an expiring or revoked credential from
 **Messaging accounts** while preserving the account and Inbox history. Apply
 migration 0058 before restarting API and workers. [Meta credential health](docs/META_DM.md#credential-health-and-reauthorization-t108p)
+
+Instagram and Messenger receive and send GIFs as private Inbox attachments.
+Staff control whether a GIF plays and can download the original.
+[GIF size and decoding limits](docs/META_DM.md#private-gif-attachments-t108q)

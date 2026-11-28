@@ -7,7 +7,7 @@ from urllib.request import getproxies, proxy_bypass
 from uuid import NAMESPACE_URL, uuid5
 
 import httpx
-from sqlalchemy import select, text
+from sqlalchemy import and_, or_, select, text
 
 from ..config import settings
 from ..db import Channel, Conversation, Message, MetaDmEvent, Session, Tenant, now
@@ -69,10 +69,12 @@ async def download(url, kind):
                     data.extend(chunk)
                     if len(data) > limit:
                         raise ValueError('Attachment exceeds the size limit')
-                mime = media.validate(bytes(data), response.headers.get('content-type', ''), kind)
-                if kind == 'video' and await asyncio.to_thread(audio_validation.validate, bytes(data), mime) != 'video':
+                data = bytes(data)
+                mime = await asyncio.to_thread(media.validate, data, response.headers.get('content-type', ''), kind,
+                                               allow_gif=True)
+                if kind == 'video' and await asyncio.to_thread(audio_validation.validate, data, mime) != 'video':
                     raise ValueError('Attachment must contain a supported video track')
-                return bytes(data), mime
+                return data, mime
 
 
 def bound(db, event):
@@ -86,26 +88,31 @@ def message_for(db, event):
         Message.role == 'user'))
 
 
-def finish(event_id, claimed_at, attachments, *, cleanup=True):
+def delete_files(attachments):
+    for item in attachments:
+        if item.get('key'):
+            media.storage().delete(item['key'])
+
+
+def finish(event_id, claimed_at, attachments, *, expected_status='media_processing'):
     discarded, changed = True, None
     with Session.begin() as db:
         event = db.get(MetaDmEvent, event_id)
         tenant = db.get(Tenant, event.tenant_id, with_for_update=True) if event else None
         event = db.scalar(select(MetaDmEvent).where(MetaDmEvent.id == event_id)
             .with_for_update().execution_options(populate_existing=True))
-        if event and event.status == 'media_processing' and event.media_claimed_at == claimed_at:
+        if event and event.status == expected_status and event.media_claimed_at == claimed_at:
             message = message_for(db, event)
             if message:
-                discarded = not (tenant and not tenant.suspended and bound(db, event)
+                discarded = expected_status == 'media_cleanup' or not (
+                    tenant and not tenant.suspended and bound(db, event)
                     and event.received_at >= now() - timedelta(days=settings.media_retention_days))
                 message.attachments = ([{**item, 'status': 'failed'}
                     for item in placeholders(event.attachments, event.tenant_id)] if discarded else attachments)
                 changed = event.tenant_id, message.conversation_id
             event.status, event.attachments, event.media_claimed_at = 'processed', [], None
-    if discarded and cleanup:
-        for item in attachments:
-            if item.get('key'):
-                media.storage().delete(item['key'])
+    if discarded and expected_status == 'media_processing':
+        delete_files(attachments)
     if changed:
         publish_sync(changed[0], 'message.updated', {'conversation_id': changed[1]})
 
@@ -130,6 +137,12 @@ def process_one():
             url = crypto.decrypt_system('meta-media:' + tenant_id, item['id'],
                                         bytes.fromhex(part['source_enc'])).decode()
             data, mime = asyncio.run(download(url, item['kind']))
+            with Session() as db:
+                active = db.scalar(select(MetaDmEvent.id).where(MetaDmEvent.id == event_id,
+                    MetaDmEvent.tenant_id == tenant_id, MetaDmEvent.status == 'media_processing',
+                    MetaDmEvent.media_claimed_at == claimed_at))
+            if not active:
+                break
             item.update(key=media.key_for(tenant_id, item['id']), mime_type=mime, size=len(data),
                         filename='attachment' + (mimetypes.guess_extension(mime) or ''))
             media.storage().put(item['key'], data)
@@ -141,14 +154,36 @@ def process_one():
     return True
 
 
+def clean_abandoned(event_id, claimed_at):
+    # Fence off the download before touching storage. Keep the keys recoverable until cleanup finishes.
+    with Session.begin() as db:
+        event = db.scalar(select(MetaDmEvent).where(MetaDmEvent.id == event_id,
+            MetaDmEvent.status.in_(('media_processing', 'media_cleanup')), MetaDmEvent.media_claimed_at == claimed_at)
+            .with_for_update())
+        if event is None:
+            return
+        event.status, event.media_claimed_at = 'media_cleanup', now()
+        event.attachments = [{key: value for key, value in item.items() if key != 'source_enc'}
+                             for item in event.attachments]
+        cleanup_claim = event.media_claimed_at
+        attachments = placeholders(event.attachments, event.tenant_id)
+    try:
+        delete_files(attachments)
+    except Exception:
+        # Storage errors can contain private provider data. Leave the claim available for a retry.
+        return
+    finish(event_id, cleanup_claim, attachments, expected_status='media_cleanup')
+
+
 def expire_stale():
     with Session() as db:
-        stale = db.scalars(select(MetaDmEvent).where(MetaDmEvent.status == 'media_processing',
-            MetaDmEvent.media_claimed_at < now() - timedelta(minutes=10)).limit(100)).all()
+        stale = db.scalars(select(MetaDmEvent).where(or_(
+            and_(MetaDmEvent.status == 'media_processing',
+                 MetaDmEvent.media_claimed_at < now() - timedelta(minutes=10)),
+            and_(MetaDmEvent.status == 'media_cleanup', MetaDmEvent.media_claimed_at < now() - timedelta(minutes=1))))
+            .order_by(MetaDmEvent.media_claimed_at, MetaDmEvent.id).limit(100)).all()
     for event in stale:
-        finish(event.id, event.media_claimed_at,
-               [{**item, 'status': 'failed'} for item in placeholders(event.attachments, event.tenant_id)],
-               cleanup=False)
+        clean_abandoned(event.id, event.media_claimed_at)
     with Session.begin() as db:
         expired = db.scalars(select(MetaDmEvent).where(text("attachments @? '$[*].source_enc'"),
             MetaDmEvent.received_at < now() - timedelta(days=settings.media_retention_days)).limit(100)).all()
