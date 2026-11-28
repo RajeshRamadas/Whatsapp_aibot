@@ -56,6 +56,7 @@ jobs:
           /tmp/chatbot-prometheus/promtool check config --syntax-only deploy/prometheus.yml
           cp .env.example .env
           docker compose --env-file .env.example config --no-env-resolution --quiet
+          docker compose --env-file deploy/compose.env.example -f deploy/compose.yml config --no-env-resolution --quiet
           rm .env
           cd deploy && /tmp/chatbot-prometheus/promtool test rules alerts.test.yml
       - uses: actions/setup-node@v4

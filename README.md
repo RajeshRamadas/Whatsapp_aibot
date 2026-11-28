@@ -154,6 +154,10 @@ calls are reported separately. Redis failures preserve request/job outcomes and 
 
 ## Getting started
 
+For an India-region staging or production deployment, use the
+[deployment runbook](deploy/RUNBOOK.md) and the Compose configuration under
+`deploy/`. The runbook covers migration ordering, backups, recovery and rollback.
+
 1. Copy `.env.example` to `.env`. Set a long random `ADMIN_BOOTSTRAP_TOKEN` and the API key of at least one provider (see [AI providers](#ai-providers)).
 2. Run `docker compose up --build` (the API service applies Alembic migrations before starting).
 3. Open `http://localhost:8000/docs` for the API documentation.
