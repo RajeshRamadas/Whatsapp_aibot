@@ -278,3 +278,31 @@ def test_multipart_image_types(client, tenant, account, monkeypatch, mime, body,
     monkeypatch.setattr(meta_outbound_media.httpx, 'Client', lambda **kwargs: real_client(
         **kwargs, transport=httpx.MockTransport(route)))
     assert meta_outbound_media.send(channel, '987654', {'kind': 'image', 'mime_type': mime}, body) == 'image-mid'
+
+
+def test_credential_invalidation_during_staging_defers_media(client, tenant, account, monkeypatch):
+    channel_id, conv = account
+    identity = queue(client, tenant, conv).json()['message_id']
+    stage = meta_outbound_media.stage
+
+    def revoke_after_staging(*args):
+        stage(*args)
+        with Session.begin() as db:
+            db.get(Tenant, tenant['tenant_id'], with_for_update=True)
+            db.get(Channel, channel_id).meta_token_status = 'invalid'
+
+    calls = []
+    monkeypatch.setattr(meta_outbound_media, 'stage', revoke_after_staging)
+    monkeypatch.setattr(meta_outbound_media, 'send', lambda *args: calls.append(args) or 'sent')
+    assert meta_dm_replies.dispatch_one() and not meta_dm_replies.dispatch_one()
+    with Session.begin() as db:
+        message = db.get(Message, identity)
+        assert message.delivery_status == 'queued' and message.upload_data == PDF
+        assert message.dispatch_started_at is None
+        db.get(Channel, channel_id).meta_token_status = None
+    assert not calls
+    monkeypatch.setattr(meta_outbound_media, 'stage', stage)
+    assert meta_dm_replies.dispatch_one() and not meta_dm_replies.dispatch_one()
+    assert len(calls) == 1
+    with Session() as db:
+        assert db.get(Message, identity).delivery_status == 'sent'

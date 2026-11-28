@@ -33,7 +33,7 @@
   "oauthReauthorize": "Reauthorize with Meta",
   "oauthWrongAccount": "Meta did not grant access to the currently connected account. Start again and grant access to that account.",
   "tokenExpiring": "Account access expires soon. Reauthorize with Meta to keep sending replies.",
-  "tokenInvalid": "Account access has expired or been revoked. Reauthorize with Meta to resume sending replies.",
+  "tokenInvalid": "Account authorization is unavailable. Reauthorize with Meta to resume sending replies.",
   "oauthHelp": "Sign in at Meta, grant messaging permissions and choose the account to connect.",
   "oauthSetup": "Ask your platform administrator to configure Meta authorization.",
   "oauthError": "Authorization could not be loaded or updated. Check your workspace and sign-in, then retry.",

@@ -48,6 +48,7 @@ def test_token_check_warns_before_expiry_and_keeps_only_metadata(client, admin, 
         channel = db.get(Channel, channel_id)
         assert channel.meta_token_status == 'expiring' and channel.meta_send_ready
         assert int(channel.meta_token_check_at.timestamp()) == expiry
+        assert channel.meta_token_expires_at == channel.meta_token_check_at and channel.meta_token_alerted
         channel.meta_token_check_at = now()
     graph.debug = {'is_valid': False}
     assert health.process_one()
@@ -60,7 +61,7 @@ def test_token_check_warns_before_expiry_and_keeps_only_metadata(client, admin, 
         assert not db.get(Channel, channel_id).meta_send_ready
 
 
-@pytest.mark.parametrize('outcome', ['healthy', 'transient', 'replaced'])
+@pytest.mark.parametrize('outcome', ['healthy', 'transient', 'malformed', 'replaced'])
 def test_health_check_preserves_a_valid_or_replaced_credential(client, admin, monkeypatch, outcome):
     tenant_id = admin['X-Workspace-Id']
     with Session.begin() as db:
@@ -74,6 +75,8 @@ def test_health_check_preserves_a_valid_or_replaced_credential(client, admin, mo
         assert engine.pool.checkedout() == 0
         if outcome == 'transient':
             raise MetaSignupError('Temporary failure')
+        if outcome == 'malformed':
+            return {'data': {'is_valid': True, 'app_id': '123', 'expires_at': 'unknown'}}
         if outcome == 'replaced':
             with Session.begin() as db:
                 channel = db.get(Channel, channel_id)
@@ -92,8 +95,41 @@ def test_health_check_preserves_a_valid_or_replaced_credential(client, admin, mo
         if outcome == 'healthy':
             assert channel.meta_token_status == 'valid'
             assert channel.meta_token_check_at > now() + timedelta(hours=23)
-        elif outcome == 'transient':
+        elif outcome in ('transient', 'malformed'):
             assert channel.meta_token_status is None
             assert now() < channel.meta_token_check_at <= now() + health.RETRY_INTERVAL
         else:
             assert channel.meta_token_status is None and channel.meta_token_check_at is None
+
+
+def test_unreadable_credential_pauses_even_when_email_staging_fails(client, admin, monkeypatch):
+    tenant_id = admin['X-Workspace-Id']
+    encrypted = encrypt(tenant_id, 'page-private')
+    with Session.begin() as db:
+        user = db.scalar(select(User).join(Membership).where(Membership.tenant_id == tenant_id))
+        user.email_verified_at = now()
+        channel = Channel(tenant_id=tenant_id, kind='messenger', external_id='1234',
+                          credentials_enc=encrypted[:-1] + bytes([encrypted[-1] ^ 1]), meta_token_status='valid')
+        db.add(channel)
+        db.flush()
+        channel_id = channel.id
+    graph = connections.FakeGraph()
+    monkeypatch.setattr(health, 'MetaSignup', lambda: graph)
+
+    def fail_email(*args):
+        raise RuntimeError('Email unavailable')
+
+    with monkeypatch.context() as context:
+        context.setattr(email.sender, 'stage', fail_email)
+        assert health.process_one()
+    with Session.begin() as db:
+        channel = db.get(Channel, channel_id)
+        assert channel.meta_token_status == 'invalid' and not channel.meta_send_ready
+        assert not channel.meta_token_alerted and channel.meta_token_check_at <= now() + health.RETRY_INTERVAL
+        channel.meta_token_check_at = now()
+    recorder = Recorder()
+    monkeypatch.setattr(email, 'sender', recorder)
+    assert health.process_one() and not health.process_one()
+    assert len(recorder.sent) == 1 and not graph.calls
+    with Session() as db:
+        assert db.get(Channel, channel_id).meta_token_alerted

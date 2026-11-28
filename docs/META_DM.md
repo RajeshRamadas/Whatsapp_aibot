@@ -368,8 +368,14 @@ credential against Meta. When Meta reports an expiry, the worker schedules a
 check ahead of the deadline and alerts verified workspace owners and admins at
 most once per period of expiring or invalid status. A temporary provider or
 configuration error leaves the last known status in place and schedules a retry.
-Invalid credentials pause replies. Incoming messages and private Inbox history
-remain available while Meta continues delivering signed webhooks.
+A known expiry pauses replies at its deadline even if a later check fails.
+An unreadable credential also requires attention. Email staging retries
+independently of the account status.
+
+Queued replies wait for reauthorization and send only if they still meet the
+existing ownership and messaging-window checks. A send already claimed for
+delivery may finish. Incoming messages remain available while Meta continues
+delivering signed webhooks.
 
 Under **Messaging accounts**, choose the existing channel in the Meta
 authorization control, choose **Reauthorize with Meta**, grant its permissions,
