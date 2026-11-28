@@ -48,5 +48,8 @@
   "payment_link": "Customer payment link",
   "payment_webhook": "Customer payment webhook",
   "lead_sync": "Lead sync",
-  "outgoing_webhook": "Outgoing event delivery"
+  "outgoing_webhook": "Outgoing event delivery",
+  "startSupport": "Open read-only support",
+  "supportBanner": "Read-only support session ends at",
+  "endSupport": "End support session"
 }

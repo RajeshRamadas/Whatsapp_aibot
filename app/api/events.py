@@ -12,6 +12,8 @@ router = APIRouter()
 @router.get('/api/v1/events')
 async def stream_events(request: Request, last_event_id: str | None = Header(default=None, alias='Last-Event-ID'),
                         principal: Principal = Depends(require_role('viewer'))):
+    if principal.support:
+        raise HTTPException(403, 'Live streams are unavailable in support sessions')
     if last_event_id is not None and not events.VALID_ID.fullmatch(last_event_id):
         raise HTTPException(422, 'Invalid Last-Event-ID')
     redis = events.redis_client()

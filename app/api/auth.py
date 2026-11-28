@@ -216,12 +216,17 @@ def me(request: Request, response: Response):
 
 @router.post('/logout', status_code=204)
 def logout(request: Request, response: Response):
-    row, _ = _session(request, allow_suspended=True)
+    from ..services import support
+
+    row, user = _session(request, allow_suspended=True)
     _csrf(request, row)
     with Session.begin() as db:
+        if request.cookies.get(support.COOKIE):
+            support.end(db, row.id_hash, user.id)
         db.execute(delete(UserSession).where(UserSession.id_hash == row.id_hash))
     response.delete_cookie(COOKIE)
     response.delete_cookie(CSRF_COOKIE)
+    response.delete_cookie(support.COOKIE, httponly=True, secure=settings.auth_cookie_secure, samesite='strict')
     _clear_challenge(response)
 
 

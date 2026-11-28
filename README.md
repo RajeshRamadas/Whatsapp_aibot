@@ -30,6 +30,9 @@ For Docker Compose, migrations run automatically before Uvicorn. **Existing data
 
 ## Platform administration (T7.5)
 
+Platform administrators can open a 15-minute, audited read-only workspace
+session. [Support access](docs/SUPPORT_ACCESS.md)
+
 After `alembic upgrade head`, sign in with a platform-admin user and open `/platform`.
 The console lists workspaces, their plans, current-month AI messages, tokens and known costs in USD.
 Unpriced calls are shown separately so incomplete cost totals are visible. Each list is paginated.

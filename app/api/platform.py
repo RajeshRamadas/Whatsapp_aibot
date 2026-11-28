@@ -4,10 +4,11 @@ from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, StrictBool
 from sqlalchemy import case, func, literal, select, union_all
 
+from ..config import settings
 from ..db import (
     AnswerReview,
     Conversation,
@@ -18,6 +19,7 @@ from ..db import (
     Tenant,
     UsageEvent,
     User,
+    UserSession,
     WebhookFailure,
     Website,
     WidgetTurn,
@@ -26,8 +28,11 @@ from ..db import (
 from ..models.google_calendar import GoogleTask
 from ..models.lead_sync import LeadDelivery
 from ..models.payments import PaymentEvent, PaymentRequest
+from ..models.support import SupportSession
 from ..models.webhooks import WebhookDelivery
+from ..services import support
 from ..services.audit import audit
+from ..services.auth import hash_token, new_token
 from ..services.usage import month_start
 from .auth import _csrf, _session
 
@@ -96,6 +101,43 @@ class FailedWebhooks(BaseModel):
 class Suspension(BaseModel):
     model_config = ConfigDict(extra='forbid')
     suspended: StrictBool
+
+
+class SupportAccess(BaseModel):
+    tenant_id: str
+    expires_at: datetime
+
+
+@router.post('/tenants/{tenant_id}/support-session', response_model=SupportAccess, status_code=201)
+def start_support(tenant_id: UUID, request: Request, response: Response, user: User = Depends(platform_admin)):
+    session, _ = _session(request)
+    token = new_token()
+    with Session.begin() as db:
+        if db.get(UserSession, session.id_hash, with_for_update=True) is None:
+            raise HTTPException(401, 'Session expired or revoked')
+        tenant = db.get(Tenant, str(tenant_id))
+        if tenant is None or tenant.suspended:
+            raise HTTPException(404, 'Workspace not found')
+        support.end(db, session.id_hash, user.id)
+        grant = SupportSession(token_hash=hash_token(token), user_session_id=session.id_hash,
+            tenant_id=tenant.id, expires_at=now() + support.DURATION)
+        db.add(grant)
+        db.flush()
+        audit(db, tenant.id, 'support.started', grant.id, {'expires_at': grant.expires_at.isoformat()},
+              actor_user_id=user.id, actor_type='platform_admin')
+    response.set_cookie(support.COOKIE, token, httponly=True, secure=settings.auth_cookie_secure,
+                        samesite='strict', max_age=int(support.DURATION.total_seconds()))
+    response.headers['Cache-Control'] = 'no-store'
+    return grant
+
+
+@router.delete('/support-session', status_code=204)
+def end_support(request: Request, response: Response, user: User = Depends(platform_admin)):
+    session, _ = _session(request)
+    with Session.begin() as db:
+        if db.get(UserSession, session.id_hash, with_for_update=True):
+            support.end(db, session.id_hash, user.id)
+    response.delete_cookie(support.COOKIE, httponly=True, secure=settings.auth_cookie_secure, samesite='strict')
 
 
 @router.get('/me')

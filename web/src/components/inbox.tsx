@@ -113,7 +113,7 @@ export function Inbox({ canAct }: { canAct: boolean }) {
   }, []);
 
   useEffect(() => {
-    if (!page || !workspace || !('serviceWorker' in navigator)) return;
+    if (!page || !workspace || workspace.support_expires_at || !('serviceWorker' in navigator)) return;
     const saveSnapshot = () => navigator.serviceWorker.controller?.postMessage({
       type: 'INBOX_SNAPSHOT', workspace: workspace.name, locale,
       conversations: page.items, messages,

@@ -13,7 +13,7 @@ from sqlalchemy import func, select, update
 
 from ..db import EvalCase, Invitation, Membership, ProductEvent, Session, Tenant, User, now, uid
 from ..services import auth as security
-from ..services import email
+from ..services import email, support
 from ..services.analytics import record
 from ..services.audit import audit
 from .auth import _csrf, _session
@@ -125,8 +125,15 @@ def create_workspace(body: WorkspaceInput, user: User = Depends(_user)):
 
 
 @router.get('/workspaces')
-def list_workspaces(user: User = Depends(_user)):
+def list_workspaces(request: Request):
+    session, user = _session(request)
     with Session() as db:
+        grant = support.current(db, request, session, user)
+        if grant:
+            tenant = db.get(Tenant, grant.tenant_id)
+            if tenant and not tenant.suspended:
+                return [{**tenant_view(tenant), 'role': 'viewer', 'support_expires_at': grant.expires_at}]
+            return []
         rows = db.execute(select(Tenant, Membership.role).join(
             Membership, Membership.tenant_id == Tenant.id).where(
             Membership.user_id == user.id, Tenant.suspended.is_(False)).order_by(Tenant.name)).all()

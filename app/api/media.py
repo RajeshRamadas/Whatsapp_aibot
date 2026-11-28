@@ -48,6 +48,8 @@ def public(attachments):
 @router.get('/api/v1/conversations/{conversation_id}/media/{attachment_id}')
 def download(conversation_id: UUID, attachment_id: UUID,
              principal: Principal = Depends(require_role('viewer'))):
+    if principal.support:
+        raise HTTPException(403, 'Downloads are unavailable in support sessions')
     with Session() as db:
         conv = conversation(db, principal.tenant.id, str(conversation_id))
         rows = db.scalars(select(Message).where(Message.conversation_id == conv.id,
