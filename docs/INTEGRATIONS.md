@@ -27,7 +27,7 @@ This document lists every outside system the product connects to: what it is for
 | 3.13 | Generic HTTP connector ("custom action") | Any business system as a bot tool | Outbound | R3 | BOT-6 |
 | 3.14 | Google Drive, Notion | Knowledge sync | Inbound | R3 | KN-6 |
 | 3.15 | Instagram, Facebook Messenger | More channels | Both | R3 | CH-4 |
-| 3.16 | GreenPlot | Pilot: resident support with live dues, visitors, maintenance | Both | R2 pilot | BOT-6, PAY-1 |
+| 3.16 | Beautiva | Launch pilot for AI look previews, salon bookings and customer support | Both | Website pilot, then live connector | KN-1, APT-1, LEAD-4, BOT-6 |
 | 4 | Public REST API and outgoing webhooks | Customers' own systems | Both | R3 | API-1, API-2 |
 | 5 | Monitoring (Sentry, metrics) | Errors and alerts | Outbound | R1 | NFR-9 |
 
@@ -235,9 +235,28 @@ Lets a business expose any of its own systems to the bot as a tool, without code
 |---|---|---|
 | META-1 | Connect through the same Meta app; receive and reply to DMs within each channel's messaging window; route into the same inbox with the channel shown. | R3 |
 
-### 3.16 GreenPlot (pilot customer)
+### 3.16 Beautiva launch pilot
 
-GreenPlot ([repo](https://github.com/RajeshRamadas/Greenplot)) manages residential plotted layouts and already has a FastAPI API with residents, dues, visitors and maintenance. It is the first real use of tools with live data.
+Beautiva lets customers try AI looks using their own photo and book a salon.
+The assistant answers questions and guides customers to the corresponding
+flow. Beautiva is the source for availability, confirmed bookings and look
+generation. [Beautiva](https://beautiva.app/)
+
+| ID | Requirement | Phase |
+|---|---|---|
+| BEAUTIVA-1 | Seed one Beautiva pilot workspace from the Beauty salon template. Use approved Beautiva and participating-salon knowledge for services, locations, hours, prices, booking policies, and photo consent and retention. Start on the Beautiva website widget. | Website pilot |
+| BEAUTIVA-2 | Explain how to try a look or book a salon, then share the matching approved Beautiva link. Start with the canonical site URL and use specific destinations once verified. Photo upload and consent take place in Beautiva's look flow. Explain that a preview is illustrative. | Website pilot |
+| BEAUTIVA-3 | Offer staff help for missing information and record the guest's name, request and optional preferred time with consent. Enable a WhatsApp follow-up only after its approved template, opt-in, delivery, and reply or STOP suppression pass live checks. | Website pilot, followed by verified WhatsApp |
+| BEAUTIVA-4 | After Beautiva supplies a staging API, validate a read-only availability action first. Require verified identity for private booking details, and customer confirmation and receiver idempotency for any booking change. Report a booking as confirmed only when Beautiva confirms it. Route unavailable or uncertain requests to the app or staff. | Live connector |
+
+A customer asking about a hairstyle can open the AI preview flow, then use
+Beautiva's salon booking flow when ready. A customer who already knows the
+service can go straight to booking. The assistant can collect the request
+for staff when the customer wants help choosing a salon or time.
+
+### 3.17 GreenPlot (candidate integration)
+
+GreenPlot ([repo](https://github.com/RajeshRamadas/Greenplot)) manages residential plotted layouts and has a FastAPI API with residents, dues, visitors and maintenance.
 
 | ID | Requirement | Release |
 |---|---|---|
@@ -283,5 +302,5 @@ GreenPlot ([repo](https://github.com/RajeshRamadas/Greenplot)) manages residenti
 1. WhatsApp: Meta Tech Provider application now, or a BSP partner for the pilots (affects WA-1)?
 2. Transcription provider for Indian languages: measure candidates on real voice notes before choosing (STT-1).
 3. Which CRM first: Zoho (common with Indian SMBs) or HubSpot?
-4. GreenPlot pilot: which layout association, and does GreenPlot need a service-account API key feature first (GP-3)?
+4. Beautiva pilot: confirm participating salons, approved booking and AI look links, and the staging API access and contract for live availability or booking actions (BEAUTIVA-1, BEAUTIVA-2, BEAUTIVA-4).
 5. Bring-your-own AI key on which plans (AI-4)?

@@ -36,13 +36,14 @@ Everything is set up through the API with shared admin keys. That is the main ga
 
 | Segment | Typical questions and jobs | What they pay for |
 |---|---|---|
+| Beauty salons and beauty marketplaces | Services, availability, booking policies and AI look previews | Appointment conversion and fewer routine support questions |
 | Clinics and diagnostic labs | Timings, doctors, test prices, report status, booking | Appointment booking, fewer calls |
 | Real estate and plotted layouts | Project details, prices, site visits; for residents: dues, gate passes, maintenance | Lead capture, site-visit booking, resident support |
 | Coaching and education | Courses, fees, batches, admissions | Lead capture, follow-ups |
 | Online shops (D2C) | Product details, order status, returns | Order status, abandoned-cart and offer campaigns |
 | Agencies | Run bots for many client businesses | White-label, multi-client management |
 
-The first segment to launch with is an open question (§10). [GreenPlot](https://github.com/RajeshRamadas/Greenplot) (residential layouts) is a ready pilot customer: residents already ask about dues, visitors and maintenance on WhatsApp.
+The launch pilot is Beautiva. The assistant helps customers explore AI looks and find a salon booking path in the app. [Beautiva pilot requirements](INTEGRATIONS.md#316-beautiva-launch-pilot)
 
 ## 4. Users and roles
 
@@ -229,7 +230,7 @@ Overage: ₹1 per extra AI message, or pause with handoff, as the owner chooses 
 
 ## 10. Open questions
 
-1. **Launch industry for R1:** residential layouts (GreenPlot pilot), clinics, real estate, coaching or online shops?
+1. **Launch industry for R1.** Salon bookings and AI look previews with Beautiva. The first test salons, booking links and approved policies still need to be confirmed.
 2. **Pricing:** validate the plans in §7 with 5–10 target customers before building billing.
 3. **WhatsApp:** become a Meta Tech Provider so businesses can connect through Embedded Signup (needs business verification and app review), or work through a Business Solution Provider (BSP) at first?
 4. **Template charges:** keep Meta billing the business directly (v1 assumption), or resell them with a margin later?
