@@ -746,6 +746,8 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 #### T9.14 Beautiva pilot
 
 - **Delivers:** BEAUTIVA-1 to BEAUTIVA-4
+- **Website handoff:** The existing widget supports clickable, explicitly approved
+  booking and AI look destinations. [Embed settings](../README.md#website-widget-v2)
 - **Steps:**
   1. Create a staging workspace with the Beauty salon template and upload approved
      Beautiva FAQs and participating-salon information. Add the verified booking and
