@@ -16,6 +16,7 @@ type Theme = {
   const key = script?.dataset.chatbotKey;
   if (!script || !key) return;
   const base = new URL(script.src).origin + '/api/v1/chat/' + encodeURIComponent(key) + '/widget';
+  const approvedLinks = new Set((script.dataset.chatbotLinks ?? '').split(/\s+/).map(httpsUrl).filter(Boolean));
   const storageKey = 'chatbot-widget:' + base;
   const defaults: Theme = {
     name: 'Assistant', color: '#064e3b', position: 'right', theme: 'auto',
@@ -36,7 +37,7 @@ type Theme = {
   style.textContent = `
     :host{all:initial;--accent:#064e3b;--accent-text:white;--bg:white;--text:#172221;--line:#d5dcda}
     *{box-sizing:border-box}button,input{font:inherit}button{cursor:pointer}button:disabled{cursor:default;opacity:.55}
-    button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+    button:focus-visible,input:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid currentColor;outline-offset:2px}
     [hidden]{display:none!important}.launcher,.bubble,.panel{position:fixed;right:20px;z-index:2147483646;
       font:14px/1.45 system-ui,sans-serif}.left{right:auto;left:20px}
     .launcher{bottom:20px;border:0;border-radius:28px;min-height:48px;min-width:48px;padding:0 16px;
@@ -53,6 +54,7 @@ type Theme = {
       padding:5px 9px}header button{background:transparent;color:inherit;border:1px solid currentColor}
     .log{flex:1;overflow:auto;overscroll-behavior:contain;padding:12px}.message{margin:0 0 12px;overflow-wrap:anywhere}
     .message p{margin:4px 0;white-space:pre-wrap}.tools{display:flex;gap:5px;flex-wrap:wrap;padding:8px}
+    .message a{color:inherit;text-decoration:underline}
     .sources{border:1px solid var(--line);border-radius:8px;padding:3px 8px;margin:5px 0}
     .sources summary{cursor:pointer}.vote[aria-pressed=true]{outline:2px solid var(--accent)}
     form{display:flex;gap:6px;padding:8px;border-top:1px solid var(--line)}
@@ -136,21 +138,38 @@ type Theme = {
     persist();
     render();
   }
+  function httpsUrl(text: string) {
+    if (!/^https:\/\//i.test(text)) return;
+    try {
+      const url = new URL(text);
+      if (url.protocol === 'https:' && !url.username && !url.password) return url.href;
+    } catch { /* Invalid link text stays plain. */ }
+  }
+  function approvedReplyLink(text: string) {
+    for (const label of [text, text.replace(/[.,!?;:)\]}]+$/, '')]) {
+      const href = httpsUrl(label);
+      if (href && approvedLinks.has(href)) return { label, href };
+    }
+  }
   function render() {
     log.replaceChildren();
     for (const entry of state.entries) {
       const row = element('article', '', 'message');
       const content = element('p');
       let offset = 0;
-      for (const match of entry.text.matchAll(/https:\/\/rzp\.io\/[a-z0-9/_-]+/gi)) {
+      const allowReplyLinks = approvedLinks.size > 0 && (entry.turn || entry.who === 'Team');
+      const urls = allowReplyLinks ? /https:\/\/[^\s<>"'`]+/gi : /https:\/\/rzp\.io\/[a-z0-9/_-]+/gi;
+      for (const match of entry.text.matchAll(urls)) {
+        const approved = allowReplyLinks ? approvedReplyLink(match[0]) : undefined;
+        const label = approved?.label ?? match[0].match(/^https:\/\/rzp\.io\/[a-z0-9/_-]+/i)?.[0];
+        if (!label) continue;
         content.append(document.createTextNode(entry.text.slice(offset, match.index)));
-        const link = element('a', match[0]);
-        link.href = match[0];
+        const link = element('a', label);
+        link.href = approved?.href ?? label;
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
-        link.style.textDecoration = 'underline';
         content.append(link);
-        offset = (match.index ?? 0) + match[0].length;
+        offset = (match.index ?? 0) + label.length;
       }
       content.append(document.createTextNode(entry.text.slice(offset)));
       row.append(element('strong', entry.who), content);

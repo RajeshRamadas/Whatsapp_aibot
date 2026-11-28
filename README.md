@@ -701,6 +701,17 @@ preview and save its theme, launcher, avatar and greeting. Add the site's
 origin to the workspace allowlist, then paste the dashboard's script tag
 with the public HTTPS API host. Use an asynchronous script tag.
 
+For a booking or AI look handoff, add the verified destination URLs to the
+workspace knowledge and to the embed's optional `data-chatbot-links` attribute.
+Use space-separated HTTPS URLs, including any required query string. The widget
+makes matching links clickable in assistant and staff replies. The sample embed
+includes a booking page and a look preview page.
+
+```html
+<script async src="https://chat.example.com/widget.js" data-chatbot-key="PUBLIC_KEY"
+  data-chatbot-links="https://salon.example.com/booking https://salon.example.com/looks"></script>
+```
+
 The widget persists the current chat and one pending message in local storage.
 It reconnects and sends that message when the browser returns online. The API
 queues each turn in PostgreSQL and the worker claims it. Replies arrive over
