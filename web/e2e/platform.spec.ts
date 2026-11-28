@@ -82,3 +82,26 @@ test('platform lists show loading, empty and recoverable error states', async ({
   await jobs.getByRole('button', { name: 'Retry', exact: true }).click();
   await expect(jobs.getByText('No records to show.')).toBeVisible();
 });
+
+test('platform operator opens and ends read-only support', async ({ page }) => {
+  expect((await page.request.post('/api/backend/auth/login', { data: {
+    email: 'platform@example.com', password: 'platform-browser-passphrase',
+  } })).ok()).toBeTruthy();
+  const result = await page.request.get('/api/backend/platform/tenants?search=Platform%20Suspension%20Fixture');
+  const { items: [workspace] } = await result.json();
+  await page.route('**/api/backend/platform/tenants?*', route => route.fulfill({ json: {
+    items: [workspace], total: 1, limit: 25, offset: 0,
+  } }));
+  await page.goto('/platform');
+  await page.getByRole('button', { name: 'Open read-only support' }).click();
+  const banner = page.getByRole('complementary', { name: 'Read-only support session ends at' });
+  await expect(banner).toContainText('Platform Suspension Fixture');
+  await expect(page.getByRole('link', { name: 'Billing', exact: true })).toHaveCount(0);
+  await page.setViewportSize({ width: 320, height: 900 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await banner.screenshot({ path: '../docs/screenshots/t10-9-support.png' });
+  await banner.getByRole('button', { name: 'End support session' }).click();
+  await expect(page).toHaveURL(/\/platform$/);
+});

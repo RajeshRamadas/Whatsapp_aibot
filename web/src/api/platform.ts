@@ -13,3 +13,6 @@ export const webhookFailures = (offset: number, signal: AbortSignal) =>
 export const suspend = (id: string, suspended: boolean) => api<components['schemas']['Suspension']>(
   `platform/tenants/${encodeURIComponent(id)}/suspension`, { method: 'PUT', body: JSON.stringify({ suspended }) });
 export const logout = () => api<void>('auth/logout', { method: 'POST' });
+export const startSupport = (id: string) => api<components['schemas']['SupportAccess']>(
+  `platform/tenants/${encodeURIComponent(id)}/support-session`, { method: 'POST' });
+export const endSupport = () => api<void>('platform/support-session', { method: 'DELETE' });

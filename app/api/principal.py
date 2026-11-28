@@ -6,6 +6,8 @@ from sqlalchemy import select
 
 from ..db import ApiKey, Membership, Session, Tenant, User, now
 from ..observability import bind
+from ..services import support
+from ..services.audit import audit
 from .auth import _csrf, _session
 from .shared import sha
 
@@ -18,6 +20,7 @@ class Principal:
     tenant: Tenant
     role: str
     legacy_key: bool = False
+    support: bool = False
 
 
 def current_principal(
@@ -56,10 +59,24 @@ def current_principal(
         role = max(scopes, key=lambda item: LEVELS[item]) if scopes else 'viewer'
         bind(tenant_id=tenant.id)
         return Principal(user=None, tenant=tenant, role=role, legacy_key=legacy)
-    _, user = _session(request)
+    session, user = _session(request)
     if not workspace_id:
         raise HTTPException(400, 'X-Workspace-Id required')
-    with Session() as db:
+    with Session.begin() as db:
+        grant = support.current(db, request, session, user)
+        if grant:
+            if workspace_id != grant.tenant_id:
+                raise HTTPException(404, 'Workspace not found')
+            if request.method not in ('GET', 'HEAD', 'OPTIONS'):
+                raise HTTPException(403, 'Support sessions are read-only')
+            tenant = db.get(Tenant, grant.tenant_id)
+            if tenant is None or tenant.suspended:
+                raise HTTPException(404, 'Workspace not found')
+            route = getattr(request.scope.get('route'), 'path', '')
+            audit(db, tenant.id, 'support.read', grant.id, {'route': route}, user.id, 'platform_admin')
+            response.headers['Cache-Control'] = 'no-store'
+            bind(tenant_id=tenant.id)
+            return Principal(user=user, tenant=tenant, role='viewer', support=True)
         membership = db.scalar(select(Membership).where(
             Membership.user_id == user.id, Membership.tenant_id == workspace_id))
         if not membership:

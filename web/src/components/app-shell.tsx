@@ -1,14 +1,15 @@
 'use client';
-import { useCopy } from '@/i18n/provider';
+import { useCopy, useDisplayLocale } from '@/i18n/provider';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { createContext, useContext, useLayoutEffect, useState, useTransition } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useState, useTransition } from 'react';
+import { endSupport } from '@/api/platform';
 import { api } from '@/lib/api';
 import { visiblePages, type Role } from '@/lib/navigation';
 
 
 
-export type Workspace = { id: string; name: string; role: Role };
+export type Workspace = { id: string; name: string; role: Role; support_expires_at?: string };
 const WorkspaceContext = createContext<Workspace | null>(null);
 export const useWorkspace = () => useContext(WorkspaceContext);
 
@@ -17,10 +18,18 @@ export function AppShell({ workspaces, active, children, platformAdmin = false }
 }) {
   const messages = useCopy('base');
   const platformCopy = useCopy('platform');
+  const locale = useDisplayLocale();
   const router = useRouter();
   const pathname = usePathname();
   const [clearing, setClearing] = useState(false), [pending, transition] = useTransition(), [navError, setNavError] = useState<'switchFailed' | 'logoutFailed' | null>(null);
   const switching = clearing || pending;
+  const [endError, setEndError] = useState(false);
+  useEffect(() => {
+    if (!active.support_expires_at) return;
+    const timer = setTimeout(() => window.location.replace('/platform'),
+      Math.max(0, Date.parse(active.support_expires_at) - Date.now()));
+    return () => clearTimeout(timer);
+  }, [active.support_expires_at]);
   // Child data effects need workspace context on the first request after login.
   useLayoutEffect(() => { if (!switching) document.cookie = 'active_workspace=' + encodeURIComponent(active.id) + '; Path=/; SameSite=Lax'; }, [active.id, switching]);
   const pages = visiblePages(active.role);
@@ -68,6 +77,18 @@ export function AppShell({ workspaces, active, children, platformAdmin = false }
         </select>
       </header>
       {navError && <p role="alert" className="p-4">{messages[navError]}</p>}
+      {active.support_expires_at && <aside className="flex flex-wrap items-center gap-3 border-b border-border bg-surface p-4"
+        aria-label={platformCopy.supportBanner}>
+        <p>{platformCopy.supportBanner} · {active.name} · <time dateTime={active.support_expires_at}>
+          {new Date(active.support_expires_at).toLocaleTimeString(locale, {
+            hour: '2-digit', minute: '2-digit', timeZone: 'UTC', timeZoneName: 'short',
+          })}
+        </time></p>
+        <button type="button" className="min-h-11 underline" onClick={() => {
+          void endSupport().then(() => window.location.replace('/platform')).catch(() => setEndError(true));
+        }}>{platformCopy.endSupport}</button>
+        {endError && <p role="alert">{platformCopy.saveError}</p>}
+      </aside>}
       <WorkspaceContext.Provider key={active.id} value={active}>{switching ? <main id="main" className="p-4"><p role="status">{pending ? messages.switchingWorkspace : messages.loading}</p></main> : children}</WorkspaceContext.Provider>
       {platformAdmin && <Link href="/platform" className="block p-4 underline md:hidden">{platformCopy.title}</Link>}
     </div>

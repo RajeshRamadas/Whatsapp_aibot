@@ -76,6 +76,14 @@ export function PlatformConsole() {
     try { await platform.logout(); router.replace('/login'); router.refresh(); }
     catch { setError(true); } finally { setBusy(undefined); }
   }
+  async function startSupport(tenant: platform.Tenant) {
+    if (busy) return;
+    setBusy(tenant.id); setError(false);
+    try {
+      await platform.startSupport(tenant.id);
+      window.location.assign('/dashboard');
+    } catch { setError(true); setBusy(undefined); }
+  }
   return <div className="space-y-10">
     <button className={button} disabled={!!busy} onClick={() => void logout()}>{copy.logout}</button>
     {error && <p role="alert">{copy.saveError}</p>}
@@ -94,6 +102,8 @@ export function PlatformConsole() {
       {tenant.unpriced_calls > 0 && <p className="text-sm">{copy.unpriced.replace('{count}', number.format(tenant.unpriced_calls))}</p>}
       <button className={button} disabled={!!busy} onClick={() => void toggle(tenant)}>
         {busy === tenant.id ? copy.saving : tenant.suspended ? copy.resume : copy.suspend}</button>
+      {!tenant.suspended && <button className={button} disabled={!!busy} onClick={() => void startSupport(tenant)}>
+        {copy.startSupport}</button>}
     </>} />
     <Records title={copy.jobs} help={copy.jobHelp} load={platform.failedJobs} render={job => <>
       <h3 className="font-semibold">{copy[job.kind]}</h3>
