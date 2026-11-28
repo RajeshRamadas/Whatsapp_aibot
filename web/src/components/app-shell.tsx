@@ -64,7 +64,7 @@ export function AppShell({ workspaces, active, children, platformAdmin = false }
         {pages.map(page => <Link key={page.key} href={page.path} aria-current={(pathname === page.path || page.path !== '/dashboard' && pathname.startsWith(page.path + '/')) ? 'page' : undefined}
           className="rounded-lg px-3 py-3 hover:bg-border aria-[current=page]:bg-border">{messages[page.key]}</Link>)}
       </nav>
-      {platformAdmin && <Link href="/platform" className="mt-4 block py-3 underline">{platformCopy.title}</Link>}
+      {platformAdmin && !active.support_expires_at && <Link href="/platform" className="mt-4 block py-3 underline">{platformCopy.title}</Link>}
       <div className="mt-4 grid gap-2"><Link className="min-h-11 py-2 underline" href="/create-workspace">{messages.workspace}</Link><Link className="min-h-11 py-2 underline" href="/account/security">{messages.accountSecurity}</Link></div>
       <button type="button" className="mt-4 underline" onClick={logout}>{messages.logout}</button>
     </aside>
@@ -90,7 +90,7 @@ export function AppShell({ workspaces, active, children, platformAdmin = false }
         {endError && <p role="alert">{platformCopy.saveError}</p>}
       </aside>}
       <WorkspaceContext.Provider key={active.id} value={active}>{switching ? <main id="main" className="p-4"><p role="status">{pending ? messages.switchingWorkspace : messages.loading}</p></main> : children}</WorkspaceContext.Provider>
-      {platformAdmin && <Link href="/platform" className="block p-4 underline md:hidden">{platformCopy.title}</Link>}
+      {platformAdmin && !active.support_expires_at && <Link href="/platform" className="block p-4 underline md:hidden">{platformCopy.title}</Link>}
     </div>
     <nav aria-label={messages.navigation} className="fixed inset-x-0 bottom-0 z-10 flex gap-1 overflow-x-auto border-t border-border bg-surface p-2 md:hidden">
       {pages.map(page => <Link key={page.key} href={page.path} aria-current={(pathname === page.path || page.path !== '/dashboard' && pathname.startsWith(page.path + '/')) ? 'page' : undefined}
