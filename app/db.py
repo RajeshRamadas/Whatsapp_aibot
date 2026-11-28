@@ -50,6 +50,8 @@ class Tenant(Base):
     __tablename__ = 'tenants'
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
     name: Mapped[str] = mapped_column(String(200))
+    agency_id: Mapped[str | None] = mapped_column(ForeignKey('tenants.id', name='fk_tenant_agency',
+        ondelete='SET NULL'), index=True)
     industry_template: Mapped[str | None] = mapped_column(String(64))
     lead_fields: Mapped[dict] = mapped_column(JSONB, default=dict)
     admin_key_hash: Mapped[str] = mapped_column(String(64), unique=True)
@@ -561,9 +563,13 @@ class UsageEvent(Base):
     __table_args__ = (
         UniqueConstraint('tenant_id', 'request_key', name='uq_usage_request'),
         Index('ix_usage_tenant_kind_created', 'tenant_id', 'kind', 'created_at'),
+        Index('ix_usage_billing_created', 'billing_tenant_id', 'created_at',
+              postgresql_where=text("billing_tenant_id IS NOT NULL AND kind = 'answer'")),
     )
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
     tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id', ondelete='CASCADE'))
+    billing_tenant_id: Mapped[str | None] = mapped_column(ForeignKey('tenants.id', name='fk_usage_billing_tenant',
+        ondelete='SET NULL'))
     kind: Mapped[str] = mapped_column(String(20))
     request_key: Mapped[str | None] = mapped_column(String(150))
     provider: Mapped[str | None] = mapped_column(String(32))

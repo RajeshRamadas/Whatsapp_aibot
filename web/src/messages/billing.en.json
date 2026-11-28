@@ -54,5 +54,22 @@
   "downgradeScheduled": "Plan change requested for the end of the billing cycle.",
   "cancelRequested": "Cancellation requested.",
   "quotaReductions": "On the lower plan: {limits}.",
-  "billing": "Billing"
+  "billing": "Billing",
+  "agency": {
+    "title": "Agency billing",
+    "total": "{used} of {limit} agency AI messages this month",
+    "clients": "Billed workspaces",
+    "usage": "{used} AI messages",
+    "noClients": "No client workspaces linked.",
+    "client": "Client workspace",
+    "choose": "Select a workspace",
+    "add": "Link client workspace",
+    "remove": "Unlink",
+    "removeName": "Unlink {name}",
+    "confirmRemove": "Unlink {name} from consolidated billing?",
+    "error": "Could not load or update agency billing.",
+    "retry": "Retry",
+    "loading": "Loading agency billing…",
+    "managed": "Billing managed by {name}"
+  }
 }

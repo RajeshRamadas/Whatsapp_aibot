@@ -6,14 +6,14 @@ from decimal import Decimal
 
 from redis import Redis
 from redis.exceptions import RedisError
-from sqlalchemy import Date, cast, func, select
+from sqlalchemy import Date, and_, cast, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 
 from ..config import settings
 from ..db import Membership, Plan, Session, Tenant, UsageDaily, UsageEvent, User, now
 from ..observability import integration
 from . import email
-from .billing import BILLING_NOTICE, entitled
+from .billing import BILLING_NOTICE, billing_workspace, entitled
 
 log = logging.getLogger(__name__)
 workspace = ContextVar('metered_workspace', default=None)
@@ -98,6 +98,16 @@ def monthly_count(db, tenant_id, start):
         UsageEvent.tenant_id == tenant_id, UsageEvent.kind == 'answer', UsageEvent.created_at >= start))
 
 
+def billing_events(tenant_id, start):
+    return select(UsageEvent).where(UsageEvent.kind == 'answer', UsageEvent.created_at >= start, or_(
+        UsageEvent.billing_tenant_id == tenant_id,
+        and_(UsageEvent.tenant_id == tenant_id, UsageEvent.billing_tenant_id.is_(None))))
+
+
+def billing_monthly_count(db, tenant_id, start):
+    return db.scalar(billing_events(tenant_id, start).with_only_columns(func.count()).select_from(UsageEvent))
+
+
 def cache_key(tenant_id, start):
     return f'usage:monthly:{tenant_id}:{start:%Y-%m}'
 
@@ -119,26 +129,27 @@ def reserve(tenant_id, request_key):
         )):
             return True
         at = now()
-        if not entitled(db, tenant, at):
+        payer = billing_workspace(db, tenant, lock=True)
+        if payer is None or not entitled(db, payer, at):
             return False
         start = month_start(at)
-        limit = db.get(Plan, tenant.plan_id).limits['ai_messages']
-        count = monthly_count(db, tenant_id, start)
-        overage = tenant.quota_behavior == 'overage'
+        limit = db.get(Plan, payer.plan_id).limits['ai_messages']
+        count = billing_monthly_count(db, payer.id, start)
+        overage = payer.quota_behavior == 'overage'
         try:
             with redis_client() as redis:
-                allowed = bool(redis.eval(_RESERVE, 1, cache_key(tenant_id, start), count, limit, int(overage)))
+                allowed = bool(redis.eval(_RESERVE, 1, cache_key(payer.id, start), count, limit, int(overage)))
         except RedisError:
             allowed = count < limit or overage
         if allowed:
-            db.add(UsageEvent(tenant_id=tenant_id, kind='answer', request_key=request_key,
-                              overage=count >= limit, created_at=at))
+            db.add(UsageEvent(tenant_id=tenant_id, billing_tenant_id=tenant.agency_id, kind='answer',
+                              request_key=request_key, overage=count >= limit, created_at=at))
             count += 1
         for percent in (80, 100):
             if count * 100 < limit * percent:
                 continue
             statement = insert(UsageEvent).values(
-                tenant_id=tenant_id, kind=f'alert{percent}', request_key=f'alert:{start:%Y-%m}:{percent}',
+                tenant_id=payer.id, kind=f'alert{percent}', request_key=f'alert:{start:%Y-%m}:{percent}',
                 created_at=at,
             ).on_conflict_do_nothing(index_elements=['tenant_id', 'request_key'])
             db.execute(statement)
@@ -171,7 +182,7 @@ def reconcile():
         with Session.begin() as db:
             if db.get(Tenant, tenant_id, with_for_update=True) is None:
                 continue
-            count = monthly_count(db, tenant_id, start)
+            count = billing_monthly_count(db, tenant_id, start)
             try:
                 with redis_client() as redis:
                     redis.set(cache_key(tenant_id, start), count, ex=3456000)
