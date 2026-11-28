@@ -528,5 +528,14 @@ class WorkerSettings:
     max_tries = 5
 
 
+# arq reads settings directly from a class __dict__ or a dictionary.
+QueueWorkerSettings = dict(vars(WorkerSettings), cron_jobs=[], health_check_interval=15, job_completion_wait=60)
+
+# arq executes the cron jobs it schedules. A separate queue prevents job-only
+# workers from claiming cron jobs they cannot execute.
+SchedulerSettings = dict(vars(WorkerSettings), functions=[], queue_name='arq:cron',
+                         health_check_interval=15, job_completion_wait=60)
+
+
 if __name__ == '__main__':
     run_worker(WorkerSettings)

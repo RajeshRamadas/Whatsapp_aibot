@@ -7,3 +7,4 @@ uploads/
 .DS_Store
 
 .env.push
+/deploy/*.env
