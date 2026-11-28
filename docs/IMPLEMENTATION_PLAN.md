@@ -729,7 +729,7 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 | T9.11 | Leads to Google Sheets, Zoho and HubSpot (implemented; live provider-account checks pending) | LEAD-3, GSH-1 to GSH-3, CRM-1, CRM-2 | T5.2 |
 | T9.12 | Accuracy runs in the UI with history (implemented; live-model verification pending) | ANL-4 | T3.3 |
 | T9.13 | Multiple workspaces per user; 2FA (implemented with account-wide TOTP and verified workspace switching) | ACC-4, ACC-5 | T1.4 |
-| T9.14 | GreenPlot pilot (tools via the HTTP connector) | GP-1 to GP-5 | T10.3 |
+| T9.14 | [Beautiva pilot](#t914-beautiva-pilot) for AI looks and salon bookings | BEAUTIVA-1 to BEAUTIVA-4 | T8.1, T6.5. Live actions use T10.3, and WhatsApp follow-ups use T10.10. |
 | T10.1 | Public API polish and docs | API-1, PAPI-1 to PAPI-6 | T1.5 |
 | T10.2 | Outgoing webhooks | API-2, OWH-1 to OWH-5 | T2.1 |
 | T10.3 | Generic HTTP connector ("custom action") | BOT-6, HTTP-1 to HTTP-6 | T5.1, T1.8 |
@@ -742,6 +742,26 @@ Size: **S** = up to half a day of agent work, **M** = about a day, **L** = 2–3
 | T10.9b | Agency billing across client workspaces | ADM-3 | T7.2 (merged #46) |
 | T10.9c | Agency white-label branding and verified domains | ADM-3 | T10.9b |
 | T10.10 | Lead follow-ups from approved WhatsApp templates | LEAD-4 | T9.2 (merged #54 and #55) |
+
+#### T9.14 Beautiva pilot
+
+- **Delivers:** BEAUTIVA-1 to BEAUTIVA-4
+- **Steps:**
+  1. Create a staging workspace with the Beauty salon template and upload approved
+     Beautiva FAQs and participating-salon information. Add the verified booking and
+     AI look destinations to its knowledge.
+  2. Add the existing widget to Beautiva staging and exercise both journeys with
+     synthetic customers. Verify that a consented lead reaches staff. Run the live
+     follow-up checks in a WhatsApp test workspace before enabling pilot follow-ups.
+  3. When Beautiva staging API access is available, test a read-only availability
+     action with the existing connector. Test identity, confirmation and deduplication
+     with Beautiva's API before enabling private lookups or booking changes.
+- **Done when:** A staging customer can find the look and booking flows, get a
+  confirmed test booking in Beautiva, and reach staff when the answer is unknown.
+  The pilot's real-knowledge eval scores at least 90% and passes both decline cases.
+  Any enabled booking action returns a confirmed result from Beautiva, rejects
+  stale availability, and handles repeated approval without a duplicate booking.
+  [Pilot requirements](INTEGRATIONS.md#316-beautiva-launch-pilot)
 
 #### T10.8k Private incoming Meta attachments
 - **Delivers:** CH-4, META-1 (inbound media slice)
@@ -901,7 +921,7 @@ Tick each task in the PR that completes it.
 | M6 | T6.1 ☐ · T6.2 ☐ · T6.3 ☐ · T6.4 ☐ · T6.5 ☐ | |
 | M7 | T7.1 ☐ · T7.2 ☐ · T7.3 ☐ · T7.4 ☐ · T7.5 ☑ | |
 | M8 | T8.1 ☑ · T8.2 ☑ · T8.3 ☑ · T8.4 ☐ · T8.5 ☐ | T8.4 live SES and DNS staging checks pending. T8.5 production configuration and local PostgreSQL restore verified. Fresh managed staging deployment pending. |
-| M9 | T9.1 ☑ · T9.2a ☑ · T9.2b ☑ · T9.3 ☑ · T9.4a ☑ · T9.4b ☐ · T9.5 ☑ · T9.6a ☑ · T9.6b ☑ · T9.6c ☑ · T9.7a ☑ · T9.7b ☑ · T9.8a ☑ · T9.8b ☑ · T9.8c ☑ · T9.8d ☑ · T9.9a ☑ · T9.9b ☑ · T9.9c ☑ · T9.9d ☑ · T9.10 ☑ · T9.11 ☑ · T9.12 ☑ · T9.13 ☑ | T9.4b code merged; user has no speech dataset and chose to keep transcription disabled. Real-language evaluation pending. T9.8 native-speaker script review and live model accuracy checks remain pilot gates. T9.9d code and fake-provider checks implemented; no Google Cloud OAuth app yet, so live authorization/delivery verification remains pending by user choice. T9.10 code and fake-provider checks implemented; live merchant test-mode payment verification remains pending until merchant keys/webhooks are configured. T9.11 implemented in stacked PRs #80–#84 with fake Google/HubSpot/Zoho checks; live account verification remains pending until OAuth and tenant credentials are configured. T9.12 implemented in stacked PRs #85–#86 with immutable accuracy-run history and English/Hindi controls; automated checks use fakes, so live-model verification remains pending credentials. T9.13 implemented in stacked PRs #87–#89: existing multi-workspace membership APIs verified; switching clears private view state; optional account-wide TOTP, one-use recovery codes and English/Hindi security controls added. |
+| M9 | T9.1 ☑ · T9.2a ☑ · T9.2b ☑ · T9.3 ☑ · T9.4a ☑ · T9.4b ☐ · T9.5 ☑ · T9.6a ☑ · T9.6b ☑ · T9.6c ☑ · T9.7a ☑ · T9.7b ☑ · T9.8a ☑ · T9.8b ☑ · T9.8c ☑ · T9.8d ☑ · T9.9a ☑ · T9.9b ☑ · T9.9c ☑ · T9.9d ☑ · T9.10 ☑ · T9.11 ☑ · T9.12 ☑ · T9.13 ☑ · T9.14 ☐ | T9.4b code merged; user has no speech dataset and chose to keep transcription disabled. Real-language evaluation pending. T9.8 native-speaker script review and live model accuracy checks remain pilot gates. T9.9d code and fake-provider checks implemented; no Google Cloud OAuth app yet, so live authorization/delivery verification remains pending by user choice. T9.10 code and fake-provider checks implemented; live merchant test-mode payment verification remains pending until merchant keys/webhooks are configured. T9.11 implemented in stacked PRs #80–#84 with fake Google/HubSpot/Zoho checks; live account verification remains pending until OAuth and tenant credentials are configured. T9.12 implemented in stacked PRs #85–#86 with immutable accuracy-run history and English/Hindi controls; automated checks use fakes, so live-model verification remains pending credentials. T9.13 implemented in stacked PRs #87–#89: existing multi-workspace membership APIs verified; switching clears private view state; optional account-wide TOTP, one-use recovery codes and English/Hindi security controls added. |
 | M10 | T10.1 ☑ · T10.2 ☑ · T10.3 ☑ · T10.4 ☑ · T10.5 ☑ · T10.6 ☑ · T10.7 ☑ · T10.8 ☐ · T10.9a ☑ · T10.9b ☑ · T10.9c ☑ · T10.10 ☑ | T10.1 implemented in stacked PRs #90–#94: additive public v1 API, granular scoped keys, plan quotas, opaque pagination, atomic 24-hour replay, all PAPI-6 resources, durable knowledge writes and sends, accuracy runs, English/Hindi key controls and OpenAPI reference. Migration 0044 verified up/down/up; tests use fake providers. T10.2 implemented in stacked PRs #95–#98: encrypted destinations, atomic metadata events, signed/pinned HTTPS delivery, 24-hour retries, three-day disablement/admin alerts, 30-day logs and English/Hindi controls. Migration 0045 verified up/down/up. T10.3 implemented in stacked parts: versioned encrypted HTTP actions, pinned public HTTPS, all five auth modes, server-bound identity checks, customer confirmation, OTP, durable replay and English/Hindi test controls. Migrations 0046–0047 verified up/down/up; receiver/provider checks use fakes. Live tenant endpoint and SES delivery checks remain deployment setup. T10.4 implemented in stacked parts: typed tenant spreadsheet tables, isolated SELECT-only roles, bounded SQL, owner/admin controls and cited bot queries. Migration 0048 verified up/down/up/check; automated provider checks use fakes. |
 
 T8.1 provides the Beauty salon template for the Beautiva use case. The sample
@@ -912,7 +932,7 @@ real-model run scored 10/10, with both decline cases passing.
 
 | Before | Decision or setup | Reference |
 |---|---|---|
-| T8.1 (ideally before T3.2) | Launch industry | REQUIREMENTS §10.1 |
+| T9.14 | Approved Beautiva content, staging site access and the API contract for live booking actions | INTEGRATIONS BEAUTIVA-1 to BEAUTIVA-4 |
 | T6.2 | Meta Tech Provider application or BSP partner; Meta app with Embedded Signup | REQUIREMENTS §10.3, DESIGN D11 |
 | T7.2 | Razorpay account; validated prices | REQUIREMENTS §7, §10.2 |
 | T7.3 | Accountant review of the invoice format and SAC code | DESIGN §9 |
