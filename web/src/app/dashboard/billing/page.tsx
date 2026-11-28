@@ -3,6 +3,7 @@ import { useCopy, useDisplayLocale } from '@/i18n/provider';
 
 import { useEffect, useState } from 'react';
 import { AgencyBillingSettings } from '@/components/agency-billing';
+import { AgencyBrandingSettings } from '@/components/agency-branding-settings';
 import { InvoiceSettings } from '@/components/invoice-settings';
 import { UsageMeter } from '@/components/usage-meter';
 import { useWorkspace } from '@/components/app-shell';
@@ -128,6 +129,7 @@ function WorkspaceBilling({ id }: { id: string }) {
     </Card>}
     {data && !data.managed_by && <>
       <AgencyBillingSettings workspace={id} changed={refresh} />
+      <AgencyBrandingSettings workspace={id} />
       <Card className="space-y-2">
         <h2 className="font-semibold">{copy.subscription}</h2>
         <p>{copy.current}: {name(data.current_plan)}</p>

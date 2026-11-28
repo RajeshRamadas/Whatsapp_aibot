@@ -6,6 +6,7 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
   const url = new URL('/api/v1/' + path.map(encodeURIComponent).join('/'), backend);
   url.search = request.nextUrl.search;
   const headers = new Headers(request.headers);
+  headers.set('X-Agency-Host', request.headers.get('host') ?? '');
   const workspace = request.cookies.get('active_workspace')?.value;
   if (workspace && !headers.has('X-Workspace-Id')) headers.set('X-Workspace-Id', workspace);
   headers.delete('host');

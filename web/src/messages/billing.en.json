@@ -71,5 +71,26 @@
     "retry": "Retry",
     "loading": "Loading agency billing…",
     "managed": "Billing managed by {name}"
+  },
+  "brand": {
+    "noWorkspace": "This account has no workspace on this agency domain.",
+    "title": "Agency branding",
+    "name": "Brand name",
+    "logo": "Public HTTPS logo URL",
+    "primary": "Primary color",
+    "secondary": "Secondary color",
+    "domain": "Custom domain",
+    "save": "Save branding",
+    "retry": "Retry",
+    "loading": "Loading branding…",
+    "dns": "Publish this DNS TXT record, then verify the domain.",
+    "recordName": "TXT record name",
+    "recordValue": "TXT record value",
+    "verify": "Verify domain",
+    "live": "{domain} is verified",
+    "saved": "Branding saved.",
+    "verified": "Domain verified.",
+    "loadError": "Could not load branding settings.",
+    "saveError": "Could not update branding."
   }
 }

@@ -39,6 +39,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/agency/branding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Brand */
+        get: operations["get_brand_api_v1_agency_branding_get"];
+        /** Change Brand */
+        put: operations["change_brand_api_v1_agency_branding_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agency/branding/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify Brand */
+        post: operations["verify_brand_api_v1_agency_branding_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/branding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Public Brand */
+        get: operations["public_brand_api_v1_branding_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/branding/domain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Certificate Domain */
+        get: operations["certificate_domain_api_v1_branding_domain_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/knowledge-sync": {
         parameters: {
             query?: never;
@@ -3704,6 +3773,67 @@ export interface components {
             /** Reminder Message Id */
             reminder_message_id: number | null;
         };
+        /** BrandAppearance */
+        BrandAppearance: {
+            /** Display Name */
+            display_name: string;
+            /** Logo Url */
+            logo_url?: string | null;
+            /**
+             * Primary Color
+             * @default #155e75
+             */
+            primary_color: string;
+            /**
+             * Secondary Color
+             * @default #edf3f7
+             */
+            secondary_color: string;
+        };
+        /** BrandSettings */
+        BrandSettings: {
+            /** Display Name */
+            display_name: string;
+            /** Logo Url */
+            logo_url?: string | null;
+            /**
+             * Primary Color
+             * @default #155e75
+             */
+            primary_color: string;
+            /**
+             * Secondary Color
+             * @default #edf3f7
+             */
+            secondary_color: string;
+            /** Domain */
+            domain?: string | null;
+        };
+        /** BrandView */
+        BrandView: {
+            /** Display Name */
+            display_name: string;
+            /** Logo Url */
+            logo_url?: string | null;
+            /**
+             * Primary Color
+             * @default #155e75
+             */
+            primary_color: string;
+            /**
+             * Secondary Color
+             * @default #edf3f7
+             */
+            secondary_color: string;
+            /** Domain */
+            domain?: string | null;
+            /** Verified At */
+            verified_at?: string | null;
+            /** Dns Name */
+            dns_name?: string | null;
+            /** Dns Value */
+            dns_value?: string | null;
+        };
         /** Cadence */
         Cadence: {
             /**
@@ -6136,6 +6266,166 @@ export interface operations {
             path: {
                 client_id: string;
             };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_brand_api_v1_agency_branding_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_brand_api_v1_agency_branding_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BrandSettings"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_brand_api_v1_agency_branding_verify_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    public_brand_api_v1_branding_get: {
+        parameters: {
+            query: {
+                domain: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandAppearance"] | null;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    certificate_domain_api_v1_branding_domain_get: {
+        parameters: {
+            query?: {
+                domain?: string | null;
+            };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
