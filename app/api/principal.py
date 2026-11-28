@@ -6,7 +6,7 @@ from sqlalchemy import select
 
 from ..db import ApiKey, Membership, Session, Tenant, User, now
 from ..observability import bind
-from ..services import support
+from ..services import branding, support
 from ..services.audit import audit
 from .auth import _csrf, _session
 from .shared import sha
@@ -48,6 +48,8 @@ def current_principal(
             tenant = db.get(Tenant, key.tenant_id)
             if not tenant or (workspace_id and workspace_id != tenant.id):
                 raise HTTPException(404, 'Workspace not found')
+            if not branding.allows(branding.request_brand(db, request), tenant):
+                raise HTTPException(404, 'Workspace not found')
             if tenant.suspended:
                 raise HTTPException(403, 'Workspace suspended. Contact support.')
             key.last_used_at = now()
@@ -63,6 +65,7 @@ def current_principal(
     if not workspace_id:
         raise HTTPException(400, 'X-Workspace-Id required')
     with Session.begin() as db:
+        brand = branding.request_brand(db, request)
         grant = support.current(db, request, session, user)
         if grant:
             if workspace_id != grant.tenant_id:
@@ -70,7 +73,7 @@ def current_principal(
             if request.method not in ('GET', 'HEAD', 'OPTIONS'):
                 raise HTTPException(403, 'Support sessions are read-only')
             tenant = db.get(Tenant, grant.tenant_id)
-            if tenant is None or tenant.suspended:
+            if tenant is None or tenant.suspended or not branding.allows(brand, tenant):
                 raise HTTPException(404, 'Workspace not found')
             route = getattr(request.scope.get('route'), 'path', '')
             audit(db, tenant.id, 'support.read', grant.id, {'route': route}, user.id, 'platform_admin')
@@ -82,7 +85,7 @@ def current_principal(
         if not membership:
             raise HTTPException(404, 'Workspace not found')
         tenant = db.get(Tenant, workspace_id)
-        if not tenant:
+        if not tenant or not branding.allows(brand, tenant):
             raise HTTPException(404, 'Workspace not found')
         if tenant.suspended:
             raise HTTPException(403, 'Workspace suspended. Contact support.')

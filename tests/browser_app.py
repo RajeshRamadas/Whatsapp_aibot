@@ -18,11 +18,14 @@ from app.invoice_config import InvoiceIssuer
 from app.jobs.worker import dispatch_agent_reply, ingest_source, process_inbound
 from app.main import app
 from app.rate_limits import RateLimiter
-from app.services import campaign_delivery, media, media_intelligence
+from app.services import branding, campaign_delivery, media, media_intelligence
 from app.services import templates as template_service
 from tests.test_billing import FakeBilling
 
 __all__ = ['app']
+
+branding.proves_ownership = lambda domain, token: domain.endswith('.localhost') and bool(token)
+
 
 
 class BrowserKnowledge:

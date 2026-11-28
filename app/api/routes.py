@@ -10,6 +10,7 @@ from . import (
     billing,
     bot,
     bot_messages,
+    branding,
     campaigns,
     channels,
     chat,
@@ -57,7 +58,8 @@ from .shared import UPLOADS as UPLOADS
 from .shared import origins as origins
 
 router = APIRouter()
-for module in (agency, knowledge_sync, commerce, spreadsheets, http_actions, outgoing_webhooks, mfa, lead_sync,
+for module in (agency, branding, knowledge_sync, commerce, spreadsheets, http_actions, outgoing_webhooks,
+               mfa, lead_sync,
                payment_webhooks, payments,
                google_calendar,
                appointments, bot_messages, improvements,

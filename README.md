@@ -738,6 +738,8 @@ configured email sender. The default sender records a delivery request in logs.
 
 Owners can consolidate eligible client workspaces under one subscription and
 pooled AI quota. [Agency billing](docs/AGENCY_BILLING.md)
+Agency owners can also verify a custom domain and set the logo and colors for
+that host. [Agency branding](docs/AGENCY_BRANDING.md)
 
 Run the database migrations, then set `RAZORPAY_KEY_ID`,
 `RAZORPAY_KEY_SECRET` and `RAZORPAY_WEBHOOK_SECRET` on the API and worker.
