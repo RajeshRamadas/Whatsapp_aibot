@@ -93,6 +93,7 @@ jobs:
           python -m scripts.seed_websites_e2e
           python -m scripts.seed_improvements_e2e
           python -m scripts.seed_lead_sync_e2e
+          python -m scripts.seed_lead_follow_ups_e2e
           python -m scripts.seed_payments_e2e
           python -m scripts.seed_appointments_e2e
           python -m scripts.seed_locales_e2e
@@ -113,6 +114,7 @@ jobs:
           name: browser-acceptance
           path: |
             docs/screenshots/t8-1-beauty-salon.png
+            docs/screenshots/t10-10-lead-follow-ups.png
             docs/screenshots/t10-6-commerce.png
             docs/screenshots/t10-7-knowledge-sync.png
             docs/screenshots/t10-8-meta-oauth.png

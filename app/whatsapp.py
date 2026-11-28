@@ -325,6 +325,7 @@ def parse_statuses(payload: dict) -> list[dict]:
 
 def record_status(status: dict) -> bool:
     """Apply a tenant-verified receipt without regressing a known delivery state."""
+    from .models.lead_follow_ups import FOLLOW_UP_REPLY_KEY
     from .services.campaign_delivery import receipt
     receipt(status)
     with Session.begin() as db:
@@ -334,14 +335,24 @@ def record_status(status: dict) -> bool:
             channel.last_webhook_at = now()
         if not tenant_id:
             return False
+        matches = Message.channel_message_id == status['id']
+        opaque = status.get('biz_opaque_callback_data')
+        prefix, _, message_id = opaque.partition(':') if isinstance(opaque, str) else ('', '', '')
+        if (prefix == FOLLOW_UP_REPLY_KEY and 1 <= len(message_id) <= 19 and message_id.isascii()
+                and message_id.isdigit() and int(message_id) <= 2**63 - 1):
+            matches = matches | ((Message.id == int(message_id)) & (Message.reply_key == FOLLOW_UP_REPLY_KEY)
+                & (Message.template_payload['phone_id'].astext == status['phone_number_id'])
+                & Message.channel_message_id.is_(None))
         row = db.scalar(select(Message).join(Conversation, Message.conversation_id == Conversation.id)
                         .where(Conversation.tenant_id == tenant_id,
                                Conversation.channel == 'whatsapp',
                                Message.direction == 'outbound',
-                               Message.channel_message_id == status['id'])
+                               matches)
                         .with_for_update())
         if row is None:
             return False
+        if row.channel_message_id is None:
+            row.channel_message_id = status['id']
         incoming = status['status']
         previous = row.delivery_status
         if previous == incoming:

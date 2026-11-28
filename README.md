@@ -1089,6 +1089,13 @@ to 60 per workspace. Optional WhatsApp utility receipt templates must have three
 (description, amount, payment reference). Provider API is Razorpay Payment Links v1.
 Live test-mode payment verification is pending; the environment has no merchant keys configured.
 
+### WhatsApp lead follow-ups (T10.10)
+
+Owners and admins can enable one approved-template follow-up per quiet,
+opted-in WhatsApp lead from the Leads page. The worker checks replies, consent,
+template approval and shared campaign capacity before each send. Apply migration
+0060 before starting the new worker and scheduler. [Follow-up guide](docs/LEAD_FOLLOW_UPS.md)
+
 ### Lead sync (T9.11)
 
 Lead sync adds explicit sharing approval, encrypted HubSpot/Zoho credentials

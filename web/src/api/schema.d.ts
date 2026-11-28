@@ -2227,6 +2227,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/lead-follow-up": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Follow Up */
+        get: operations["get_follow_up_api_v1_lead_follow_up_get"];
+        /** Set Follow Up */
+        put: operations["set_follow_up_api_v1_lead_follow_up_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/lead-config": {
         parameters: {
             query?: never;
@@ -4207,6 +4225,50 @@ export interface components {
              * @enum {string}
              */
             vote: "up" | "down";
+        };
+        /** FollowUpInput */
+        FollowUpInput: {
+            /** Enabled */
+            enabled: boolean;
+            /**
+             * Delay Hours
+             * @default 24
+             */
+            delay_hours: number;
+            /** Template Id */
+            template_id?: string | null;
+            /** Values */
+            values?: string[];
+        };
+        /** FollowUpPause */
+        FollowUpPause: {
+            /**
+             * Enabled
+             * @constant
+             */
+            enabled: false;
+        };
+        /** FollowUpView */
+        FollowUpView: {
+            /**
+             * Enabled
+             * @default false
+             */
+            enabled: boolean;
+            /**
+             * Delay Hours
+             * @default 24
+             */
+            delay_hours: number;
+            /** Template Id */
+            template_id?: string | null;
+            /** Values */
+            values?: string[];
+            /**
+             * Template Available
+             * @default false
+             */
+            template_available: boolean;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -11223,6 +11285,74 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_follow_up_api_v1_lead_follow_up_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FollowUpView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_follow_up_api_v1_lead_follow_up_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace-Id"?: string | null;
+                "X-Admin-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FollowUpPause"] | components["schemas"]["FollowUpInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FollowUpView"];
                 };
             };
             /** @description Validation Error */

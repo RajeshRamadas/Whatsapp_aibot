@@ -196,7 +196,11 @@ class Conversation(Base):
 
 class Message(Base):
     __tablename__ = 'messages'
-    __table_args__ = (UniqueConstraint('conversation_id', 'reply_key', name='uq_message_reply_key'),)
+    __table_args__ = (
+        UniqueConstraint('conversation_id', 'reply_key', name='uq_message_reply_key'),
+        Index('ix_messages_lead_follow_up_claims', 'dispatch_started_at',
+              postgresql_where=text("reply_key = 'lead-follow-up'")),
+    )
     # Sequential so history order is exact even when rows share a timestamp.
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     conversation_id: Mapped[str] = mapped_column(ForeignKey('conversations.id', ondelete='CASCADE'), index=True)
@@ -705,6 +709,7 @@ from .models import evaluations as _evaluations  # noqa: E402,F401
 from .models import google_calendar as _google_calendar  # noqa: E402, F401
 from .models import http_actions as _http_actions  # noqa: E402,F401
 from .models import knowledge_sync as _knowledge_sync  # noqa: E402,F401
+from .models import lead_follow_ups as _lead_follow_ups  # noqa: E402,F401
 from .models import lead_sync as _lead_sync  # noqa: E402,F401
 from .models import meta_bot as _meta_bot  # noqa: E402,F401
 from .models import meta_oauth as _meta_oauth  # noqa: E402,F401
