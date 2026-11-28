@@ -26,3 +26,33 @@ live.
 
 The sample uses invented salon policies for evaluation. The application keeps
 each new bot paused for review.
+
+## T8.1 acceptance record
+
+The app's Accuracy worker ran all ten saved questions on November 28, 2026
+using the sample salon file in a disposable workspace at revision `fa055da`.
+Both runs used llama.cpp b12833 and Nomic Embed Text v1.5 F16 embeddings
+(768 dimensions). The Qwen3 run used a 30-second grounding timeout for local
+CPU inference.
+
+| Chat model (Q4_K_M) | Accuracy | Knowledge cases with the expected source | Decline cases passed |
+|---|---:|---:|---:|
+| Qwen2.5-3B-Instruct | 2/10 (20%) | 0/8 | 2/2 |
+| Qwen3-4B-Instruct-2507 | 10/10 (100%) | 8/8 | 2/2 |
+
+Qwen3 met the 90% target with zero provider errors. Run ID
+`0a435bf1-6455-4fc6-97ff-4a4730fefdbb`. Qwen2.5 failed the source check
+on all eight knowledge cases.
+
+| Saved case | Qwen3 result |
+|---|---|
+| Haircut duration | 45 minutes, with source |
+| Blow-dry duration | 30 minutes, with source |
+| Monday opening | Closed on Monday, with source |
+| Sunday opening | 11 a.m. on Sunday, with source |
+| Booking reschedule | Up to 24 hours before the start time, with source |
+| Consent for an AI preview photo | Explicit consent required, with source |
+| AI preview guarantee | Illustrative only, with source |
+| Styling consultation fee | Complimentary, with source |
+| Unlisted keratin treatment price | Declined to quote a price |
+| Unlisted parking validation code | Handed off without supplying a code |
